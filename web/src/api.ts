@@ -72,8 +72,9 @@ export const del = <T,>(p: string) => api<T>('DELETE', p)
 // ---- types shared with the backend ----
 export interface Session {
   id: number
-  kind: 'user' | 'guest'
-  role: 'admin' | 'user' | 'guest'
+  kind: 'user' | 'guest' | 'link'
+  role: 'admin' | 'user' | 'guest' | 'link'
+  linkId?: number
   name: string
   username?: string
   guestStatus?: string
@@ -101,10 +102,23 @@ export interface ViewerStream {
   until: number
 }
 
+// All times are stored in UTC (unix ms) and shown in Asia/Tashkent (UTC+5, no DST).
+export const TZ = 'Asia/Tashkent'
 export function fmtTime(ms?: number | null) {
   if (!ms) return '—'
-  const d = new Date(ms)
-  return d.toLocaleString('uz-UZ', { hour12: false })
+  return new Date(ms).toLocaleString('uz-UZ', { hour12: false, timeZone: TZ })
+}
+/** "2026-11-13T18:00" in Tashkent time -> UTC ms */
+export function tashkentInputToUTC(v: string): number | null {
+  const m = /^(d{4})-(d{2})-(d{2})T(d{2}):(d{2})$/.exec(v)
+  if (!m) return null
+  return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) - 5 * 3600_000
+}
+/** UTC ms -> "YYYY-MM-DDTHH:mm" in Tashkent time (for datetime-local inputs) */
+export function utcToTashkentInput(ms: number): string {
+  const d = new Date(ms + 5 * 3600_000)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`
 }
 export function fmtAgo(ms?: number | null) {
   if (!ms) return '—'
@@ -120,4 +134,29 @@ export function fmtBytes(b: number) {
   if (b < 1 << 20) return `${(b / 1024).toFixed(1)} KB`
   if (b < 1 << 30) return `${(b / (1 << 20)).toFixed(1)} MB`
   return `${(b / (1 << 30)).toFixed(2)} GB`
+}
+
+export interface LibraryItem {
+  id: number
+  type: 'stream' | 'text' | 'image' | 'video'
+  title: string
+  description: string
+  streamId?: number
+  body?: string
+  mime?: string
+  size?: number
+  width?: number
+  height?: number
+  codec?: string
+  hasThumb: boolean
+  until: number
+  online?: boolean
+  visible: boolean
+  sortOrder: number
+}
+export interface LibraryCollection {
+  id: number
+  title: string
+  description: string
+  items: { contentId: number; itemTitle: string; sortOrder: number }[]
 }

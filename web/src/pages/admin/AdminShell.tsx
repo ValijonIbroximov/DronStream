@@ -4,6 +4,9 @@ import { useServerEvents } from '../../events'
 import { navigate } from '../../router'
 import { beep, toast, Toasts } from '../../components/ui'
 import Dashboard from './Dashboard'
+import Content from './Content'
+import Collections from './Collections'
+import Links from './Links'
 import Streams from './Streams'
 import Requests from './Requests'
 import Users from './Users'
@@ -13,12 +16,13 @@ import System from './System'
 
 const NAV = [
   { p: '/', l: 'Bosh sahifa' },
-  { p: '/streams', l: 'Streamlar' },
+  { p: '/content', l: 'Kontent' },
+  { p: '/collections', l: "To'plamlar" },
+  { p: '/users', l: 'Doimiy foydalanuvchilar' },
+  { p: '/links', l: 'Maxsus havolalar' },
   { p: '/requests', l: "Kirish so'rovlari" },
-  { p: '/users', l: 'Foydalanuvchilar va ruxsatlar' },
-  { p: '/viewers', l: 'Faol tomoshabinlar' },
-  { p: '/audit', l: 'Audit' },
-  { p: '/system', l: 'Tarmoq va tizim' },
+  { p: '/viewers', l: 'Faol sessiyalar' },
+  { p: '/settings', l: 'Audit va sozlamalar' },
 ]
 
 export default function AdminShell({ info, route, onLogout }: { info: SessionInfo; route: string; onLogout: () => void }) {
@@ -59,6 +63,18 @@ export default function AdminShell({ info, route, onLogout }: { info: SessionInf
   switch (page) {
     case '/streams':
       body = <Streams />
+      break
+    case '/content':
+      body = <Content />
+      break
+    case '/collections':
+      body = <Collections />
+      break
+    case '/links':
+      body = <Links />
+      break
+    case '/settings':
+      body = <AuditSettings />
       break
     case '/requests':
       body = <Requests />
@@ -105,7 +121,7 @@ export default function AdminShell({ info, route, onLogout }: { info: SessionInf
           </label>
           <div className="muted small">{info.session?.name} (admin)</div>
           <div className="row gap">
-            <button onClick={() => navigate('/system')}>Parol</button>
+            <button onClick={() => navigate('/settings')}>Parol</button>
             <button onClick={onLogout}>Chiqish</button>
           </div>
         </div>
@@ -124,6 +140,23 @@ export default function AdminShell({ info, route, onLogout }: { info: SessionInf
         {body}
       </main>
       <Toasts />
+    </div>
+  )
+}
+
+function AuditSettings() {
+  const [tab, setTab] = useState<'settings' | 'audit'>('settings')
+  return (
+    <div>
+      <div className="tabs">
+        <button className={tab === 'settings' ? 'active' : ''} onClick={() => setTab('settings')}>
+          Sozlamalar
+        </button>
+        <button className={tab === 'audit' ? 'active' : ''} onClick={() => setTab('audit')}>
+          Audit
+        </button>
+      </div>
+      {tab === 'settings' ? <System /> : <Audit />}
     </div>
   )
 }

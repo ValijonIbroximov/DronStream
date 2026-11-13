@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { get, post, fmtTime, fmtAgo } from '../../api'
+import { get, post, fmtTime, fmtAgo, tashkentInputToUTC } from '../../api'
 import { useServerEvents } from '../../events'
 import { Dot, Modal, durationOptions, toLocalInput, useAction, useLoad } from '../../components/ui'
-import type { AdminStream } from './Dashboard'
+import ObjectPicker, { type CollectionLite, type ContentLite, type Pick } from '../../components/ObjectPicker'
 
 export interface Guest {
   id: number
@@ -30,7 +30,6 @@ const TABS = [
 export default function Requests() {
   const [tab, setTab] = useState('pending')
   const { data, err, reload } = useLoad(() => get<Guest[]>(`/api/admin/guests?status=${tab}`), [tab], 5000)
-  const streams = useLoad(() => get<AdminStream[]>('/api/admin/streams'), [])
   const [approving, setApproving] = useState<Guest | null>(null)
   const { busy, run } = useAction()
   useServerEvents((e) => ['guest_request', 'guests', 'sessions'].includes(e.kind) && reload())
@@ -110,31 +109,26 @@ export default function Requests() {
           </div>
         ))}
       </div>
-      {approving && streams.data && <ApproveModal g={approving} streams={streams.data} onClose={() => setApproving(null)} onDone={() => (setApproving(null), reload())} />}
+      {approving && <ApproveModal g={approving} onClose={() => setApproving(null)} onDone={() => (setApproving(null), reload())} />}
     </div>
   )
 }
 
-function ApproveModal({ g, streams, onClose, onDone }: { g: Guest; streams: AdminStream[]; onClose: () => void; onDone: () => void }) {
-  const [sel, setSel] = useState<number[]>([])
+function ApproveModal({ g, onClose, onDone }: { g: Guest; onClose: () => void; onDone: () => void }) {
+  const [sel, setSel] = useState<Pick[]>([])
   const [minutes, setMinutes] = useState(120)
   const [custom, setCustom] = useState(toLocalInput(Date.now() + 2 * 3600_000))
   const [useCustom, setUseCustom] = useState(false)
   const [note, setNote] = useState('')
+  const contents = useLoad(() => get<ContentLite[]>('/api/admin/contents'), [])
+  const cols = useLoad(() => get<CollectionLite[]>('/api/admin/collections'), [])
   const { busy, run } = useAction()
-  const toggle = (id: number) => setSel(sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id])
   return (
-    <Modal title={`Mehmonni tasdiqlash: ${g.displayName}`} onClose={onClose}>
+    <Modal title={`Mehmonni tasdiqlash: ${g.displayName}`} onClose={onClose} wide>
       <div className="reason pre small">{g.reason}</div>
-      <h4>Qaysi streamlar?</h4>
-      <div className="checks">
-        {streams.map((s) => (
-          <label key={s.id}>
-            <input type="checkbox" checked={sel.includes(s.id)} onChange={() => toggle(s.id)} /> {s.name}
-          </label>
-        ))}
-      </div>
-      <h4>Ruxsat muddati</h4>
+      <h4>Qaysi kontent / to'plamlar?</h4>
+      {contents.data && cols.data && <ObjectPicker contents={contents.data} collections={cols.data} value={sel} onChange={setSel} />}
+      <h4>Ruxsat muddati (Toshkent vaqti)</h4>
       <div className="row gap wrap">
         <select value={useCustom ? 'custom' : minutes} onChange={(e) => (e.target.value === 'custom' ? setUseCustom(true) : (setUseCustom(false), setMinutes(Number(e.target.value))))}>
           {durationOptions().map((o) => (
@@ -157,15 +151,15 @@ function ApproveModal({ g, streams, onClose, onDone }: { g: Guest; streams: Admi
           run(
             () =>
               post(`/api/admin/guests/${g.id}/approve`, {
-                streamIds: sel,
-                until: useCustom ? new Date(custom).getTime() : Date.now() + minutes * 60_000,
+                objects: sel,
+                until: useCustom ? tashkentInputToUTC(custom) : Date.now() + minutes * 60_000,
                 note,
               }).then(onDone),
             { ok: 'Tasdiqlandi' },
           )
         }
       >
-        Tasdiqlash ({sel.length} stream)
+        Tasdiqlash ({sel.length})
       </button>
     </Modal>
   )

@@ -18,7 +18,8 @@ export default function System() {
   const tls = data.tls
   return (
     <div className="page">
-      <h1>Tarmoq va tizim sozlamalari</h1>
+      <h1>Sozlamalar</h1>
+      <BaseURL />
       <p className="muted small">
         Tarmoq parametrlari <code>{data.paths?.config}</code> faylida o'zgartiriladi va xizmatni qayta ishga tushirish talab qilinadi. Bu sahifa joriy
         qiymatlarni ko'rsatadi.
@@ -102,7 +103,7 @@ export default function System() {
         <h2>Mehmonlar</h2>
         <div className="row gap wrap">
           <label className="switch">
-            <input type="checkbox" checked={guest.enabled} onChange={(e) => setGuest({ ...guest, enabled: e.target.checked })} /> "Mehmon sifatida kirish" yoqilgan
+            <input type="checkbox" checked={guest.enabled} onChange={(e) => setGuest({ ...guest, enabled: e.target.checked })} /> "Mehmon sifatida kirish" (ism va xabar bilan so'rov) yoqilgan — maxsus havolalardan alohida
           </label>
           <label>
             Standart muddat (daqiqa){' '}
@@ -169,6 +170,30 @@ export default function System() {
             Almashtirish
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function BaseURL() {
+  const st = useLoad(() => get<{ publicBaseUrl: string; publicBaseUrlProblem: string; timeZone: string }>('/api/admin/settings'), [])
+  const [v, setV] = useState<string | null>(null)
+  const { busy, run } = useAction()
+  const val = v ?? st.data?.publicBaseUrl ?? ''
+  return (
+    <div className="card">
+      <h2>Tashqi manzil (Public base URL)</h2>
+      <p className="muted small">
+        Maxsus havolalar, umumiy kirish havolasi va QR-kodlar shu manzil bilan yaratiladi. Boshqa qurilma unga ulana olishi kerak: https://domen yoki https://public-IP:port.
+        localhost qabul qilinmaydi. Vaqt zonasi: {st.data?.timeZone} (barcha vaqtlar bazada UTC).
+      </p>
+      {st.data?.publicBaseUrlProblem && <div className="alert warn small">{st.data.publicBaseUrlProblem}</div>}
+      <div className="row gap wrap">
+        <input style={{ flex: '1 1 320px' }} placeholder="https://stream.example.uz:8443" value={val} onChange={(e) => setV(e.target.value)} />
+        <button className="primary" disabled={busy || v === null} onClick={() => run(() => post('/api/admin/settings/base-url', { url: val }).then(() => (setV(null), st.reload())), { ok: 'Saqlandi' })}>
+          Saqlash
+        </button>
+        {v !== null && <span className="save-state dirty">● saqlanmagan</span>}
       </div>
     </div>
   )

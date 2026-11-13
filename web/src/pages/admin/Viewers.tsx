@@ -4,7 +4,7 @@ import { Dot, useAction, useLoad } from '../../components/ui'
 
 interface WebSess {
   id: number
-  kind: 'user' | 'guest'
+  kind: 'user' | 'guest' | 'link'
   role: string
   name: string
   username?: string
@@ -68,7 +68,7 @@ export default function Viewers() {
 
   return (
     <div className="page">
-      <h1>Faol tomoshabinlar</h1>
+      <h1>Faol sessiyalar</h1>
       <div className="alert info small">
         "Saytda online" — brauzer sahifani ochiq tutib turibdi. "Videoga ulangan" — server shu sessiyaga video yuboryapti. Bularning hech biri ekran
         qarshisida inson tomosha qilayotganini isbotlamaydi. IP manzil faqat diagnostika uchun; u shaxsni tasdiqlamaydi.
@@ -94,7 +94,7 @@ export default function Viewers() {
             {live.map((m) => (
               <tr key={m.id}>
                 <td>
-                  {m.subjectType === 'guest' && <span className="guest-badge">Mehmon</span>} {m.subjectName}
+                  {m.subjectType === 'guest' && <span className="guest-badge">Mehmon</span>} {m.subjectType === 'link' && <span className="guest-badge">Havola</span>} {m.subjectName}
                   <div className="muted small">sessiya #{m.webSessionId} · tab {m.tab}</div>
                 </td>
                 <td>{m.streamName}</td>
@@ -133,7 +133,7 @@ export default function Viewers() {
             {sess.data?.map((s) => (
               <tr key={s.id}>
                 <td>
-                  {s.kind === 'guest' ? <span className="guest-badge">Mehmon</span> : <span className="tag">{s.role}</span>} {s.name}
+                  {s.kind === 'guest' ? <span className="guest-badge">Mehmon</span> : s.kind === 'link' ? <span className="guest-badge">Maxsus havola</span> : <span className="tag">{s.role}</span>} {s.name}
                   {s.username && <span className="muted small"> ({s.username})</span>}
                   <div className="muted small">sessiya #{s.id}</div>
                 </td>

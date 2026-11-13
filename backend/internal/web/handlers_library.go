@@ -33,6 +33,7 @@ func (s *Server) library(w http.ResponseWriter, r *http.Request) {
 			if st, err := s.Core.GetStream(r.Context(), *items[i].StreamID); err == nil {
 				p, _ := s.Core.MediaPath(st)
 				items[i].Online = s.Media.Stats(p).Online
+				items[i].IsDemo = st.IsDemo
 			}
 		}
 	}

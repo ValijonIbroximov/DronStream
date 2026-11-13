@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { get, type SessionInfo, type ViewerStream, fmtTime } from '../api'
+import { get, type SessionInfo, type ViewerStream, type LibraryItem, type LibraryCollection, fmtTime } from '../api'
+import Materials from '../components/Materials'
+import { toast, Toasts } from '../components/ui'
 import { useServerEvents } from '../events'
 import Player from '../components/Player'
 import { navigate } from '../router'
@@ -21,7 +23,8 @@ function tabId() {
 
 export default function ViewerPage({ info, onLogout }: { info: SessionInfo; onLogout: () => void }) {
   const s = info.session!
-  const [streams, setStreams] = useState<ViewerStream[] | null>(null)
+  const [lib, setLib] = useState<{ items: LibraryItem[]; collections: LibraryCollection[] } | null>(null)
+  const [coll, setColl] = useState<number>(0)
   const [layout, setLayout] = useState<number>(() => Number(localStorage.getItem('ds-layout')) || 1)
   const [slots, setSlots] = useState<(number | null)[]>(() => {
     try {
@@ -36,7 +39,7 @@ export default function ViewerPage({ info, onLogout }: { info: SessionInfo; onLo
 
   const load = useCallback(async () => {
     try {
-      setStreams(await get<ViewerStream[]>('/api/streams'))
+      setLib(await get<{ items: LibraryItem[]; collections: LibraryCollection[] }>('/api/library'))
       setErr('')
     } catch (e: any) {
       setErr(e.message)
@@ -48,12 +51,24 @@ export default function ViewerPage({ info, onLogout }: { info: SessionInfo; onLo
     return () => clearInterval(t)
   }, [load])
   useServerEvents((e) => {
-    if (e.kind === 'permissions' || e.kind === 'reconnected' || e.kind === 'media_ended') load()
+    if (['permissions', 'reconnected', 'media_ended', 'library'].includes(e.kind)) load()
+    if (e.kind === 'content_revoked') {
+      toast(e.data?.message || 'Kontentga ruxsat tugadi', 'error')
+      load()
+    }
   })
 
   useEffect(() => localStorage.setItem('ds-layout', String(layout)), [layout])
   useEffect(() => localStorage.setItem('ds-slots', JSON.stringify(slots)), [slots])
 
+  const inColl = (id: number) => coll === 0 || !!lib?.collections.find((c) => c.id === coll)?.items.some((it) => it.contentId === id)
+  const itemTitle = (it: LibraryItem) => (coll ? lib?.collections.find((c) => c.id === coll)?.items.find((x) => x.contentId === it.id)?.itemTitle : '') || it.title
+  const streams: ViewerStream[] | null = lib
+    ? lib.items
+        .filter((it) => it.type === 'stream' && it.streamId && inColl(it.id))
+        .map((it) => ({ id: it.streamId!, name: itemTitle(it), description: it.description, isDemo: !!(it as any).isDemo, online: !!it.online, until: it.until }))
+    : null
+  const materials = lib ? lib.items.filter((it) => it.type !== 'stream' && inColl(it.id)).map((it) => ({ ...it, title: itemTitle(it) })) : []
   const allowed = new Set((streams || []).map((x) => x.id))
   const seen = useRef(new Map<number, string>())
   useEffect(() => {
@@ -113,16 +128,34 @@ export default function ViewerPage({ info, onLogout }: { info: SessionInfo; onLo
           </button>
         </div>
         <div className="who">
-          {s.kind === 'guest' ? <span className="guest-badge">Mehmon: {s.name} (tasdiqlanmagan ism)</span> : <span>{s.name}</span>}
+          {s.kind === 'guest' ? (
+            <span className="guest-badge">Mehmon: {s.name} (tasdiqlanmagan ism)</span>
+          ) : s.kind === 'link' ? (
+            <span className="guest-badge">Maxsus havola: {s.name} (shaxs tasdiqlanmagan)</span>
+          ) : (
+            <span>{s.name}</span>
+          )}
           {s.role === 'admin' && <button onClick={() => navigate('/')}>Admin panel</button>}
           {s.kind === 'user' && <button onClick={() => navigate('/password')}>Parol</button>}
           <button onClick={onLogout}>Chiqish</button>
         </div>
       </header>
       {err && <div className="alert error">{err}</div>}
-      {streams && streams.length === 0 && (
+      {lib && lib.collections.length > 0 && (
+        <div className="coll-bar">
+          <button className={coll === 0 ? 'active' : ''} onClick={() => setColl(0)}>
+            Barchasi
+          </button>
+          {lib.collections.map((c) => (
+            <button key={c.id} className={coll === c.id ? 'active' : ''} onClick={() => setColl(c.id)} title={c.description}>
+              To'plam: {c.title}
+            </button>
+          ))}
+        </div>
+      )}
+      {lib && lib.items.length === 0 && (
         <div className="empty">
-          <h2>Sizga ruxsat etilgan stream yo'q</h2>
+          <h2>Sizga ruxsat etilgan kontent yo'q</h2>
           <p className="muted">Administrator ruxsat berganda bu yerda paydo bo'ladi.</p>
         </div>
       )}
@@ -170,6 +203,8 @@ export default function ViewerPage({ info, onLogout }: { info: SessionInfo; onLo
           </div>
         </>
       )}
+      {materials.length > 0 && <Materials items={materials} watermark={s.kind === 'guest' ? `Mehmon: ${s.name}` : s.kind === 'link' ? `Havola: ${s.name}` : s.name} />}
+      <Toasts />
     </div>
   )
 }

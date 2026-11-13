@@ -7,8 +7,14 @@ import WaitingPage from './pages/Waiting'
 import ViewerPage from './pages/Viewer'
 import ChangePassword from './pages/ChangePassword'
 import AdminShell from './pages/admin/AdminShell'
+import LinkLanding from './pages/LinkLanding'
 
 export default function App() {
+  if (window.location.pathname === '/link') return <LinkLanding />
+  return <MainApp />
+}
+
+function MainApp() {
   const [info, setInfo] = useState<SessionInfo | null>(null)
   const [err, setErr] = useState('')
   const [logoutReason, setLogoutReason] = useState('')
@@ -42,6 +48,7 @@ export default function App() {
           session_ended: 'Sessiyangiz administrator tomonidan yakunlandi.',
           password_reset: 'Parolingiz tiklandi. Yangi parol bilan kiring.',
           admin_logout_all: 'Administrator sizni barcha qurilmalardan chiqardi.',
+          link_revoked: 'Administrator bu maxsus havolani bekor qildi. Kirish yopildi.',
         }
         setLogoutReason(reasons[e.data?.reason] || 'Sessiya yakunlandi.')
         closeEvents()

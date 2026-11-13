@@ -417,6 +417,7 @@ type LibraryItem struct {
 	*Content
 	Until  int64 `json:"until"`
 	Online bool  `json:"online,omitempty"`
+	IsDemo bool  `json:"isDemo,omitempty"`
 }
 
 type LibraryCollection struct {

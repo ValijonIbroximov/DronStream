@@ -3,9 +3,12 @@ module dronstream
 go 1.27.4
 
 require (
+	github.com/makiuchi-d/gozxing v0.1.1
 	github.com/pion/turn/v5 v5.1.3
 	github.com/pion/webrtc/v4 v4.2.26
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/crypto v0.59.0
+	golang.org/x/image v0.48.0
 	golang.org/x/sys v0.50.0
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.62.0
@@ -14,7 +17,6 @@ require (
 require (
 	github.com/dustin/go-humanize v1.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/makiuchi-d/gozxing v0.1.1 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/pion/datachannel v1.6.3 // indirect
@@ -32,9 +34,7 @@ require (
 	github.com/pion/stun/v4 v4.0.1 // indirect
 	github.com/pion/transport/v5 v5.1.4 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e // indirect
 	github.com/wlynxg/anet v0.0.5 // indirect
-	golang.org/x/image v0.48.0 // indirect
 	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/text v0.44.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
