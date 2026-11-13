@@ -86,22 +86,29 @@ Check "restore: starts in STANDBY" ($sys2.state.instanceState -eq "standby")
 $streams = Invoke-RestMethod -Uri "$base/api/admin/streams" -WebSession $ws2 -Headers $h2
 $perms = Invoke-RestMethod -Uri "$base/api/admin/permissions" -WebSession $ws2 -Headers $h2
 Check "restore: streams restored" (@($streams | Where-Object { $_.slug -eq "pultx" }).Count -eq 1)
-Check "restore: permissions restored" (@($perms | Where-Object { $_.streamName -eq "Pult X" -or $_.objectTitle -eq "Pult X" }).Count -eq 1)
+# 1.0.x answers with "streamName", 1.1+ with "objectTitle": read whichever exists (strict mode forbids a missing property)
+function PermTitle($p) { foreach ($n in "objectTitle", "streamName") { $x = $p.PSObject.Properties[$n]; if ($x) { return $x.Value } }; return $null }
+Check "restore: permissions restored" (@($perms | Where-Object { (PermTitle $_) -eq "Pult X" }).Count -eq 1)
 $k2 = Invoke-RestMethod -Uri "$base/api/admin/streams/$($st.stream.id)/key" -WebSession $ws2 -Headers $h2
 Check "restore: publish key re-bound (DPAPI) and readable" ($k2.key -eq $key)
 $vw = New-Object Microsoft.PowerShell.Commands.WebRequestSession
 $rv = Invoke-RestMethod -Method Post -Uri "$base/api/login" -WebSession $vw -Headers @{ "X-DS-Request" = "1" } -ContentType "application/json" -Body (@{ username = "viewer1"; password = "Viewer-Pass-12345" } | ConvertTo-Json)
+# The watch status says whether this viewer is authorised, independently of the source being on air.
+# (The test stream has no publisher, and since 1.2 no ticket is issued for a source that is off air.)
+$vh = @{ "X-DS-Request" = "1"; "X-CSRF-Token" = $rv.csrf }
+$statusUrl = "$base/api/watch/$($st.stream.id)/status"
+$sb = Invoke-RestMethod -Uri $statusUrl -WebSession $vw -Headers $vh
 try {
-  Invoke-RestMethod -Method Post -Uri "$base/api/watch/$($st.stream.id)/ticket" -WebSession $vw -Headers @{ "X-DS-Request" = "1"; "X-CSRF-Token" = $rv.csrf } -ContentType "application/json" -Body "{}" | Out-Null
+  Invoke-RestMethod -Method Post -Uri "$base/api/watch/$($st.stream.id)/ticket" -WebSession $vw -Headers $vh -ContentType "application/json" -Body "{}" | Out-Null
   Check "standby: viewing refused" $false
-} catch { Check "standby: viewing refused" ($_.Exception.Response.StatusCode.value__ -eq 403) }
+} catch { Check "standby: viewing refused" (($_.Exception.Response.StatusCode.value__ -eq 403) -and (-not $sb.ok) -and ($sb.code -eq "instance_standby")) }
 try {
   Invoke-RestMethod -Method Post -Uri "$base/api/admin/system/instance" -WebSession $ws2 -Headers $h2 -ContentType "application/json" -Body (@{ state = "active"; confirm = "wrong" } | ConvertTo-Json) | Out-Null
   Check "activate: requires exact confirmation" $false
 } catch { Check "activate: requires exact confirmation" $true }
 Invoke-RestMethod -Method Post -Uri "$base/api/admin/system/instance" -WebSession $ws2 -Headers $h2 -ContentType "application/json" -Body (@{ state = "active"; confirm = "ESKI SERVER O'CHIRILDI" } | ConvertTo-Json) | Out-Null
-$t = Invoke-RestMethod -Method Post -Uri "$base/api/watch/$($st.stream.id)/ticket" -WebSession $vw -Headers @{ "X-DS-Request" = "1"; "X-CSRF-Token" = $rv.csrf } -ContentType "application/json" -Body "{}"
-Check "activate: viewing allowed again" ([bool]$t.ticket)
+$sa = Invoke-RestMethod -Uri $statusUrl -WebSession $vw -Headers $vh
+Check "activate: viewing allowed again" ([bool]$sa.ok)
 & powershell -NoProfile -ExecutionPolicy Bypass -File "$B\scripts\stop.ps1" -Root $B | Out-Null
 Check "stop.ps1: stopped" ($LASTEXITCODE -eq 0)
 Start-Sleep -Seconds 1

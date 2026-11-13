@@ -93,7 +93,11 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "unit testlar muvaffaqiyatsiz" }
   }
   Step "dronstream.exe yig'ilmoqda ($Version)"
-  $out = Join-Path $Root "build\dronstream.exe"
+  # A separate output file: build\dronstream.exe is the developer's run binary (DronStreamStart) and a
+  # server may be running from it - packaging must never replace it.
+  $relDir = Join-Path $Root "build\release"
+  New-Item -ItemType Directory -Force $relDir | Out-Null
+  $out = Join-Path $relDir "dronstream-$Version.exe"
   & $go build -trimpath -ldflags "-s -w -X main.version=$Version" -o $out ./cmd/dronstream
   if ($LASTEXITCODE -ne 0) { throw "go build xato" }
 } finally { Pop-Location }
@@ -105,7 +109,7 @@ $pkg = Join-Path $Root "dist\$name"
 if (Test-Path $pkg) { Remove-Item $pkg -Recurse -Force }
 $appDir = Join-Path $pkg "app\$Version"
 New-Item -ItemType Directory -Force (Join-Path $appDir "mediamtx"), (Join-Path $pkg "scripts"), (Join-Path $pkg "config"), (Join-Path $pkg "docs") | Out-Null
-Copy-Item (Join-Path $Root "build\dronstream.exe") $appDir
+Copy-Item $out (Join-Path $appDir "dronstream.exe")
 Copy-Item $mtxExe (Join-Path $appDir "mediamtx")
 Copy-Item (Join-Path $mtxDir "LICENSE") (Join-Path $appDir "mediamtx\LICENSE-mediamtx.txt")
 Copy-Item (Join-Path $Root "packaging\scripts\*") (Join-Path $pkg "scripts")
