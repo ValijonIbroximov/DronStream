@@ -152,6 +152,7 @@ sudo systemctl stop dronstream
 if sudo DRONSTREAM_BACKUP_PASSPHRASE="Wrong-Passphrase-000" bash "$ROOT/scripts/restore.sh" --root "$ROOT" --in "$BK" --force >/dev/null 2>&1; then fail "noto'g'ri parol qabul qilindi"; else pass "restore: noto'g'ri parol rad etiladi"; fi
 if sudo DRONSTREAM_BACKUP_PASSPHRASE="$BK_PASS" bash "$ROOT/scripts/restore.sh" --root "$ROOT" --in "$BK" --force >/dev/null; then pass "restore.sh"; else fail "restore.sh"; fi
 sudo systemctl start dronstream
+wait_health 60 || true
 JAR="$WORK/jar-restored"
 expect "restore'dan keyin ham TOTP talab qilinadi" "$(api POST /api/login "{\"username\":\"boss\",\"password\":\"$ADMIN_PASS\"}" | jq -r '.code')" "mfa_required"
 JAR="$WORK/jar"
