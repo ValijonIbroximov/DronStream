@@ -1,0 +1,30 @@
+# Toolchains and downloads (dev only)
+.tools/
+# Build outputs
+/dist/
+/build/
+web/node_modules/
+web/dist/
+backend/internal/webui/dist/*
+!backend/internal/webui/dist/.keep
+# Runtime data, secrets, logs — never commit
+/runtime/
+/devroot/
+*.db
+*.db-wal
+*.db-shm
+*.dsbak
+*.key
+*.pem
+*.crt
+secrets/
+logs/
+*.log
+.env
+.env.*
+!.env.example
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
