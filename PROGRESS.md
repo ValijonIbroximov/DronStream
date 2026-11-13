@@ -41,3 +41,37 @@
 ### Keyingi (real muhit kerak)
 - Real DJI, VPN, internet/NAT/TURN, toza yangi Windows kompyuter, Windows service, haqiqiy ikki kompyuter orasida ko'chirish.
 - Clipboard rasm va tizim ulashishining muvaffaqiyatli yo'li real Chrome/Edge va telefonda (ichki sinov brauzerida faqat fallback sinaldi).
+
+## v1.2.0 — ISH JARAYONIDA (boshlandi 2026-11-13)
+Topshiriq: R570 serveriga tayyorlash, admin "?" yordam, mustaqil `info.html`, Linux yo'li, skriptlarni yakunlash.
+Kontekst siqilsa shu bo'lim + `git log` + `git status` orqali davom eting. Tayyor ishni qayta yozmang.
+
+### Boshlanish holati (tekshirilgan)
+- `main` = `7baf400`, remote bilan bir xil, ish daraxti toza. CLAUDE.md / AGENTS.md yo'q.
+- Foydalanuvchi serveri `build\dronstream.exe run --root runtime` (8443/1935/9997/9180/8889) ishlab turibdi — TO'XTATILMAYDI. Dev build boshqa faylga (`build\devbin\`), testlar boshqa portlarda.
+- Foydalanuvchi tasdiqlagan: Pixel 6 Pro (Android 17, Chrome 156) USB lokal tarmoq orqali 2 ta demo WebRTC video ko'rdi (Chrome'ga "Yaqin-atrofdagi qurilmalar" ruxsati kerak bo'ldi). Bu faqat lokal + demo.
+
+### Topilgan nuqsonlar (v1.1.0 da bor, tuzatilishi kerak)
+1. **"Juda ko'p ulanish" (asosiy sabab)**: efirda bo'lmagan stream sloti har 5 s da chipta + WHEP urinadi; hook chiptani sarflab `media_sessions` ga `pending` yozadi, MediaMTX 404 qaytaradi, lekin `pending` yozuv reconciler'da 10 s yashaydi (`manager.go` pass, `age < 10_000`). 3-urinishda slot chegarasi (`tabStream >= 2`, `core/media.go` IssueTicket) → 429 → Player `deny()` (avtomatik qayta urinmaydi).
+2. Lease yangilanishida 429 kelsa `Player.tsx` o'ynayotgan videoni ham `deny()` qiladi (403 uchun `renewal && cur.current` tekshiruvi bor, 429 uchun yo'q).
+3. Subyekt chegarasi (12) sessiyalarni sanaydi: 3×3 da 9 player bir vaqtda yangilansa vaqtincha 18 → yangilanishlar rad.
+4. Sahifa yangilanganda/yopilganda React unmount ishlamaydi → WHEP DELETE yuborilmaydi; eski sessiya MediaMTX ICE timeout'igacha (~30 s) qoladi.
+5. `Player.tsx`: muvaffaqiyatsiz renewal ulanishi yopilmaydi (`onDrop` da `cur.current !== dropped` → return); WHEP 201 dan keyingi xatoda resurs DELETE qilinmaydi; `alive` ref effekt qayta ishlaganda eski `connect` ni to'xtatmaydi.
+6. Mobil: `.player-top` (sarlavha + statistika) va `.watermark` (pos2/pos3 `top:14%`) kichik playerda ustma-ust tushadi.
+
+### Reja (tartib bilan) va holat
+- [ ] A. Sessiya limiti/Player tuzatishlari + testlar (yuqoridagi 1–6).
+- [ ] B. StrictMode: `ds-*.ps1` da qayta yoqish, sabablarni tuzatish, PS 5.1 da test.
+- [ ] C. Linux: `mediamtx` binary nomi, `Pdeathsig` (fail-closed), master kalit fayl huquqlari tekshiruvi, `service`siz systemd unit, `packaging/linux/*`, linux-amd64 paket, Windows→Linux backup ko'chirish testi.
+- [ ] D. Qo'llanma: `guide/src/*` yagona manba → `info.html` (mustaqil) + admin yordam (`/api/admin/help/`), admin "?" tugmasi.
+- [ ] E. `SERVER_INSTALL_UZ.md`, README/SECURITY/TEST_REPORT/ARCHITECTURE yangilash.
+- [ ] F. Testlar, 1.2.0 paketlari (win64 + linux-amd64), push.
+
+### Qarorlar (v1.2)
+- Versiya 1.2.0 (sxema o'zgarmasa v2 qoladi; 1.1.0 paketi ustidan yozilmaydi).
+- Linux'da master kalit: `DSK0` (ochiq 32 bayt) + fayl 0600, papka 0700, alohida xizmat foydalanuvchisi; DPAPI Linux'da ochilmaydi → ko'chirish faqat parolli `.dsbak` orqali (backup ichida xom kalit bor, restore qayta bog'laydi).
+- Qo'llanma kontenti bitta manbada; `info.html` va admin ko'rinishi build paytida hosil qilinadi; push oldidan sinxronlik tekshiriladi.
+
+### To'siqlar
+- Haqiqiy R570 ga kirish yo'q: OS noma'lum → o'rnatish bajarilmaydi, faqat preflight + qo'llanma + paket.
+- Linux runtime sinovi faqat shu kompyuterda WSL/Docker bo'lsa mumkin (tekshiriladi); bo'lmasa faqat cross-compile deb yoziladi.
