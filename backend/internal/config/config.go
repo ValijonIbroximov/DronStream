@@ -139,6 +139,8 @@ type SecurityConfig struct {
 	AuditRetainDays   int    `yaml:"audit_retention_days"`
 	TrustProxyHeaders bool   `yaml:"trust_proxy_headers"`
 	SameSite          string `yaml:"cookie_samesite"` // Strict (default) or Lax
+	// LinkRatePerMinute limits special-link inspect/activate requests per IP.
+	LinkRatePerMinute int `yaml:"link_rate_per_minute"`
 }
 
 type LoggingConfig struct {
@@ -160,7 +162,7 @@ func Default() Config {
 			MaxPerUser: 12, ReconcileMillis: 1000, LogLevel: "info", PublishHost: "localhost",
 		},
 		TURN:     TURNConfig{Mode: "off", Listen: ":3478", Realm: "dronstream", RelayMin: 50000, RelayMax: 50100, CredMinutes: 10},
-		Security: SecurityConfig{SessionHours: 24, IdleMinutes: 480, GuestMaxHours: 24, MaxPendingGuests: 50, AuditRetainDays: 180, SameSite: "Strict"},
+		Security: SecurityConfig{SessionHours: 24, IdleMinutes: 480, GuestMaxHours: 24, MaxPendingGuests: 50, AuditRetainDays: 180, SameSite: "Strict", LinkRatePerMinute: 60},
 		Logging:  LoggingConfig{Level: "info", MaxSizeMB: 20, Keep: 5},
 		Demo:     DemoConfig{Enabled: true},
 		Library:  LibraryConfig{MaxImageMB: 25, MaxVideoMB: 2048},
@@ -208,6 +210,9 @@ func (c *Config) Validate() error {
 	case "", "off", "builtin", "external":
 	default:
 		return fmt.Errorf("turn.mode must be off|builtin|external")
+	}
+	if c.Security.LinkRatePerMinute <= 0 {
+		c.Security.LinkRatePerMinute = 60
 	}
 	if c.Library.MaxImageMB <= 0 {
 		c.Library.MaxImageMB = 25

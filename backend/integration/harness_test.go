@@ -51,6 +51,7 @@ func repoRoot() string {
 func buildServer(t testing.TB) (bin string) {
 	dir := t.TempDir()
 	bin = filepath.Join(dir, "dronstream.exe")
+	embedFrontend(t)
 	cmd := exec.Command("go", "build", "-o", bin, "./cmd/dronstream")
 	cmd.Dir = filepath.Join(repoRoot(), "backend")
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
@@ -88,6 +89,7 @@ media:
   reconcile_interval_ms: 1000
 security:
   audit_retention_days: 30
+  link_rate_per_minute: 100000
 logging:
   level: debug
 demo:
@@ -356,4 +358,29 @@ func (p *pub) kill() {
 		p.cmd.Process.Kill()
 		<-p.done
 	}
+}
+
+// embedFrontend copies web/dist (if built) into the embed directory so the
+// test binary serves the real SPA (needed for /link).
+func embedFrontend(t testing.TB) {
+	src := filepath.Join(repoRoot(), "web", "dist")
+	if _, err := os.Stat(filepath.Join(src, "index.html")); err != nil {
+		t.Log("web/dist not built; SPA routes will 404")
+		return
+	}
+	dst := filepath.Join(repoRoot(), "backend", "internal", "webui", "dist")
+	filepath.Walk(src, func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(src, p)
+		if info.IsDir() {
+			return os.MkdirAll(filepath.Join(dst, rel), 0o755)
+		}
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(filepath.Join(dst, rel), b, 0o644)
+	})
 }

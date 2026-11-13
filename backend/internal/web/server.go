@@ -59,7 +59,7 @@ type Server struct {
 func New(c *core.Service, m *media.Manager, hub *Hub, cfg *config.Config, log *slog.Logger, static fs.FS, hooks Hooks) *Server {
 	return &Server{Core: c, Media: m, Hub: hub, Cfg: cfg, Log: log, Static: static, Hooks: hooks,
 		whep:     &http.Client{Timeout: 20 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }},
-		limLogin: newLimiter(10, 5), limGuest: newLimiter(0.3, 3), limSetup: newLimiter(5, 5), limTicket: newLimiter(120, 30), limLink: newLimiter(20, 10),
+		limLogin: newLimiter(10, 5), limGuest: newLimiter(0.3, 3), limSetup: newLimiter(5, 5), limTicket: newLimiter(120, 30), limLink: newLimiter(float64(cfg.Security.LinkRatePerMinute), cfg.Security.LinkRatePerMinute/2+1),
 	}
 }
 

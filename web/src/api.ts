@@ -110,7 +110,7 @@ export function fmtTime(ms?: number | null) {
 }
 /** "2026-11-13T18:00" in Tashkent time -> UTC ms */
 export function tashkentInputToUTC(v: string): number | null {
-  const m = /^(d{4})-(d{2})-(d{2})T(d{2}):(d{2})$/.exec(v)
+  const m = /^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2})$/.exec(v)
   if (!m) return null
   return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) - 5 * 3600_000
 }
