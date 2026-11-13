@@ -49,7 +49,6 @@ jobs:
 
   linux:
     name: Linux (${{ matrix.os }}) - build, testlar, paket, systemd
-    needs: windows-backup
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     strategy:
@@ -80,8 +79,10 @@ jobs:
       - name: go vet va unit testlar (linux)
         working-directory: backend
         run: |
+          set -o pipefail
           go vet ./...
-          go test ./internal/... -count=1
+          go test ./internal/... -count=1 2>&1 | tee "$RUNNER_TEMP/unit.log"
+          echo "::notice title=unit testlar (linux)::$(grep -c '^ok' "$RUNNER_TEMP/unit.log") paket o'tdi"
       - name: ffmpeg (integratsiya testlaridagi RTMP manba uchun)
         run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - name: Linux paketlari (ikki versiya - update/rollback sinovi uchun)
@@ -92,15 +93,37 @@ jobs:
         working-directory: backend
         env:
           DS_MEDIAMTX: ${{ github.workspace }}/.tools/mediamtx-linux/mediamtx
-        run: go test -tags integration ./integration -run 'TestAcceptance|TestLinksAndMedia|TestPlayerSlots|TestTURNRelay' -count=1 -timeout 25m
+        run: |
+          set -o pipefail
+          go test -tags integration ./integration -run 'TestAcceptance|TestLinksAndMedia|TestPlayerSlots|TestTURNRelay' -count=1 -timeout 25m -v 2>&1 | tee "$RUNNER_TEMP/integration.log" | grep -E '^(=== RUN|--- |PASS|FAIL|ok|panic)' || { grep -E '^s*(--- FAIL|.*_test.go:[0-9]+:)' "$RUNNER_TEMP/integration.log" | head -n 8 | while IFS= read -r l; do echo "::error title=integratsiya::$l"; done; exit 1; }
+          echo "::notice title=integratsiya (linux)::$(grep -c '^--- PASS' "$RUNNER_TEMP/integration.log") test o'tdi: $(grep '^--- PASS' "$RUNNER_TEMP/integration.log" | awk '{print $3}' | tr '
+' ' ')"
       - name: Paket sinovi - o'rnatish, systemd, backup/restore, update/rollback
         run: bash tests/ci/linux-package-test.sh dist/DronStream-9.9.1-linux-amd64.tar.gz dist/DronStream-9.9.2-linux-amd64.tar.gz
+      - name: Integratsiya natijalari
+        if: always()
+        run: cat build/test-results/integration.json 2>/dev/null || true
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux-package
+          path: dist/DronStream-9.9.1-linux-amd64.tar.gz
+          retention-days: 1
+          if-no-files-found: error
+
+  migrate:
+    name: Windows backup -> Linux'da tiklash
+    needs: [windows-backup, linux]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
           name: windows-backup
           path: ci/win
-      - name: Windows backupni Linux'da tiklash
-        run: bash tests/ci/restore-windows-backup.sh dist/DronStream-9.9.1-linux-amd64.tar.gz ci/win/win.dsbak ci/win/expect.json
-      - name: Integratsiya natijalari
-        if: always()
-        run: cat build/test-results/integration.json 2>/dev/null || true
+      - uses: actions/download-artifact@v8
+        with:
+          name: linux-package
+          path: ci/pkg
+      - name: Windows'da olingan shifrlangan backupni Linux'da tiklash
+        run: bash tests/ci/restore-windows-backup.sh ci/pkg/DronStream-9.9.1-linux-amd64.tar.gz ci/win/win.dsbak ci/win/expect.json

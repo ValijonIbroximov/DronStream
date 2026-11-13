@@ -13,6 +13,7 @@ $Exe = (Resolve-Path $Exe).Path
 $root = Join-Path $env:RUNNER_TEMP "ds-win-root"
 if (Test-Path $root) { Remove-Item $root -Recurse -Force }
 New-Item -ItemType Directory -Force $root, $Out | Out-Null
+$Out = (Resolve-Path $Out).Path
 $base = "https://127.0.0.1:8443"
 $adminPass = "Ci-Admin-Password-1"
 $bkPass = "Ci-Backup-Passphrase-123"
@@ -60,6 +61,13 @@ try {
   $expect | ConvertTo-Json | Set-Content (Join-Path $Out "expect.json") -Encoding utf8
   Remove-Item $png
   Write-Host "Windows backup: $bk ($((Get-Item $bk).Length) bayt), master kalit formati: $mkFormat"
+} catch {
+  # GitHub annotation: the public run page shows the reason without needing the full log.
+  Write-Host ("::error title=make-windows-backup::{0} (qator {1})" -f $_.Exception.Message, $_.InvocationInfo.ScriptLineNumber)
+  $sl = Join-Path $root "logsdronstream.log"
+  if (Test-Path $sl) { Get-Content $sl -Tail 8 | ForEach-Object { Write-Host ("::warning title=dronstream.log::" + $_) } }
+  else { Write-Host "::warning title=dronstream.log::server logi yaratilmagan (jarayon ishga tushmagan bo'lishi mumkin)" }
+  throw
 } finally {
   & $Exe stop --root $root 2>$null | Out-Null
   if (-not $proc.WaitForExit(15000)) { $proc.Kill() }

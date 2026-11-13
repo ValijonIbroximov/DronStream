@@ -10,7 +10,7 @@ BASE="https://127.0.0.1:8443"
 WORK="$(mktemp -d)"; JAR="$WORK/jar"; CSRF=""
 PASS=0; FAIL=0
 pass() { echo "PASS  $1"; PASS=$((PASS + 1)); }
-fail() { echo "FAIL  $1 ${2:-}"; FAIL=$((FAIL + 1)); }
+fail() { echo "FAIL  $1 ${2:-}"; echo "::error title=$(basename "$0")::FAIL $1 ${2:-}"; FAIL=$((FAIL + 1)); }
 expect() { if [ "$2" = "$3" ]; then pass "$1"; else fail "$1" "(kutilgan '$3', olingan '$2')"; fi; }
 api() {
   local a=(-ksS -b "$JAR" -c "$JAR" -X "$1" "$BASE$2" -H 'X-DS-Request: 1' -H "X-CSRF-Token: $CSRF")
@@ -39,4 +39,5 @@ expect "faollashtirildi" "$(api GET /api/admin/system | jq -r '.state.instanceSt
 expect "rasm fayli bayt-ma-bayt bir xil (SHA-256)" "$(curl -ksS -b "$JAR" "$BASE/api/content/$(j .imageId)/file" | sha256sum | cut -d' ' -f1)" "$(j .imageSha256)"
 sudo bash "$ROOT/scripts/uninstall-service.sh" >/dev/null
 echo "NATIJA: $PASS o'tdi, $FAIL o'tmadi"
+echo "::notice title=$(basename "$0")::$PASS o'tdi, $FAIL o'tmadi ($(. /etc/os-release; echo "$PRETTY_NAME"), $(uname -m))"
 [ "$FAIL" -eq 0 ]

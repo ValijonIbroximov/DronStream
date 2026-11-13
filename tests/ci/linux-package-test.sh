@@ -15,7 +15,7 @@ BK_PASS="Ci-Backup-Passphrase-123"
 ADMIN_PASS="Ci-Admin-Password-1"
 PASS=0; FAIL=0
 pass() { echo "PASS  $1"; PASS=$((PASS + 1)); }
-fail() { echo "FAIL  $1 ${2:-}"; FAIL=$((FAIL + 1)); }
+fail() { echo "FAIL  $1 ${2:-}"; echo "::error title=$(basename "$0")::FAIL $1 ${2:-}"; FAIL=$((FAIL + 1)); }
 expect() { if [ "$2" = "$3" ]; then pass "$1"; else fail "$1" "(kutilgan '$3', olingan '$2')"; fi; }
 api() { # METHOD PATH [JSON]
   local a=(-ksS -b "$JAR" -c "$JAR" -X "$1" "$BASE$2" -H 'X-DS-Request: 1' -H "X-CSRF-Token: $CSRF")
@@ -24,7 +24,7 @@ api() { # METHOD PATH [JSON]
 }
 login() { CSRF=""; rm -f "$JAR"; CSRF="$(api POST /api/login "{\"username\":\"boss\",\"password\":\"$ADMIN_PASS\"}" | jq -r '.csrf // empty')"; [ -n "$CSRF" ]; }
 wait_health() { local i; for i in $(seq 1 "${1:-60}"); do [ "$(curl -ks -o /dev/null -w '%{http_code}' "$BASE/api/health")" = "200" ] && return 0; sleep 1; done; return 1; }
-dump() { echo "---- journal ----"; sudo journalctl -u dronstream -n 60 --no-pager || true; }
+dump() { echo "---- journal ----"; sudo journalctl -u dronstream -n 60 --no-pager || true; sudo journalctl -u dronstream -n 6 --no-pager -o cat 2>/dev/null | while IFS= read -r l; do echo "::warning title=journal::$l"; done; }
 trap 'if [ "$FAIL" -gt 0 ]; then dump; fi' EXIT
 
 mkdir -p "$WORK/p1" "$WORK/p2"
@@ -125,4 +125,5 @@ if [ ! -f /etc/systemd/system/dronstream.service ] && sudo test -f "$ROOT/data/d
 if pgrep -x mediamtx >/dev/null || pgrep -x dronstream >/dev/null; then fail "jarayonlar qolib ketdi"; else pass "jarayon qolmadi"; fi
 
 echo "NATIJA: $PASS o'tdi, $FAIL o'tmadi"
+echo "::notice title=$(basename "$0")::$PASS o'tdi, $FAIL o'tmadi ($(. /etc/os-release; echo "$PRETTY_NAME"), $(uname -m))"
 [ "$FAIL" -eq 0 ]
