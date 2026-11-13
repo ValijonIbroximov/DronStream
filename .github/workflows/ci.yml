@@ -71,8 +71,8 @@ jobs:
         run: bash tests/ci/check-guide.sh
       - name: go vet va unit testlar (linux)
         run: bash tests/ci/run-unit.sh
-      - name: ffmpeg (integratsiya testlaridagi RTMP manba uchun)
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: ffmpeg va tcpdump (RTMP manba, paket ushlash)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg tcpdump
       - name: Linux paketlari (ikki versiya - update/rollback sinovi uchun)
         run: |
           bash packaging/linux/build-package.sh 9.9.1
@@ -80,6 +80,7 @@ jobs:
       - name: Integratsiya testlari (haqiqiy MediaMTX, WebRTC, RTMP)
         env:
           DS_MEDIAMTX: ${{ github.workspace }}/.tools/mediamtx-linux/mediamtx
+          CAPTURE: "1"
         run: bash tests/ci/run-integration.sh
       - name: Paket sinovi - o'rnatish, systemd, backup/restore, update/rollback
         run: bash tests/ci/linux-package-test.sh dist/DronStream-9.9.1-linux-amd64.tar.gz dist/DronStream-9.9.2-linux-amd64.tar.gz
