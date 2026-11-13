@@ -29,6 +29,7 @@ ALTER TABLE web_sessions ADD COLUMN reauth_at INTEGER NOT NULL DEFAULT 0;
 UPDATE web_sessions SET approval='pending' WHERE kind='link';
 UPDATE web_sessions SET approval='approved' WHERE kind='guest' AND guest_id IN (SELECT id FROM guests WHERE status='approved');
 UPDATE web_sessions SET approval='pending' WHERE kind='guest' AND approval='';
+UPDATE web_sessions SET verify_code=substr(hex(randomblob(3)),1,3)||'-'||substr(hex(randomblob(3)),1,3) WHERE approval='pending' AND verify_code='';
 ALTER TABLE link_activations ADD COLUMN approved INTEGER NOT NULL DEFAULT 1;
 ALTER TABLE users ADD COLUMN totp_enc BLOB;
 ALTER TABLE users ADD COLUMN totp_pending_enc BLOB;

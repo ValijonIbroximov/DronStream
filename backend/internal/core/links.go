@@ -545,7 +545,7 @@ func (s *Service) ApproveLinkSession(ctx context.Context, a Actor, sessionID int
 			denyCode = "approval_not_pending"
 			return nil
 		}
-		if !secure.Equal([]byte(strings.ToUpper(strings.TrimSpace(verifyCode))), []byte(code)) {
+		if code == "" || !secure.Equal([]byte(strings.ToUpper(strings.TrimSpace(verifyCode))), []byte(code)) {
 			denyCode = "verify_code_mismatch"
 			return nil
 		}

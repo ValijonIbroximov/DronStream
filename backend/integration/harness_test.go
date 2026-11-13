@@ -171,6 +171,9 @@ type client struct {
 	http *http.Client
 	csrf string
 	name string
+	// the browser session the server reported last (id, verification code)
+	sessID     int64
+	verifyCode string
 }
 
 func newClient(t testing.TB, name string) *client {
@@ -220,9 +223,16 @@ func (c *client) mustJSON(method, path string, body any, out any) {
 }
 
 func (c *client) absorbSession(b []byte) {
-	var s struct{ CSRF string }
+	var s struct {
+		CSRF    string
+		Session struct {
+			ID         int64
+			VerifyCode string
+		}
+	}
 	json.Unmarshal(b, &s)
 	c.csrf = s.CSRF
+	c.sessID, c.verifyCode = s.Session.ID, s.Session.VerifyCode
 }
 
 func (c *client) login(user, pass string) int {

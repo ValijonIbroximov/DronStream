@@ -46,6 +46,22 @@ func (c *client) upload(kind, title string, data []byte) (int, map[string]any) {
 	return resp.StatusCode, m
 }
 
+// approve: the administrator approves exactly this browser's request,
+// using the verification code that the visitor's screen shows.
+func (c *client) approve(visitor *client) (int, string) {
+	st, b := c.do("POST", fmt.Sprintf("/api/admin/approvals/%d/approve", visitor.sessID), map[string]string{"verifyCode": visitor.verifyCode}, nil)
+	var e struct{ Code string }
+	json.Unmarshal(b, &e)
+	return st, e.Code
+}
+
+func (c *client) mustApprove(visitor *client) {
+	c.t.Helper()
+	if st, code := c.approve(visitor); st != 200 {
+		c.t.Fatalf("approve %s: %d %s", visitor.name, st, code)
+	}
+}
+
 func (c *client) activate(token, reqID string) (int, string) {
 	st, b := c.do("POST", "/api/link/activate", map[string]string{"token": token, "requestId": reqID}, nil)
 	if st == 200 {
@@ -189,9 +205,10 @@ func TestLinksAndMedia(t *testing.T) {
 	}
 	record("link_preview_get_qr_no_consume", "PASS")
 
-	// parallel activation from 20 different "browsers"
+	// parallel "Kirish" from 20 different browsers: only access REQUESTS are
+	// created (at most 5 per link); none of them grants anything yet.
 	var okN atomic.Int64
-	var winner *client
+	var requesters []*client
 	var wmu sync.Mutex
 	var wg sync.WaitGroup
 	for i := 0; i < 20; i++ {
@@ -202,16 +219,54 @@ func TestLinksAndMedia(t *testing.T) {
 			if st, _ := c.activate(token, fmt.Sprintf("parallel-browser-%04d", i)); st == 200 {
 				okN.Add(1)
 				wmu.Lock()
-				winner = c
+				requesters = append(requesters, c)
 				wmu.Unlock()
 			}
 		}(i)
 	}
 	wg.Wait()
-	if okN.Load() != 1 || admin.linkUses(once.Link.ID) != 1 {
-		t.Fatalf("one-time link: %d winners, uses=%d", okN.Load(), admin.linkUses(once.Link.ID))
+	if okN.Load() != 5 || admin.linkUses(once.Link.ID) != 0 {
+		t.Fatalf("one-time link: %d requests (want 5), uses=%d (want 0)", okN.Load(), admin.linkUses(once.Link.ID))
 	}
-	record("once_link_parallel_20_winners", okN.Load())
+	record("once_link_parallel_20_requests_capped", okN.Load())
+	// the link alone opens nothing: no ticket, no file, no library entry, no media
+	pend := requesters[0]
+	if _, st, code := pend.ticket(admin.streams()["demo-a"].ID, "x"); st != 403 || code != "link_pending_approval" {
+		t.Fatalf("pending link session got a ticket: %d %s", st, code)
+	}
+	if st, _ := pend.do("GET", fmt.Sprintf("/api/content/%d/file", imgID), nil, nil); st != 403 {
+		t.Fatalf("pending link session got a file: %d", st)
+	}
+	var pl struct{ Items []any }
+	pend.mustJSON("GET", "/api/library", nil, &pl)
+	if len(pl.Items) != 0 {
+		t.Fatalf("pending link session sees %d library items", len(pl.Items))
+	}
+	record("link_alone_grants_nothing", "PASS (ticket 403 link_pending_approval, fayl 403, kutubxona bo'sh)")
+	// a wrong verification code does not approve
+	if st, code := admin.do("POST", fmt.Sprintf("/api/admin/approvals/%d/approve", pend.sessID), map[string]string{"verifyCode": "XXX-XXX"}, nil); st != 409 || !strings.Contains(string(code), "verify_code_mismatch") {
+		t.Fatalf("wrong code approved: %d %s", st, code)
+	}
+	// two approvals at once for two different requests: exactly one wins
+	var won atomic.Int64
+	var winner *client
+	for _, c := range requesters[:2] {
+		wg.Add(1)
+		go func(c *client) {
+			defer wg.Done()
+			if st, _ := admin.approve(c); st == 200 {
+				won.Add(1)
+				wmu.Lock()
+				winner = c
+				wmu.Unlock()
+			}
+		}(c)
+	}
+	wg.Wait()
+	if won.Load() != 1 || admin.linkUses(once.Link.ID) != 1 {
+		t.Fatalf("one-time link approved %d times, uses=%d", won.Load(), admin.linkUses(once.Link.ID))
+	}
+	record("once_link_parallel_approvals_one_winner", won.Load())
 	if st, code := newClient(t, "late").activate(token, "late-browser-000001"); st != 403 || code != "link_used_up" {
 		t.Fatalf("other browser after use: %d %s", st, code)
 	}
@@ -223,8 +278,12 @@ func TestLinksAndMedia(t *testing.T) {
 	admin.mustJSON("POST", "/api/admin/links", map[string]any{"name": "Retry", "preset": "once", "sessionMinutes": 60, "objects": objs}, &once2)
 	t2 := tokenOf(once2.Share.URL)
 	retry.activate(t2, "same-req-id-0000001")
-	if st, _ := retry.activate(t2, "same-req-id-0000001"); st != 200 || admin.linkUses(once2.Link.ID) != 1 {
+	if st, _ := retry.activate(t2, "same-req-id-0000001"); st != 200 || admin.linkUses(once2.Link.ID) != 0 {
 		t.Fatalf("retry: %d uses=%d", st, admin.linkUses(once2.Link.ID))
+	}
+	admin.mustApprove(retry)
+	if admin.linkUses(once2.Link.ID) != 1 {
+		t.Fatalf("retry then approval: uses=%d", admin.linkUses(once2.Link.ID))
 	}
 	record("activation_retry_not_double_counted", "PASS")
 
@@ -354,6 +413,7 @@ func TestLinksAndMedia(t *testing.T) {
 	if st, code := tc.activate(tokenOf(timed.Share.URL), "timed-browser-000001"); st != 200 {
 		t.Fatalf("timed activate %d %s", st, code)
 	}
+	admin.mustApprove(tc)
 	tv := tc.watch(admin.streams()["demo-a"].ID, "t")
 	resp2, err := tc.http.Do(func() *http.Request {
 		r, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/content/%d/file", base, vidID), nil)
@@ -406,21 +466,40 @@ func TestLinksAndMedia(t *testing.T) {
 	// ---- N-limit under parallel HTTP ----
 	var multi linkResp
 	admin.mustJSON("POST", "/api/admin/links", map[string]any{"name": "3 marta", "preset": "multi", "maxUses": 3, "maxParallel": 50, "sessionMinutes": 30, "objects": objs}, &multi)
-	var nOK atomic.Int64
+	var mreq []*client
 	for i := 0; i < 15; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			if st, _ := newClient(t, "m").activate(tokenOf(multi.Share.URL), fmt.Sprintf("multi-browser-%05d", i)); st == 200 {
-				nOK.Add(1)
+			c := newClient(t, "m")
+			if st, _ := c.activate(tokenOf(multi.Share.URL), fmt.Sprintf("multi-browser-%05d", i)); st == 200 {
+				wmu.Lock()
+				mreq = append(mreq, c)
+				wmu.Unlock()
 			}
 		}(i)
 	}
 	wg.Wait()
-	if nOK.Load() != 3 || admin.linkUses(multi.Link.ID) != 3 {
-		t.Fatalf("N=3 over HTTP: %d", nOK.Load())
+	var nOK atomic.Int64
+	for _, c := range mreq {
+		wg.Add(1)
+		go func(c *client) {
+			defer wg.Done()
+			if st, _ := admin.approve(c); st == 200 {
+				nOK.Add(1)
+			}
+		}(c)
 	}
-	record("multi_link_n3_parallel15_success", nOK.Load())
+	wg.Wait()
+	if len(mreq) != 5 || nOK.Load() != 3 || admin.linkUses(multi.Link.ID) != 3 {
+		t.Fatalf("N=3 over HTTP: %d requests, %d approved, uses=%d", len(mreq), nOK.Load(), admin.linkUses(multi.Link.ID))
+	}
+	record("multi_link_n3_parallel_approvals", fmt.Sprintf("%d so'rov, %d tasdiq", len(mreq), nOK.Load()))
+	// a copy of an approved multi link in yet another browser: a new request, nothing more
+	copyc := newClient(t, "copy")
+	if st, code := copyc.activate(tokenOf(multi.Share.URL), "copied-link-browser01"); st != 403 || code != "link_used_up" {
+		t.Fatalf("copied used-up link: %d %s", st, code)
+	}
 
 	// ---- text visible to link session, disappears after revoke of grant ----
 	var multiLib struct {
@@ -433,6 +512,22 @@ func TestLinksAndMedia(t *testing.T) {
 	var multi2 linkResp
 	admin.mustJSON("POST", "/api/admin/links", map[string]any{"name": "matn", "preset": "multi", "maxUses": 2, "maxParallel": 2, "sessionMinutes": 30, "objects": []map[string]any{{"type": "content", "id": txt.ID}}}, &multi2)
 	mc.activate(tokenOf(multi2.Share.URL), "text-browser-000001")
+	// copied link in another browser before approval: request only, sees nothing
+	cp := newClient(t, "copied")
+	if st, _ := cp.activate(tokenOf(multi2.Share.URL), "copied-browser-00001"); st != 200 {
+		t.Fatalf("copied link request: %d", st)
+	}
+	var cpl struct{ Items []any }
+	cp.mustJSON("GET", "/api/library", nil, &cpl)
+	if len(cpl.Items) != 0 {
+		t.Fatal("copied link sees content before approval")
+	}
+	admin.mustApprove(mc)
+	cp.mustJSON("GET", "/api/library", nil, &cpl)
+	if len(cpl.Items) != 0 {
+		t.Fatal("approving one browser opened another browser's copy of the link")
+	}
+	record("copied_link_other_browser_no_access", "PASS (tasdiqlangan sessiya boshqa brauzerdagi nusxaga huquq bermadi)")
 	mc.mustJSON("GET", "/api/library", nil, &multiLib)
 	if len(multiLib.Items) != 1 || !strings.Contains(multiLib.Items[0].Body, "<script>") {
 		t.Fatalf("text: %+v", multiLib.Items)
