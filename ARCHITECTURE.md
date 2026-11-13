@@ -87,7 +87,7 @@ Ko'rish mumkin, agar hammasi to'g'ri bo'lsa: instance `active`; favqulodda to'xt
 |---|---|---|
 | 8443/tcp HTTPS | brauzerlar | ha |
 | 8189/udp (+tcp ixtiyoriy) WebRTC ICE | brauzerlar | ha |
-| 1935/tcp RTMP | pultlar | faqat VPN interfeysi / ruxsatlangan IP |
+| 1935/tcp RTMP (shifrlanmagan) | pult yoki serverdagi gateway | secure: faqat `127.0.0.1` yoki o'chiq; boshqa manzil — faqat laboratoriya rejimida |
 | 1936/tcp RTMPS | pultlar | ha (agar RTMPS ishlasa) |
 | 3478/udp+tcp TURN (ixtiyoriy) | brauzerlar | ha |
 | 8889, 9997, 9180 | ichki | **yo'q** (127.0.0.1) |
@@ -138,7 +138,11 @@ Ko'rish mumkin, agar hammasi to'g'ri bo'lsa: instance `active`; favqulodda to'xt
 | D45 | `sessionSubject` (yagona ruxsat funksiyasining kirish qismi) link sessiyasi uchun `approval='approved'` talab qiladi | Chipta, hook, reconciler, fayl, kutubxona — hammasi bir joydan rad etadi |
 | D46 | TOTP stdlib bilan (HMAC-SHA1, 30 s, 6 raqam), `totp_last_step` bilan replay himoyasi; sir master kalit bilan AES-GCM | Tashqi bog'liqliksiz standart algoritm; bazaning o'zi sirni ochmaydi |
 | D47 | `reauth_at` sessiyada; `sensitive` middleware 10 daqiqa | O'g'irlangan cookie bilan eng xavfli amallar bajarilmasin |
-| D48 | `security.mode`; secure'da `rtmp_listen` faqat loopback/xususiy IP yoki bo'sh, aks holda `Validate` xato (fail-closed); TOTP gate admin middleware'da | Shifrlanmagan ingest internetga ochilmasin; "secure" belgisi faqat bayroq emas |
+| D48 | `security.mode`; secure'da `rtmp_listen` faqat **loopback** yoki bo'sh (`config.ClassifyPlainRTMP`), aks holda `Validate` xato (fail-closed). Xususiy IP, CGNAT, link-local va host nomi ham rad. "Bu interfeys VPN" degan bayroq yo'q; TOTP gate admin middleware'da | Xususiy IP shifrlash emas va dastur tunnel interfeysini ishonchli aniqlay olmaydi; tekshirib bo'lmaydigan va'da berilmaydi. Loopback istisnosining ishonch chegarasi: SECURITY_MODEL.md 4.2 |
 | D49 | Migratsiya v2→v3 avtomatik `VACUUM INTO pre-migration-schema-v2-*.db` dan keyin; eski havola sessiyalari `pending` + yangi kod | Qat'iyroq siyosat mavjud sessiyalarga ham qo'llanadi |
-| D50 | E2EE amalga oshirilmagan: manba (DJI Pilot 2) E2EE qila olmaydi; MediaMTX kadrlarni ochiq qayta paketlaydi; brauzer JS'i serverdan keladi | SECURITY_MODEL.md 6-bo'lim — maket yoki animatsiya bilan almashtirilmaydi |
+| D50 | E2EE amalga oshirilmagan: joriy DJI Pilot 2 → MediaMTX oqimida E2EE yo'q; mos publisher/SDK imkoniyati hujjatlarda bor, qurilmada tekshirilmagan; MediaMTX kadrlarni ochiq qayta paketlaydi; brauzer JS'i serverdan keladi | SECURITY_MODEL.md 6-bo'lim (A/B/C variantlar) — maket yoki animatsiya bilan almashtirilmaydi |
 | D51 | CI'da paket ushlash (`tests/ci/pcap-check.py`): WebRTC UDP'da demo SPS/SEI yo'q, oddiy RTMP'da kalit ochiq | Shifrlash borligi va oddiy RTMP xavfi uchun qo'shimcha dalil (yagona isbot emas) |
+| D52 | Mehmon tasdig'i ham kod bilan: `ApproveGuestObjects(…, verifyCode, …)` tranzaksiya ichida solishtiradi; `GuestInfo.VerifyCode` va `PendingApproval.VerifyCode` JSON'ga chiqmaydi | Kodni administrator ko'rsa, uni so'ramasdan tasdiqlashi mumkin; kod faqat tomoshabin ekranida |
+| D53 | `standard` = laboratoriya rejimi: `sessionOut.securityMode/plainIngest` (faqat adminlarga) va har sahifadagi ogohlantirish; holat panelining boshida o'zgarmas 4 xulosa (`securitySummary`) | Rejim TOTP qulfi ortida ham ko'rinsin; "video maxfiyligi tayyor" degan taassurot sozlamadan kelib chiqmasin |
+| D54 | 1.3 gacha ochilgan havola sessiyasi (`link_activations.approved=1`, sessiya `pending`) tasdiqlanganda `uses_count` oshirilmaydi va `used_up` uni rad etmaydi | Foydalanish eski versiyada sanalgan; bir martalik havola egasi yangilanishdan keyin qayta tasdiqlana olishi kerak |
+| D55 | (ish jarayonida, hali repozitoriyda yo'q) `poc/e2ee/` — mahsulotdan alohida Go moduli: SFrame (RFC 9605) + HPKE (RFC 9180), manba simulyatori → kalitsiz relay → qabul qiluvchi/brauzer. Mahsulot kodi uni import qilmaydi | E2EE imkoniyatini standartlar asosida tekshirish; DJI'da ishlaydi degan da'vo yo'q |

@@ -107,7 +107,11 @@ if ($status) {
     $guideFiles = @($changedFiles | Where-Object { $_ -like "guide/*" -or $_ -eq "info.html" -or $_ -like "backend/internal/webui/help/*" }).Count
     $nodeExe = Join-Path $td "node\node.exe"
     $guideBuild = Join-Path $ctx.Base "guide\build.mjs"
-    if ($guideFiles -gt 0 -and (Test-Path $nodeExe) -and (Test-Path $guideBuild)) {
+    $guideDeps = (Test-Path (Join-Path $ctx.Base "web\node_modules\three\package.json")) -and (Test-Path (Join-Path $ctx.Base "web\node_modules\esbuild\package.json"))
+    if ($guideFiles -gt 0 -and (Test-Path $nodeExe) -and (Test-Path $guideBuild) -and -not $guideDeps) {
+      Write-DsLog "Qo'llanma tekshiruvi o'tkazib yuborildi: web\node_modules ichida three/esbuild yo'q (DronStreamTayyorla.bat yoki: cd web; npm ci). GitHub CI baribir tekshiradi." "WARN"
+    }
+    if ($guideFiles -gt 0 -and (Test-Path $nodeExe) -and (Test-Path $guideBuild) -and $guideDeps) {
       Write-DsLog "Tezkor tekshiruv: qo'llanma manbasi va hosil qilingan fayllar" "STEP"
       if ((Invoke-DsNative $nodeExe @($guideBuild, "--check")).Code -ne 0) { Stop-DsWith $EX_FAIL "info.html yoki admin yordam manbadan eskirgan. Qayta hosil qiling: node guide\build.mjs - commit qilinmadi." }
     }

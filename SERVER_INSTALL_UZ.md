@@ -243,11 +243,13 @@ Paketdagi `config/dronstream.yaml` da `security.mode: "secure"`:
 
 | Talab | Natija |
 |---|---|
-| Oddiy (shifrlanmagan) RTMP faqat VPN/lokal interfeysda | `media.rtmp_listen` bo'sh (sukut) yoki xususiy IP (masalan `<VPN_IP>:1935`). `":1935"` yoki ommaviy IP bo'lsa dastur **ishga tushmaydi** va sababini logga yozadi |
+| Oddiy (shifrlanmagan) RTMP tarmoqdan qabul qilinmaydi | `media.rtmp_listen` bo'sh (sukut) yoki `127.0.0.1:1935`. Xususiy IP (`<VPN_IP>:1935`, LAN, Wi-Fi), ommaviy IP, `":1935"` yoki host nomi bo'lsa dastur **ishga tushmaydi** va sababini logga yozadi: xususiy IP shifrlash emas |
 | RTMPS | `media.rtmps_listen` (masalan `":1936"`) + ishonchli sertifikat. RTMPS ishlamasa avtomatik RTMP'ga o'tilmaydi. DJI pulti bilan sinash tartibi: SECURITY_MODEL.md 4-bo'lim |
 | Administrator ikkinchi bosqichi | TOTP yoqilmaguncha admin amallari bloklangan |
 
-Mavjud o'rnatishdagi (1.0–1.2 dan yangilangan) sozlama faylida `security.mode` bo'lmasa — `standard`. Production uchun uni `secure` ga o'zgartiring va xizmatni qayta ishga tushiring; avval `rtmp_listen` ni tekshiring.
+Mavjud o'rnatishdagi (1.0–1.2 dan yangilangan) sozlama faylida `security.mode` bo'lmasa — `standard`, ya'ni **laboratoriya rejimi**: admin panel har sahifada "Laboratoriya rejimi — production emas" deb ko'rsatadi. Production uchun uni `secure` ga o'zgartiring va xizmatni qayta ishga tushiring; avval `rtmp_listen` ni tekshiring (yuqoridagi jadval).
+
+Pultni secure rejimda ulash yo'llari (RTMPS yoki shifrlangan tunnel + serverdagi gateway) va ularning tasdiqlanmagan joylari: `DJI_SETUP_UZ.md`. Haqiqiy pult bilan tasdiqlangan yo'l hali yo'q.
 
 Admin panel → **Audit va sozlamalar → Sozlamalar → Xavfsizlik holati** qaysi himoya amalda tekshirilgani va qaysi biri tasdiqlanmaganini ko'rsatadi.
 

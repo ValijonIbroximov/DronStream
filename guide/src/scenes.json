@@ -44,12 +44,12 @@
       "beats": [
         {
           "title": "Joriy: pult → server",
-          "text": "Oddiy RTMP shifrlanmagan: video va pult kaliti yo‘lda ochiq ketadi. Uni VPN yoki yopiq tarmoq bilan himoyalang. Serverda RTMPS bor, lekin DJI Pilot 2 bilan ishlashi tasdiqlanmagan.",
+          "text": "Oddiy RTMP shifrlanmagan: video va pult kaliti yo‘lda ochiq ketadi — xususiy tarmoqda ham. Production (secure) rejimda server uni tarmoqdan qabul qilmaydi. Serverda RTMPS bor, lekin pult bilan ishlashi tasdiqlanmagan.",
           "cam": "sec_ingest",
-          "state": ["ingest", "vpn"],
+          "state": ["ingest"],
           "labels": [
             ["ingestMid", "RTMP — shifrlanmagan", "video va kalit ochiq ketadi", "bad"],
-            ["vpnTag", "VPN yoki yopiq tarmoq", "tavsiya etilgan himoya", "ok"],
+            ["vpnTag", "Xususiy tarmoq — shifrlash emas", "oddiy RTMP faqat laboratoriya rejimida", "warn"],
             ["remote", "DJI Pilot 2", "RTMP yuboradi; RTMPS tasdiqlanmagan", "warn"]
           ]
         },
@@ -78,17 +78,18 @@
         },
         {
           "title": "Reja — amalga oshirilmagan",
-          "text": "Manbadan tasdiqlangan tomoshabingacha end-to-end shifrlash hozir YO‘Q. DJI Pilot 2 faqat RTMP/RTSP yuboradi, manba tomonda shifrlab bo‘lmaydi. Buning uchun SDK asosidagi yuboruvchi yoki ishonchli lokal shlyuz kerak bo‘ladi — shlyuz ham videoni ochiq ko‘radi.",
+          "text": "Manbadan tasdiqlangan tomoshabingacha end-to-end shifrlash hozir YO‘Q. Joriy DJI Pilot 2 → server oqimida u bo‘lmaydi. Mos yo‘llar — pultdagi o‘z ilovamiz yoki ishonchli lokal shlyuz — hujjatlarda bor, lekin haqiqiy qurilmada tekshirilmagan; ikkalasi ham qo‘shimcha dastur yoki qurilma talab qiladi.",
           "cam": "sec_plan",
           "state": ["planned", "dim"],
           "labels": [
             ["plannedMid", "End-to-end shifrlash", "REJA — amalga oshirilmagan", "plan"],
-            ["gateway", "Ishonchli lokal shlyuz (reja)", "u ham videoni ochiq ko‘radi", "plan"],
-            ["remote", "DJI Pilot 2", "faqat RTMP/RTSP — manbada E2EE yo‘q", "bad"]
+            ["gateway", "Lokal shlyuz yoki pultdagi ilova (reja)", "qo‘shimcha dastur/qurilma; tekshirilmagan", "plan"],
+            ["remote", "DJI Pilot 2", "joriy oqimda E2EE yo‘q", "bad"]
           ]
         }
       ],
-      "sections": ["ruxsat-shifr", "kim-koradi", "ingest", "secure-rejim"]
+      "sections": ["ruxsat-shifr", "kim-koradi", "ingest", "secure-rejim"],
+      "sectionBeats": { "ruxsat-shifr": 2, "kim-koradi": 1, "ingest": 0, "secure-rejim": 0 }
     },
     {
       "id": "ornatish",
@@ -263,12 +264,12 @@
         },
         {
           "title": "Mehmon so‘rovi",
-          "text": "Hisobi yo‘q odam ismini yozib so‘rov yuboradi. Ism tasdiqlanmagan: admin u kimligiga boshqa yo‘l bilan ishonch hosil qiladi.",
+          "text": "Hisobi yo‘q odam ismini yozib so‘rov yuboradi va ekranida tekshirish kodi chiqadi. Ism tasdiqlanmagan: admin kodni mehmonning o‘zidan so‘rab kiritadi — kod mos kelsagina shu brauzer tasdiqlanadi.",
           "cam": "acc_approve",
           "state": ["guestTravel~"],
           "labels": [
             ["req", "Mehmon so‘rovi", "ism shaxsni isbotlamaydi", "warn"],
-            ["admin", "Admin qaror qiladi", "qaysi kontent, qancha vaqtga"]
+            ["admin", "Admin kodni so‘rab kiritadi", "kod faqat mehmon ekranida ko‘rinadi"]
           ]
         },
         {
@@ -290,9 +291,20 @@
             ["rightsOk", "Ruxsat berilgan", "ko‘rinadi", "ok"],
             ["rightsNo", "Ruxsat yo‘q", "umuman ko‘rinmaydi", "bad"]
           ]
+        },
+        {
+          "title": "Administrator himoyasi",
+          "text": "Administrator parol va telefondagi autentifikator kodi (TOTP) bilan kiradi. Pult kalitini ko‘rish yoki hisobni o‘zgartirish kabi muhim amallar parolni qayta tasdiqlashni so‘raydi.",
+          "cam": "acc_admin",
+          "state": [],
+          "labels": [
+            ["admin", "Parol + TOTP kodi", "bir marta ishlatilgan kod qayta o‘tmaydi"],
+            ["adminScreen", "Muhim amalda qayta tasdiqlash", "oxirgi 10 daqiqada parol kiritilgan bo‘lishi kerak", "warn"]
+          ]
         }
       ],
-      "sections": ["foydalanuvchilar", "f-hisob", "f-sessiya", "f-audit", "admin-mfa"]
+      "sections": ["foydalanuvchilar", "f-hisob", "f-sessiya", "f-audit", "admin-mfa"],
+      "sectionBeats": { "f-hisob": 1, "f-sessiya": 2, "admin-mfa": 4 }
     },
     {
       "id": "havola",

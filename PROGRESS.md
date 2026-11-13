@@ -16,7 +16,7 @@
 8. **Hujjatlar**: README_UZ, INSTALL_UZ, ADMIN_GUIDE_UZ, DJI_SETUP_UZ, SECURITY, BACKUP_RESTORE_UZ, TEST_REPORT, ARCHITECTURE, REQUIREMENTS.
 
 ## Keyingi ishlar (real muhit kerak)
-- Real DJI Mavic 3T / DJI Pilot 2 bilan DJI_SETUP_UZ.md 4-bo'limdagi sinov protokoli (RTMP+VPN, RTMPS, `?key=` qo'llanishi).
+- Real DJI Mavic 3T / DJI Pilot 2 bilan DJI_SETUP_UZ.md 5-bo'limdagi sinov protokoli (RTMPS, tunnel, `?key=` qo'llanishi).
 - Haqiqiy server manzili/domeni: CA sertifikat yoki ACME, firewall, router port yo'naltirish.
 - Tashqi internet / NAT / CGNAT / mobil tarmoqdan tomosha; TURN real tarmoqda.
 - Toza yangi Windows kompyuterda o'rnatish va Windows service rejimi.
@@ -109,3 +109,19 @@ Avvalgi xavfsizlik va info.html dizayniga oid zid talablar shu topshiriq bilan a
 - [ ] D. `security.mode: secure`: ochiq interfeysdagi oddiy RTMP rad; RTMPS fallback yo'q; `check` hisobotida tasdiqlangan/tasdiqlanmagan himoyalar.
 - [ ] E. 3D qo'llanma birlashtirish (agent natijasi) + guide.md matni yangi siyosatga.
 - [ ] F. `SECURITY_ACCEPTANCE.md`, testlar, vizual qabul, 1.3.0 paket, push.
+
+### v1.3.0 — 2-sessiya holati (2026-11-14, limit sabab to'xtadi)
+Bajarildi va push qilindi:
+- 3D qo'llanma worktree'dan saqlandi (branch worktree-agent-aa03d029b6b65a1ce, 8303b37) va main bilan birlashtirildi.
+- Secure rejim: oddiy RTMP faqat 127.0.0.1 yoki o'chiq (xususiy IP ham rad); standard = laboratoriya rejimi (admin panelda ogohlantirish).
+- Mehmon ham kod bilan tasdiqlanadi; kodlar admin API'ga yuborilmaydi; eski havola sessiyasi ikki marta sanalmaydi.
+- Xavfsizlik holati: o'zgarmas 4 xulosa. Hujjatlar: SECURITY_MODEL (4- va 6-bo'lim qayta yozildi, DJI SDK faktlari, A/B/C), DJI_SETUP_UZ, guide.md, sahnalar.
+- Brauzerda UI sinovlari o'tkazildi (migratsiya, kod, nusxa havola, rad, mehmon, muddat, revoke, chiqish, blok, qayta tasdiqlash, TOTP, takroriy kod, tiklash kodi).
+- Qo'llanma: 18 ta headless tekshiruv o'tdi, 28 screenshot (docs/guide-preview), build.ps1 tartibi tuzatildi (npm ci qo'llanmadan oldin).
+Qolgan (keyingi sessiya shu ro'yxatdan boshlaydi):
+1. poc/e2ee (diskda, commit qilinmagan, ko'rib chiqilmagan): kodni o'qish, run-tests, brauzerda tekshirish, README, keyin commit va hujjatlardagi "ish jarayonida" yozuvini yangilash.
+2. SECURITY_ACCEPTANCE.md ni yangilash (yangi testlar, brauzer sinovlari turi, 3.1 test nomi eskirgan).
+3. 3D: desktop-20 va mobil screenshotlarni ko'zdan kechirish (mobil panel), kadr vaqti o'lchovi (preview.mjs --perf), --nowebgl.
+4. To'liq testlar bitta yurishda (unit, integratsiya, ps-lint, install-roundtrip, update-rollback 1.2.0->1.3.0, scripts-test), 1.3.0 paket + SHA256, TEST_REPORT v1.3 (aniq SHA), yakuniy commit uchun CI.
+5. Foydalanuvchidan qurilma ma'lumotlari (SECURITY_MODEL 6.5).
+6. Tozalash: build/devbin/dronstream-dev.exe, scratch test ildizlari.

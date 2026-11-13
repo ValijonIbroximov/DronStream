@@ -30,9 +30,11 @@ media:
   # Brauzerlarga e'lon qilinadigan server IP/domenlari (public IP, LAN IP, domen).
   webrtc_additional_hosts: []
   webrtc_ips_from_interfaces: true
-  # Pultdan oddiy RTMP. RTMP SHIFRLANMAGAN: uni faqat VPN yoki yopiq tarmoq interfeysiga bog'lang,
-  # masalan "10.8.0.1:1935". Bo'sh = o'chiq (sukut). secure rejimda ":1935" (barcha interfeyslar) yoki
-  # ommaviy IP bilan dastur ishga tushmaydi. Avtomatik RTMPS -> RTMP fallback yo'q.
+  # Pultdan oddiy RTMP. RTMP SHIFRLANMAGAN: video ham, pult kaliti ham ochiq ketadi. Bo'sh = o'chiq (sukut).
+  # secure rejimda faqat "" yoki "127.0.0.1:1935" (shu kompyuterdagi shifrlangan gateway uchun) qabul qilinadi.
+  # Xususiy IP (LAN, Wi-Fi, VPN diapazoni), ommaviy IP, ":1935" yoki host nomi bilan dastur ishga tushmaydi:
+  # xususiy IP shifrlash emas. Boshqa manzil faqat laboratoriya rejimida (security.mode: standard).
+  # Avtomatik RTMPS -> RTMP fallback yo'q.
   rtmp_listen: ""
   # Ixtiyoriy RTMPS (shifrlangan). config\secrets\tls.crt/tls.key kerak. Bo'sh = o'chiq.
   rtmps_listen: ""
@@ -68,8 +70,9 @@ turn:
   stun_urls: []
 
 security:
-  # secure = production siyosati: ochiq interfeysdagi shifrlanmagan RTMP taqiqlanadi va har bir administrator
-  # ikkinchi bosqichni (TOTP) yoqmaguncha admin amallari bloklanadi. standard = cheklovlarsiz (sinov uchun).
+  # secure = production siyosati: shifrlanmagan RTMP tarmoqdan qabul qilinmaydi (faqat 127.0.0.1 yoki o'chiq) va
+  # har bir administrator ikkinchi bosqichni (TOTP) yoqmaguncha admin amallari bloklanadi.
+  # standard = LABORATORIYA rejimi: hech narsa majburiy emas, admin panel har sahifada ogohlantiradi.
   # Havola/QR har ikki rejimda ham faqat taklif: administrator aniq brauzer sessiyasini tasdiqlaydi.
   mode: "secure"
   session_hours: 24

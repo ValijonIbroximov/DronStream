@@ -8,7 +8,7 @@
 ## 2. Ikki transport yo'li
 | Yo'l | Himoya | Izoh |
 |---|---|---|
-| A. Pult → server | RTMPS (TLS) yoki RTMP + VPN | RTMP ni ochiq internetga chiqarmang. `rtmp_listen` ni VPN IP ga bog'lang / firewall bilan cheklang. Pult URL ida faqat VPN ichki IP — VPN uzilsa trafik internetga chiqmaydi. RTMPS da sertifikat tekshiruvini real pultda sinang (DJI_SETUP_UZ.md, 7-sinov). |
+| A. Pult → server | RTMPS (TLS), yoki shifrlangan tunnel + serverdagi gateway → `127.0.0.1` | Oddiy RTMP shifrlanmagan; xususiy IP ham himoya emas. secure rejimda `rtmp_listen` faqat bo'sh yoki `127.0.0.1` (v1.3, 14-bo'lim); boshqa manzil — faqat laboratoriya rejimida. RTMPS'da sertifikat tekshiruvini haqiqiy pultda sinang (DJI_SETUP_UZ.md, 7–8-sinov). Pult bilan ishlashi tasdiqlanmagan. |
 | B. Server → brauzer | HTTPS (TLS 1.2+) interfeys va signalling; media WebRTC DTLS-SRTP | MediaMTX WebRTC HTTP signalling faqat 127.0.0.1 da; brauzer unga backend HTTPS proxy orqali boradi. |
 
 Yangi kodek yoki shifrlash protokoli yaratilmagan: TLS (Go stdlib), DTLS-SRTP (MediaMTX/brauzer), Argon2id va AES-256-GCM (Go x/crypto, stdlib).
@@ -132,9 +132,11 @@ Loyiha egasiga yopiq kanal orqali xabar bering; publish kalitlari va parollarni 
 Bu bo'lim avvalgi "maxsus havola o'zi kirish beradi" qoidasini **bekor qiladi** (12-bo'limdagi havola faollashtirish tavsifi endi faqat so'rov yaratishga tegishli). Umumiy model va raqiblar tahlili: [SECURITY_MODEL.md](SECURITY_MODEL.md). Qabul testlari: [SECURITY_ACCEPTANCE.md](SECURITY_ACCEPTANCE.md).
 
 - **Havola/QR**: "Kirish" = kutayotgan sessiya + tasodifiy tekshirish kodi. Administrator kodni kiritib aynan shu sessiyani tasdiqlaydi (`/api/admin/approvals/{id}/approve`). Tasdiqsiz sessiyada chipta, fayl, kutubxona yo'q (`link_pending_approval`). Foydalanish tasdiqda sanaladi; havola bo'yicha kutayotgan so'rovlar ≤ 5. Eski havola sessiyalari migratsiyada kutayotgan holatga o'tadi.
-- **Mehmon**: oldingidek admin tasdig'i; endi tekshirish kodi ham ko'rsatiladi.
+- **Mehmon**: mehmon ekranida tekshirish kodi chiqadi; administrator uni mehmondan so'rab **kiritadi**, server solishtiradi (`verify_code_mismatch`). Allaqachon tasdiqlangan mehmonning ruxsatini o'zgartirish kod talab qilmaydi.
+- **Kodlar admin API'ga yuborilmaydi** (havola so'rovlari uchun ham, mehmonlar uchun ham): administrator kodni faqat tomoshabinning o'zidan oladi.
 - **TOTP (RFC 6238)**: sir AES-GCM (master kalit) bilan; qayta ishlatish rad; 10 ta xeshlangan bir martalik tiklash kodi; `reset-admin` TOTP'ni ham tozalaydi.
 - **Qayta tasdiqlash**: kalit ko'rish/almashtirish/bekor qilish, stream o'chirish, foydalanuvchi yaratish/o'zgartirish, parol tiklash, server holati — 10 daqiqalik oynadan tashqarida `reauth_required`.
-- **secure rejim** (`security.mode: secure`, paketda sukut): ochiq interfeysdagi oddiy RTMP bilan ishga tushmaydi; TOTP'siz admin faqat TOTP yoqa oladi.
-- **Xavfsizlik holati** (`/api/admin/security-status`): har band ish vaqtida "tekshirilgan / zaif / buzilgan / tasdiqlanmagan / mavjud emas".
-- **Amalga oshirilmagan**: E2EE (server videoni ochiq ko'radi), passkey, qurilma kaliti bilan sessiya bog'lash, saqlangan mediani serverdan yashirish.
+- **secure rejim** (`security.mode: secure`, paketda sukut): oddiy RTMP faqat o'chiq yoki `127.0.0.1` da bo'lishi mumkin — xususiy IP (LAN, Wi-Fi, VPN diapazoni, CGNAT), ommaviy IP, barcha interfeyslar va host nomi bilan dastur ishga tushmaydi (xususiy IP shifrlash emas); TOTP'siz admin faqat TOTP yoqa oladi.
+- **standard = laboratoriya rejimi**: hech narsa majburiy emas; admin panelning har sahifasida "Laboratoriya rejimi — production emas" ogohlantirishi chiqadi.
+- **Xavfsizlik holati** (`/api/admin/security-status`): sozlamaga bog'liq bo'lmagan to'rt xulosa bilan boshlanadi (kirish nazorati kuchaytirilgan; server videoni ochiq ko'radi; pult RTMPS va sertifikat tekshiruvi tasdiqlanmagan; E2EE amalga oshirilmagan), so'ng har band ish vaqtida "tekshirilgan / zaif / buzilgan / tasdiqlanmagan / mavjud emas".
+- **Amalga oshirilmagan**: E2EE (server videoni ochiq ko'radi; alohida proof-of-concept ish jarayonida, hali repozitoriyda yo'q), passkey, qurilma kaliti bilan sessiya bog'lash, saqlangan mediani serverdan yashirish. Pultni secure rejimda ulashning tasdiqlangan yo'li hali yo'q.

@@ -3,7 +3,7 @@
 DJI pultlaridan kelayotgan jonli videoni markaziy serverda (Windows yoki Ubuntu Server) qabul qilib, **faqat administrator ruxsat bergan** foydalanuvchi va mehmonlarga brauzerda (WebRTC) ko'rsatadigan dastur.
 
 ```
-DJI pult --RTMP (VPN orqali) / RTMPS--> [ Windows server: DronStream + MediaMTX ] --HTTPS + WebRTC--> brauzerlar
+DJI pult --RTMPS yoki shifrlangan tunnel--> [ server: DronStream + MediaMTX ] --HTTPS + WebRTC--> brauzerlar
 ```
 
 > **Muhim.** Bu markaziy serverga ishonadigan tizim: server videoni ochiq ko'rinishda qabul qiladi va qayta uzatadi. Bu **end-to-end shifrlash emas**. Server kompyuteri o'chsa, uxlasa yoki tarmoqdan uzilsa — translatsiya ham to'xtaydi. Admin kompyuteri server bo'lishi mumkin, lekin u yoqiq va uyqu rejimiga o'tmaydigan bo'lishi kerak.
@@ -22,8 +22,9 @@ DJI pult --RTMP (VPN orqali) / RTMPS--> [ Windows server: DronStream + MediaMTX 
 ## Xavfsizlik siyosati (v1.3)
 - **Havola/QR — faqat taklif.** Havolani ochgan odam kirish so'rovini yuboradi va ekranida tekshirish kodini ko'radi; administrator aynan shu brauzer sessiyasini kod bilan tasdiqlamaguncha hech narsa ochilmaydi. Havolaning nusxasi boshqa brauzerga huquq bermaydi.
 - **Administrator: TOTP** (autentifikator ilovasi) + 10 ta tiklash kodi; muhim amallarda parolni qayta tasdiqlash.
-- **secure rejim** (paketda sukut): shifrlanmagan RTMP faqat VPN/lokal interfeysda; TOTP'siz admin ishlay olmaydi.
-- **Kim hali videoni ko'ra oladi**: server (va uning root egasi) — video serverda ochiq; oddiy RTMP'da pult↔server yo'li. Pultdan tomoshabingacha shifrlash (E2EE) DJI Pilot 2 bilan mumkin emas va amalga oshirilmagan. Batafsil: [SECURITY_MODEL.md](SECURITY_MODEL.md), testlar: [SECURITY_ACCEPTANCE.md](SECURITY_ACCEPTANCE.md).
+- **Mehmon so'rovi ham kod bilan**: administrator mehmon ekranidagi kodni kiritadi; kodlar admin paneliga yuborilmaydi.
+- **secure rejim** (paketda sukut): shifrlanmagan RTMP faqat o'chiq yoki `127.0.0.1` da — xususiy IP ham rad etiladi, chunki u shifrlash emas; TOTP'siz admin ishlay olmaydi. `standard` — laboratoriya rejimi, admin panel buni har sahifada ko'rsatadi.
+- **Nima hal qilinmagan** ("video maxfiyligi tayyor" emas): server va uning root egasi videoni ochiq ko'radi; pultning RTMPS'ni qo'llashi va sertifikatni tekshirishi tasdiqlanmagan; pultdan tomoshabingacha shifrlash (E2EE) amalga oshirilmagan. Joriy DJI Pilot 2 → MediaMTX oqimida E2EE yo'q; mos publisher/SDK imkoniyati hali qurilmada tekshirilmagan. Standartlar (SFrame, HPKE) asosidagi alohida proof-of-concept ish jarayonida, hali repozitoriyda yo'q. Batafsil: [SECURITY_MODEL.md](SECURITY_MODEL.md), testlar: [SECURITY_ACCEPTANCE.md](SECURITY_ACCEPTANCE.md).
 
 ## Hujjatlar
 | Fayl | Mazmuni |

@@ -56,6 +56,11 @@ const SHOTS = [
   ['mobile-05-revoke', PHONE, 'scene=revoke&beat=2'],
   ['mobile-06-diag-buyruq', PHONE, 'scene=diag&beat=0'],
   ['mobile-07-oddiy-rejim', PHONE, 'scene=havola&plain=1'],
+  ['desktop-19-mehmon-kod', DESK, 'scene=hisob&beat=1&quality=high'],
+  ['desktop-20-admin-himoyasi', DESK, 'scene=hisob&beat=4&quality=high'],
+  ['desktop-21-server-brauzer', DESK, 'scene=xavfsizlik&beat=2&quality=high'],
+  ['mobile-08-reja-amalga-oshirilmagan', PHONE, 'scene=xavfsizlik&beat=3'],
+  ['mobile-09-admin-himoyasi', PHONE, 'scene=hisob&beat=4'],
 ]
 
 async function launch(extraFlags) {
@@ -159,28 +164,36 @@ async function checks(c) {
     if (!cond) fails++
   }
   const st = () => c.evaluate('window.__dsGuide.state()')
+  // Waits until the scene stops rendering (the eased state has reached its target). A fixed sleep is not enough
+  // with the software renderer: frames are slow there and the easing may still be running.
+  const settle = async (max = 30000) => {
+    const t0 = Date.now()
+    let x
+    do {
+      await sleep(250)
+      x = await st()
+    } while (x.rendering && Date.now() - t0 < max)
+    return x
+  }
   await c.open(DESK, 'debug=1', 2500)
   let s = await st()
   ok(s.gl && s.frames > 0, '3D yoqildi va kadr chizildi', { quality: s.quality, frames: s.frames })
-  await sleep(7500)
-  const f1 = (await st()).frames
+  const f1 = (await settle()).frames
   await sleep(2500)
   s = await st()
   ok(s.frames === f1 && !s.rendering, 'bo‘sh turganda kadr chizilmaydi (render on demand)', { before: f1, after: s.frames })
   // determinism: the same scroll position gives the same state, also after visiting the end
   await c.evaluate('scrollTo(0, 5200)')
-  await sleep(3500)
-  const a = await st()
+  const a = await settle()
   await c.evaluate('scrollTo(0, document.documentElement.scrollHeight)')
-  await sleep(3000)
+  await settle()
   await c.evaluate('scrollTo(0, 5200)')
-  await sleep(3500)
-  const b = await st()
-  ok(a.Tt === b.Tt && Math.abs(a.T - b.T) < 1e-9, 'orqaga aylantirilganda holat aynan tiklanadi', { a, b })
+  const b = await settle()
+  ok(!a.rendering && !b.rendering && a.Tt === b.Tt && Math.abs(a.T - b.T) < 1e-9, 'orqaga aylantirilganda holat aynan tiklanadi', { a, b })
   // table of contents: a section inside "Batafsil" opens it and puts the scene in the mapped state
   await c.evaluate('document.querySelector(\'#toc a[href="#x-limit"]\').click()')
-  await sleep(3500)
-  s = await st()
+  await sleep(1500)
+  s = await settle()
   const pos = await c.evaluate('document.getElementById("scene-pos").textContent')
   const top = await c.evaluate('Math.round(document.getElementById("x-limit").getBoundingClientRect().top)')
   ok(s.open.includes('diag') && pos.startsWith('11') && top > 40 && top < 140, 'mundarija: x-limit ochildi (11-sahna, Batafsil ochiq)', { open: s.open, pos, top, T: s.T, reading: s.reading })

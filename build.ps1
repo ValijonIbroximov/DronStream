@@ -62,6 +62,17 @@ if ("$ver".Trim() -ne $MediaMTXVersion) { throw "MediaMTX versiyasi $ver, kutilg
 $node = Join-Path $Tools "node\node.exe"
 if (-not (Test-Path $node)) { $nodeCmd = Get-Command node -ErrorAction SilentlyContinue; if ($nodeCmd) { $node = $nodeCmd.Source } else { throw "Node topilmadi (.tools\node yoki PATH)" } }
 if (Test-Path (Join-Path $Tools "node")) { $env:PATH = (Join-Path $Tools "node") + ";" + $env:PATH }
+# The guide bundles three.js with esbuild; both come from web\node_modules (versions pinned in package-lock.json).
+$webDir = Join-Path $Root "web"
+$haveGuideDeps = (Test-Path (Join-Path $webDir "node_modules\three\package.json")) -and (Test-Path (Join-Path $webDir "node_modules\esbuild\package.json"))
+if (-not $SkipFrontend -or -not $haveGuideDeps) {
+  Step "Frontend bog'liqliklari o'rnatilmoqda (npm ci; qo'llanma ham shulardan foydalanadi)"
+  Push-Location $webDir
+  try {
+    npm ci --no-audit --no-fund
+    if ($LASTEXITCODE -ne 0) { throw "npm ci xato" }
+  } finally { Pop-Location }
+}
 Step "Qo'llanma hosil qilinmoqda (guide\src -> info.html, admin yordam)"
 & $node (Join-Path $Root "guide\build.mjs")
 if ($LASTEXITCODE -ne 0) { throw "guide build xato" }
@@ -74,8 +85,6 @@ if (-not $SkipFrontend) {
   Step "Frontend yig'ilmoqda"
   Push-Location (Join-Path $Root "web")
   try {
-    npm ci --no-audit --no-fund
-    if ($LASTEXITCODE -ne 0) { throw "npm ci xato" }
     npm run build
     if ($LASTEXITCODE -ne 0) { throw "frontend build xato" }
   } finally { Pop-Location }

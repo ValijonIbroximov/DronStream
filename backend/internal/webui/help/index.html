@@ -16,7 +16,7 @@
   <div class="bar-title">
     <svg class="logo" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="7" fill="#0b1a33" stroke="#3b9bff"/><path d="M11 9.5v13l11-6.5z" fill="#22d3ee"/></svg>
     <span>DronStream qo‘llanmasi</span>
-    <span class="ver">v1.2.0 · 2026-11-13</span>
+    <span class="ver">v1.3.0 · 2026-11-14</span>
   </div>
   <div class="bar-tools">
     <label class="search"><span class="sr">Qo‘llanmadan qidirish</span><input id="q" type="search" placeholder="Qidiruv…" autocomplete="off" spellcheck="false"></label>
@@ -84,7 +84,7 @@
 
   <main id="content">
     <header class="intro">
-      <p class="kicker">DronStream · v1.2.0</p>
+      <p class="kicker">DronStream · v1.3.0</p>
       <h1>Qo‘llanma: video pultdan tomoshabingacha</h1>
       <p class="lead">Pastga aylantiring: 12 ta sahna butun qo‘llanmani bosqichma-bosqich ko‘rsatadi. Har bir sahnada <strong>Batafsil</strong> tugmasi to‘liq matn va buyruq kartalarini ochadi. Mundarija va qidiruv kerakli joyga to‘g‘ridan-to‘g‘ri olib boradi.</p>
       <p class="intro-note">3D modellar <strong>stilizatsiyalangan sxema</strong>: DJI yoki Dell uskunasining aniq modeli emas, ularning texnik xususiyatlarini ko‘rsatmaydi. Paketlar va chiziqlar haqiqiy trafik yoki serveringizning joriy holati emas. Sahifa hech qayerga ulanmaydi.</p>
@@ -151,7 +151,7 @@
 <div class="beat-stack">
 <div class="beat" data-beat="0" id="s-xavfsizlik-1">
 <h3><span class="bn">1</span>Joriy: pult → server</h3>
-<p>Oddiy RTMP shifrlanmagan: video va pult kaliti yo‘lda ochiq ketadi. Uni VPN yoki yopiq tarmoq bilan himoyalang. Serverda RTMPS bor, lekin DJI Pilot 2 bilan ishlashi tasdiqlanmagan.</p>
+<p>Oddiy RTMP shifrlanmagan: video va pult kaliti yo‘lda ochiq ketadi — xususiy tarmoqda ham. Production (secure) rejimda server uni tarmoqdan qabul qilmaydi. Serverda RTMPS bor, lekin pult bilan ishlashi tasdiqlanmagan.</p>
 </div>
 <div class="beat" data-beat="1" id="s-xavfsizlik-2">
 <h3><span class="bn">2</span>Joriy: server ichida</h3>
@@ -163,7 +163,7 @@
 </div>
 <div class="beat" data-beat="3" id="s-xavfsizlik-4">
 <h3><span class="bn">4</span>Reja — amalga oshirilmagan</h3>
-<p>Manbadan tasdiqlangan tomoshabingacha end-to-end shifrlash hozir YO‘Q. DJI Pilot 2 faqat RTMP/RTSP yuboradi, manba tomonda shifrlab bo‘lmaydi. Buning uchun SDK asosidagi yuboruvchi yoki ishonchli lokal shlyuz kerak bo‘ladi — shlyuz ham videoni ochiq ko‘radi.</p>
+<p>Manbadan tasdiqlangan tomoshabingacha end-to-end shifrlash hozir YO‘Q. Joriy DJI Pilot 2 → server oqimida u bo‘lmaydi. Mos yo‘llar — pultdagi o‘z ilovamiz yoki ishonchli lokal shlyuz — hujjatlarda bor, lekin haqiqiy qurilmada tekshirilmagan; ikkalasi ham qo‘shimcha dastur yoki qurilma talab qiladi.</p>
 </div>
 </div>
 <button type="button" class="more" aria-expanded="false" aria-controls="d-xavfsizlik"><span class="more-t">Batafsil</span><span class="more-n"> · 4 bo‘lim</span></button>
@@ -174,8 +174,11 @@
 <h2>Ruxsat va shifrlash — ikki xil narsa</h2>
 <p>Bu ikki tushunchani aralashtirmaslik muhim.</p>
 <ul><li><strong>Shifrlash</strong> yo'ldagi begona odam trafikni o'qiy olmasligini ta'minlaydi. Brauzer bilan server orasida HTTPS va WebRTC (DTLS-SRTP) shifrlangan.</li><li><strong>Ruxsat</strong> kim nimani ko'rishi mumkinligini belgilaydi. Uni server tekshiradi: har bir video ulanishi, har bir fayl va har bir Range so'rovi uchun alohida.</li></ul>
-<p>Shifrlash bor degani ruxsat bor degani emas, va aksincha. Oddiy <strong>RTMP shifrlanmagan</strong>: pultdan serverga boradigan video yo'lda ochiq ketadi. Buning yechimlari <a href="#ingest">&quot;Pult → server yo'li&quot;</a> bo'limida.</p>
+<p>Shifrlash bor degani ruxsat bor degani emas, va aksincha. Oddiy <strong>RTMP shifrlanmagan</strong>: pultdan serverga boradigan video yo'lda ochiq ketadi. <strong>Xususiy IP manzil ham shifrlash emas</strong> — lokal tarmoq yoki Wi-Fi ichidagi qurilma uni o'qiy oladi. Yechimlar va ularning holati <a href="#ingest">&quot;Pult → server yo'li&quot;</a> bo'limida.</p>
 <p>Bu end-to-end shifrlash emas: server videoni ochiq holda ko'radi.</p>
+<div class="note warn">
+<p><strong>Joriy holat qisqacha.</strong> Kirish nazorati kuchaytirilgan. Server videoni ochiq ko'radi. Pultning RTMPS'ni qo'llashi va sertifikatni tekshirishi tasdiqlanmagan. Pultdan tomoshabingacha shifrlash (E2EE) amalga oshirilmagan. Shuning uchun bu versiya haqida &quot;video maxfiyligi to'liq ta'minlangan&quot; deb bo'lmaydi.</p>
+</div>
 </section>
 <section class="sec" id="kim-koradi" data-title="Kim videoni ko'ra oladi: joriy holat va reja">
 <h2>Kim videoni ko'ra oladi: joriy holat va reja</h2>
@@ -187,26 +190,34 @@
 <tr><td>Havolani olgan begona odam</td><td>Yo'q</td><td>Havola faqat so'rov; admin tasdig'isiz hech narsa ochilmaydi</td></tr>
 <tr><td>Ruxsatsiz foydalanuvchi</td><td>Yo'q</td><td>Server har bir ulanish, fayl va Range so'rovini tekshiradi</td></tr>
 <tr><td>Lokal tarmoq kuzatuvchisi, internet provayderi (brauzer ↔ server)</td><td>Mazmunini yo'q</td><td>HTTPS va WebRTC (DTLS-SRTP). Sertifikat ishonchli bo'lishi shart</td></tr>
-<tr><td>Pult ↔ server oralig'idagi kuzatuvchi</td><td><strong>Oddiy RTMP'da ha</strong> (kalit ham)</td><td>RTMP shifrlanmaydi: VPN yoki yopiq tarmoq kerak</td></tr>
+<tr><td>Pult ↔ server oralig'idagi kuzatuvchi</td><td><strong>Oddiy RTMP'da ha</strong> (kalit ham), xususiy tarmoqda ham</td><td>RTMP shifrlanmaydi. Production (secure) rejimda u tarmoqdan qabul qilinmaydi; RTMPS pult bilan tasdiqlanmagan</td></tr>
 <tr><td>Server egasi / hosting root, media-server</td><td><strong>Ha</strong></td><td>TLS va DTLS serverda tugaydi; MediaMTX videoni ochiq qabul qilib qayta paketlaydi</td></tr>
 <tr><td>Ruxsatli tomoshabin</td><td>Ha, va ekranini yozib olishi mumkin</td><td>Buni texnik jihatdan to'xtatib bo'lmaydi</td></tr>
 </tbody></table></div>
 <p>Shifrlangan video ham <strong>metadata</strong>ni yashirmaydi: qachon efir bo'lgani, trafik hajmi, IP manzillar tarmoqda ko'rinadi.</p>
 <h3>Rejalashtirilgan arxitektura — amalga oshirilmagan</h3>
-<p>Pultdan tomoshabingacha shifrlash (E2EE), ya'ni server ham videoni o'qiy olmasligi, <strong>hozirgi qurilmalar bilan mumkin emas</strong>: DJI Pilot 2 faqat RTMP/RTSP kabi oqimlarni yuboradi va manba tomonida E2EE qilmaydi. Serverda qabul qilib keyin shifrlash E2EE emas.</p>
-<p>Mumkin bo'lgan yo'l uchun qo'shimcha narsalar kerak: pult yonida ishonchli <strong>gateway</strong> (u videoni ochiq ko'radi) yoki DJI SDK asosidagi o'z publisher ilovasi, shifrlangan yukni ochmasdan uzatadigan media-server (SFU), tomoshabin qurilmalariga kalit tarqatish va frontend'ni serverdan alohida ishonchli manbadan yetkazish. Bular hali bajarilmagan.</p>
+<p>Pultdan tomoshabingacha shifrlash (E2EE), ya'ni server ham videoni o'qiy olmasligi, <strong>amalga oshirilmagan</strong>. Joriy DJI Pilot 2 → media-server oqimida E2EE yo'q: Pilot 2 RTMP kabi oqim yuboradi, server uni ochiq qabul qiladi. Serverda qabul qilib keyin shifrlash E2EE emas.</p>
+<p>Bu &quot;DJI bilan umuman mumkin emas&quot; degani emas — mos yo'l hujjatlarda bor, lekin haqiqiy qurilmada <strong>hali tekshirilmagan</strong>:</p>
+<div class="tbl"><table><thead><tr><th>Variant</th><th>Shifrlash qayerdan boshlanadi</th><th>Server egasidan yashiradimi</th><th>Narxi</th></tr></thead><tbody>
+<tr><td>A. Pultdagi o'z ilovamiz (DJI Mobile SDK)</td><td>Pult ichida</td><td>Ha, qo'shimcha shartlar bilan</td><td>Pultga yangi ilova; u DJI Pilot 2 <strong>o'rnida</strong> ishlaydi</td></tr>
+<tr><td>B. Pult yonidagi ishonchli gateway</td><td>Gateway'da; pult ↔ gateway ochiq</td><td>Ha, qo'shimcha shartlar bilan</td><td>Qo'shimcha qurilma va dastur</td></tr>
+<tr><td>C. RTMPS → serverimiz → WebRTC (hozirgi yo'l)</td><td>Uchdan-uchga shifrlash yo'q</td><td><strong>Yo'q</strong></td><td>Qo'shimcha narsa kerak emas; pult RTMPS'ni qo'llashi kerak</td></tr>
+</tbody></table></div>
+<p>A va B &quot;ortiqcha dastursiz ishlash&quot; talabiga zid: ikkalasi ham qo'shimcha dastur yoki qurilma talab qiladi. C esa E2EE emas. Bundan tashqari A va B uchun shifrlangan yukni ochmasdan uzatadigan relay, tomoshabin qurilmalariga kalit tarqatish va frontend'ni serverdan alohida ishonchli manbadan yetkazish kerak. Bu zanjirning alohida sinov namunasi (proof-of-concept) tayyorlanmoqda; u mahsulotga ulanmagan va DJI qurilmasida sinalmagan. To'liq solishtiruv: <code>SECURITY_MODEL.md</code>, 6-bo'lim.</p>
 </section>
 <p class="part-tag" id="e">E. Tashqi internet</p>
 <section class="sec" id="ingest" data-title="Pult → server yo'li va uning himoyasi">
 <h2>Pult → server yo'li va uning himoyasi</h2>
-<p>Oddiy <strong>RTMP shifrlanmagan</strong>. Pult kaliti va video yo'lda ochiq ketadi. Shuning uchun RTMP portini (1935) internetga ochiq qoldirmang. <strong>secure</strong> rejim buni majburiy qiladi: oddiy RTMP faqat loopback yoki xususiy (VPN/LAN) manzilda tinglashi mumkin, aks holda dastur ishga tushmaydi. RTMPS ishlamasa dastur o'zi oddiy RTMP'ga o'tib ketmaydi.</p>
-<div class="tbl"><table><thead><tr><th>Variant</th><th>Himoya</th><th>Cheklovi</th><th>Holati</th></tr></thead><tbody>
-<tr><td>RTMP + VPN yoki yopiq tarmoq</td><td>VPN shifrlaydi</td><td>Pult tomonda VPN router yoki VPN'li mobil router kerak</td><td>Dasturda tayyor; firewall'da 1935 faqat VPN tarmog'iga ochiladi</td></tr>
-<tr><td>RTMPS (<code>rtmps_listen: &quot;:1936&quot;</code>)</td><td>TLS shifrlaydi, VPN kerak emas</td><td>Pult RTMPS'ni qo'llashi va server sertifikatini qabul qilishi kerak</td><td>Server tomoni tayyor; <strong>DJI pulti bilan tasdiqlanmagan</strong></td></tr>
-<tr><td>Ochiq RTMP internet orqali</td><td>Yo'q</td><td>Kalit va video ochiq ketadi</td><td>Tavsiya etilmaydi</td></tr>
+<p>Oddiy <strong>RTMP shifrlanmagan</strong>: pult kaliti va video yo'lda ochiq ketadi. <strong>Xususiy IP manzil shifrlash emas</strong> — <code>10.x</code>, <code>192.168.x</code> kabi manzildagi RTMP'ni shu tarmoqdagi (Wi-Fi, LAN yoki VPN ichidagi) har qanday qurilma o'qiy oladi. Wi-Fi paroli faqat tarmoqqa kirmaganlardan himoya qiladi.</p>
+<p>Shuning uchun <strong>secure</strong> (production) rejimda oddiy RTMP faqat <code>127.0.0.1</code> da tinglashi yoki o'chiq turishi mumkin. Xususiy IP, ommaviy IP, <code>&quot;:1935&quot;</code> yoki host nomi bilan dastur ishga tushmaydi va sababini yozadi. RTMPS ishlamasa dastur o'zi oddiy RTMP'ga o'tib ketmaydi.</p>
+<div class="tbl"><table><thead><tr><th>Variant</th><th>Yo'lda shifrlash</th><th>Rejim</th><th>Holati</th></tr></thead><tbody>
+<tr><td>RTMPS (<code>rtmps_listen: &quot;:1936&quot;</code>)</td><td>TLS</td><td>secure</td><td>Server tomoni tayyor; <strong>DJI pulti bilan tasdiqlanmagan</strong></td></tr>
+<tr><td>Shifrlangan tunnel + serverdagi gateway → <code>127.0.0.1:1935</code></td><td>Tunnel</td><td>secure</td><td>Qo'shimcha sozlash kerak; <strong>sinalmagan</strong></td></tr>
+<tr><td>Oddiy RTMP xususiy yoki ommaviy manzilda</td><td>Yo'q</td><td>faqat laboratoriya (<code>standard</code>)</td><td>Stend sinovi uchun; haqiqiy operativ video uchun emas</td></tr>
 </tbody></table></div>
-<p>RTMPS haqida halol holat: DJI hujjatlarida DJI Pilot 2 uchun RTMP ko'rsatilgan, RTMPS rasman tasdiqlanmagan (DJI forumidagi eski javobda qo'llanmasligi aytilgan). Pultingiz RTMPS'ni qabul qilishi va sertifikatni tekshirishi <strong>real qurilmada sinab ko'rilmaguncha</strong>, uni tayyor himoyalangan yo'l deb hisoblamang.</p>
-<p>Hozircha VPNsiz, amalda ishlaydigan variant: pult yonidagi kichik router yoki noutbuk RTMP'ni qabul qilib, serverga shifrlangan tunnel orqali uzatadi. Tomoshabinlar uchun bu o'zgarishsiz qoladi — ularga VPN kerak emas.</p>
+<p><strong>Gateway istisnosining chegarasi.</strong> <code>127.0.0.1</code> ga faqat shu kompyuterdagi dastur ulana oladi. Operator serverning o'zida shifrlangan tunnelni tugatib, oqimni <code>127.0.0.1</code> ga yo'naltirishi mumkin. Tunnel haqiqatan shifrlanganini dastur <strong>tekshirmaydi</strong> — bu operator mas'uliyati. Tunnel pult yonidagi routerdan boshlansa, pult ↔ router oralig'i ochiq qoladi: u yerda faqat pult va router bo'lsin.</p>
+<p><strong>Laboratoriya rejimi</strong> (<code>security.mode: standard</code>) production emas: admin panel buni har sahifada ko'rsatadi.</p>
+<p>RTMPS haqida halol holat: DJI hujjatlarida DJI Pilot 2 uchun RTMP, RTSP, GB28181 va Agora ko'rsatilgan; RTMPS haqida rasmiy bayonot yo'q. Pultingiz RTMPS'ni qabul qilishi va sertifikatni tekshirishi <strong>haqiqiy qurilmada sinab ko'rilmaguncha</strong>, uni tayyor himoyalangan yo'l deb hisoblamang. Demak production rejimda haqiqiy pultni ulashning tasdiqlangan yo'li hozircha yo'q.</p>
 <p>RTMPS ishlasa ham video <strong>serverdan yashirilmaydi</strong>: TLS serverda tugaydi.</p>
 <h3>RTMPS'ni haqiqiy pultda sinash tartibi</h3>
 <ol><li>Serverda <code>rtmps_listen: &quot;:1936&quot;</code>, domenga mos ishonchli sertifikat, <code>rtmp_listen</code> bo'sh.</li><li>Pultda <code>rtmps://&lt;DOMEN&gt;:1936/live/&lt;YOL&gt;?key=&lt;KALIT&gt;</code> — efirga chiqdimi?</li><li>O'z-o'zidan imzolangan sertifikat bilan — ulanmasligi kerak.</li><li>Boshqa domen sertifikati bilan — ulanmasligi kerak.</li><li>Muddati o'tgan sertifikat bilan — ulanmasligi kerak.</li><li>3–5 dan birida ulansa, pult sertifikatni tekshirmaydi: RTMPS faqat passiv kuzatuvchidan himoya qiladi. Natijani yozib qo'ying.</li></ol>
@@ -214,15 +225,17 @@
 <p class="part-tag" id="f">F. Kundalik boshqaruv</p>
 <section class="sec" id="secure-rejim" data-title="Xavfsizlik holati paneli">
 <h2>Xavfsizlik holati paneli</h2>
-<p><strong>Audit va sozlamalar → Sozlamalar → Xavfsizlik holati</strong> har bir himoyani ish vaqtida tekshirib ko'rsatadi:</p>
+<p><strong>Audit va sozlamalar → Sozlamalar → Xavfsizlik holati</strong> to'rt o'zgarmas xulosa bilan boshlanadi: kirish nazorati kuchaytirilgan; server videoni ochiq ko'radi; pult → server yo'li tasdiqlanmagan; E2EE amalga oshirilmagan. Bu xulosalar sozlamaga bog'liq emas. Keyin har bir himoya ish vaqtida tekshirib ko'rsatiladi:</p>
 <div class="tbl"><table><thead><tr><th>Belgi</th><th>Ma'nosi</th></tr></thead><tbody>
 <tr><td>tekshirilgan</td><td>Dastur buni hozir amalda ta'minlayapti</td></tr>
 <tr><td>zaif</td><td>Ishlaydi, lekin production siyosatidan kuchsiz (masalan o'z-o'zidan imzolangan sertifikat)</td></tr>
-<tr><td>buzilgan</td><td>Production siyosatiga zid (masalan ochiq interfeysdagi oddiy RTMP)</td></tr>
+<tr><td>buzilgan</td><td>Production siyosatiga zid (masalan tarmoqqa ochiq oddiy RTMP yoki laboratoriya rejimi)</td></tr>
 <tr><td>tasdiqlanmagan</td><td>Dastur o'zi tekshira olmaydi (pult, tarmoq, qurilma)</td></tr>
 <tr><td>mavjud emas</td><td>Bu versiyada yo'q himoya (masalan E2EE)</td></tr>
 </tbody></table></div>
-<p>&quot;Secure&quot; degan yozuv sozlamadagi bayroqning o'zi uchun chiqmaydi. Rejim <code>config/dronstream.yaml</code> dagi <code>security.mode</code> bilan tanlanadi: <code>secure</code> (paketdagi sukut) yoki <code>standard</code> (cheklovlarsiz, faqat sinov uchun).</p>
+<p>&quot;Secure&quot; degan yozuv sozlamadagi bayroqning o'zi uchun chiqmaydi. Rejim <code>config/dronstream.yaml</code> dagi <code>security.mode</code> bilan tanlanadi:</p>
+<ul><li><code>secure</code> (paketdagi sukut) — production siyosati: oddiy RTMP tarmoqdan qabul qilinmaydi, administrator TOTP'siz ishlay olmaydi.</li><li><code>standard</code> — <strong>laboratoriya rejimi</strong>: hech narsa majburiy emas. Admin panel har sahifada &quot;Laboratoriya rejimi — production emas&quot; deb ogohlantiradi. 1.0–1.2 dan yangilangan o'rnatishlar shu rejimda qoladi, toki sozlamaga <code>security.mode: secure</code> yozilmaguncha.</li></ul>
+<p>Secure rejim ham videoni serverdan yashirmaydi.</p>
 </section>
 <p class="less-row"><button type="button" class="less">Batafsilni yopish ↑</button></p>
 </div>
@@ -509,7 +522,7 @@ sudo cat /opt/dronstream/data/runtime/setup-token.txt</code></pre>
 <tr><td>8443</td><td>TCP</td><td>brauzer → server</td><td>HTTPS: sahifa, login, boshqaruv</td><td>Tomoshabinlar</td><td>Majburiy</td></tr>
 <tr><td>8189</td><td>UDP</td><td>brauzer ↔ server</td><td>WebRTC video</td><td>Tomoshabinlar</td><td>Majburiy</td></tr>
 <tr><td>8189</td><td>TCP</td><td>brauzer ↔ server</td><td>UDP yopiq tarmoqlar uchun WebRTC</td><td>Tomoshabinlar</td><td>Ixtiyoriy (<code>webrtc_tcp_listen</code>)</td></tr>
-<tr><td>1935</td><td>TCP</td><td>pult → server</td><td>RTMP ingest (shifrlanmagan)</td><td>Faqat pult tarmog'i yoki VPN</td><td>Sukut bo'yicha o'chiq (<code>rtmp_listen</code>)</td></tr>
+<tr><td>1935</td><td>TCP</td><td>pult → server</td><td>RTMP ingest (shifrlanmagan)</td><td>Tarmoqqa ochilmaydi: secure rejimda faqat <code>127.0.0.1</code>; boshqa manzil — faqat laboratoriya rejimida</td><td>Sukut bo'yicha o'chiq (<code>rtmp_listen</code>)</td></tr>
 <tr><td>1936</td><td>TCP</td><td>pult → server</td><td>RTMPS ingest (<code>rtmps_listen</code> yoqilsa)</td><td>Pultlar</td><td>Ixtiyoriy</td></tr>
 <tr><td>3478</td><td>UDP va TCP</td><td>brauzer ↔ server</td><td>TURN (<code>turn.mode: builtin</code>)</td><td>Tomoshabinlar</td><td>Ixtiyoriy</td></tr>
 <tr><td>50000–50100</td><td>UDP</td><td>brauzer ↔ server</td><td>TURN relay portlari</td><td>Tomoshabinlar</td><td>TURN bilan birga</td></tr>
@@ -573,7 +586,7 @@ sudo cat /opt/dronstream/data/runtime/setup-token.txt</code></pre>
 </div>
 <div class="cmd k-setup" data-os="windows">
 <div class="cmd-h"><span class="cmd-t">Windows: qoidalarni qo'shish</span><span class="chip">PowerShell</span><span class="chip c-admin">Administrator kerak</span><span class="chip k-setup">Sozlash — tizimni o‘zgartiradi</span></div>
-<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda, administrator PowerShell</dd><dt>Nima qiladi</dt><dd>HTTPS va WebRTC uchun kiruvchi qoidalarni qo'shadi. RTMP (1935) faqat siz ko'rsatgan pult tarmog'idan ochiladi</dd><dt>Kutiladigan natija</dt><dd>&quot;DronStream …&quot; nomli qoidalar paydo bo'ladi</dd><dt>Xato bo‘lsa</dt><dd>Administrator huquqi kerak</dd><dt>Bekor qilish</dt><dd>Alohida kartada (quyida)</dd></dl>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda, administrator PowerShell</dd><dt>Nima qiladi</dt><dd>HTTPS va WebRTC uchun kiruvchi qoidalarni qo'shadi. RTMP (1935) qoidasi faqat laboratoriya rejimida kerak va faqat siz ko'rsatgan tarmoqdan ochiladi; secure rejimda oddiy RTMP tarmoqdan qabul qilinmaydi</dd><dt>Kutiladigan natija</dt><dd>&quot;DronStream …&quot; nomli qoidalar paydo bo'ladi</dd><dt>Xato bo‘lsa</dt><dd>Administrator huquqi kerak</dd><dt>Bekor qilish</dt><dd>Alohida kartada (quyida)</dd></dl>
 <pre class="code" data-lang="powershell"><code>$PultTarmogi = '&lt;PULT_TARMOGI&gt;'   # masalan 10.8.0.0/24
 if ($PultTarmogi -match '[&lt;&gt;]') { throw &quot;Avval &lt;PULT_TARMOGI&gt; o'rniga pult tarmog'ini yozing&quot; }
 powershell -ExecutionPolicy Bypass -File C:\DronStream\scripts\firewall-rules.ps1 -RtmpRemote $PultTarmogi -Apply</code></pre>
@@ -601,7 +614,7 @@ sudo ufw allow 8189/udp comment 'DronStream WebRTC'</code></pre>
 </div>
 <div class="cmd k-setup" data-os="linux">
 <div class="cmd-h"><span class="cmd-t">Ubuntu: RTMP ni faqat pult tarmog'idan ochish</span><span class="chip">bash</span><span class="chip c-admin">root (sudo) kerak</span><span class="chip k-setup">Sozlash — tizimni o‘zgartiradi</span></div>
-<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda</dd><dt>Nima qiladi</dt><dd>TCP 1935 ni faqat ko'rsatilgan tarmoqdan ochadi. RTMP shifrlanmagan — uni butun internetga ochmang</dd><dt>Kutiladigan natija</dt><dd>&quot;Rule added&quot;</dd><dt>Xato bo‘lsa</dt><dd>Tarmoq noto'g'ri yozilsa ufw xato beradi va hech narsa qo'shilmaydi</dd><dt>Bekor qilish</dt><dd>Alohida kartada (quyida)</dd></dl>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda</dd><dt>Nima qiladi</dt><dd>Faqat laboratoriya rejimi uchun: TCP 1935 ni ko'rsatilgan tarmoqdan ochadi. RTMP shifrlanmagan — shu tarmoqdagi har bir qurilma uni o'qiy oladi; internetga ochmang</dd><dt>Kutiladigan natija</dt><dd>&quot;Rule added&quot;</dd><dt>Xato bo‘lsa</dt><dd>Tarmoq noto'g'ri yozilsa ufw xato beradi va hech narsa qo'shilmaydi</dd><dt>Bekor qilish</dt><dd>Alohida kartada (quyida)</dd></dl>
 <pre class="code" data-lang="bash"><code>NET='&lt;PULT_TARMOGI&gt;'   # masalan 10.8.0.0/24
 case &quot;$NET&quot; in
   *'&lt;'*) echo &quot;Avval NET ga pult tarmog'ini yozing&quot; ;;
@@ -668,9 +681,9 @@ esac</code></pre>
 <div class="details" id="d-pult" role="region" aria-label="Batafsil: Pult ulash">
 <section class="sec" id="pult" data-title="Haqiqiy pultni ulash — alohida tekshiruv">
 <h2>Haqiqiy pultni ulash — alohida tekshiruv</h2>
-<ol><li>Sozlamada pult tarmog'i uchun RTMP'ni yoqing: <code>media.rtmp_listen</code> ga VPN yoki lokal interfeys IP sini yozing (masalan <code>&lt;VPN_IP&gt;:1935</code>). <strong>secure</strong> rejimda <code>&quot;:1935&quot;</code> (barcha interfeyslar) yoki ommaviy IP bilan dastur ishga tushmaydi — shifrlanmagan RTMP internetga ochilmasligi uchun.</li><li>Admin panel: <strong>Kontent → Dron pultlari → yangi stream</strong>. Dastur pult uchun manzil va kalit beradi (kalitni ko'rish uchun parolni qayta tasdiqlaysiz).</li><li>Manzil ko'rinishi: <code>rtmp://&lt;SERVER_IP&gt;:1935/live/&lt;YOL&gt;?key=&lt;KALIT&gt;</code>. Pult <code>?</code> belgisini qabul qilmasa: <code>rtmp://&lt;SERVER_IP&gt;:1935/live/&lt;YOL&gt;/&lt;KALIT&gt;</code>.</li><li>DJI Pilot 2 da jonli efir turini RTMP qilib, shu manzilni kiriting.</li><li>Admin panelda stream &quot;efirda&quot; bo'lishi va tomosha sahifasida video ko'rinishi kerak.</li></ol>
+<ol><li>Pult yo'lini tanlang (<a href="#ingest">&quot;Pult → server yo'li&quot;</a>): RTMPS (<code>media.rtmps_listen</code>), yoki shifrlangan tunnel + serverdagi gateway (<code>media.rtmp_listen: &quot;127.0.0.1:1935&quot;</code>). <strong>secure</strong> rejimda oddiy RTMP faqat <code>127.0.0.1</code> da yoki o'chiq bo'ladi; xususiy IP, ommaviy IP yoki <code>&quot;:1935&quot;</code> bilan dastur ishga tushmaydi. Stend sinovi uchun — laboratoriya rejimi (<code>security.mode: standard</code>).</li><li>Admin panel: <strong>Kontent → Dron pultlari → yangi stream</strong>. Dastur pult uchun manzil va kalit beradi (kalitni ko'rish uchun parolni qayta tasdiqlaysiz).</li><li>Manzil ko'rinishi: <code>rtmps://&lt;DOMEN&gt;:1936/live/&lt;YOL&gt;?key=&lt;KALIT&gt;</code> (RTMPS) yoki <code>rtmp://&lt;MANZIL&gt;:1935/live/&lt;YOL&gt;?key=&lt;KALIT&gt;</code>. Pult <code>?</code> belgisini qabul qilmasa: <code>.../live/&lt;YOL&gt;/&lt;KALIT&gt;</code>.</li><li>DJI Pilot 2 da jonli efir turini RTMP qilib, shu manzilni kiriting.</li><li>Admin panelda stream &quot;efirda&quot; bo'lishi va tomosha sahifasida video ko'rinishi kerak.</li></ol>
 <div class="note warn">
-<p>Haqiqiy DJI pulti bilan ishlash bu loyihada hali sinalmagan. DJI hujjatlarida DJI Pilot 2 uchun RTMP ko'rsatilgan; RTMPS rasman tasdiqlanmagan. Pult bilan birinchi ulanishni alohida sinov sifatida o'tkazing va natijani yozib qo'ying.</p>
+<p>Haqiqiy DJI pulti bilan ishlash bu loyihada hali sinalmagan. DJI hujjatlarida DJI Pilot 2 uchun RTMP, RTSP, GB28181 va Agora ko'rsatilgan; RTMPS haqida rasmiy bayonot yo'q. Production (secure) rejimda pultni ulashning tasdiqlangan yo'li hali yo'q. Pult bilan birinchi ulanishni alohida sinov sifatida o'tkazing va natijani yozib qo'ying.</p>
 </div>
 </section>
 <section class="sec" id="demo" data-title="Demo sinov">
@@ -690,12 +703,12 @@ esac</code></pre>
 </section>
 
 <section class="scene" id="s-hisob" aria-labelledby="h-hisob">
-<div class="stage b4">
+<div class="stage b5">
 <div class="panel">
 <p class="kicker"><span class="kn">06</span> / 12 · sahna</p>
 <h2 id="h-hisob">Hisob va mehmon</h2>
 <p class="lead">Tomoshabin login-parol bilan kiradi yoki mehmon so‘rovi yuboradi. Admin tasdiqlaydi, server har bir sessiya va huquqni tekshiradi.</p>
-<ol class="beat-nav" aria-label="Bosqichlar"><li><button type="button" data-beat="0"><span class="bn">1</span>Kirish</button></li><li><button type="button" data-beat="1"><span class="bn">2</span>Mehmon so‘rovi</button></li><li><button type="button" data-beat="2"><span class="bn">3</span>Qurilma va sessiya</button></li><li><button type="button" data-beat="3"><span class="bn">4</span>Huquqlar</button></li></ol>
+<ol class="beat-nav" aria-label="Bosqichlar"><li><button type="button" data-beat="0"><span class="bn">1</span>Kirish</button></li><li><button type="button" data-beat="1"><span class="bn">2</span>Mehmon so‘rovi</button></li><li><button type="button" data-beat="2"><span class="bn">3</span>Qurilma va sessiya</button></li><li><button type="button" data-beat="3"><span class="bn">4</span>Huquqlar</button></li><li><button type="button" data-beat="4"><span class="bn">5</span>Administrator himoyasi</button></li></ol>
 <div class="beat-stack">
 <div class="beat" data-beat="0" id="s-hisob-1">
 <h3><span class="bn">1</span>Kirish</h3>
@@ -703,7 +716,7 @@ esac</code></pre>
 </div>
 <div class="beat" data-beat="1" id="s-hisob-2">
 <h3><span class="bn">2</span>Mehmon so‘rovi</h3>
-<p>Hisobi yo‘q odam ismini yozib so‘rov yuboradi. Ism tasdiqlanmagan: admin u kimligiga boshqa yo‘l bilan ishonch hosil qiladi.</p>
+<p>Hisobi yo‘q odam ismini yozib so‘rov yuboradi va ekranida tekshirish kodi chiqadi. Ism tasdiqlanmagan: admin kodni mehmonning o‘zidan so‘rab kiritadi — kod mos kelsagina shu brauzer tasdiqlanadi.</p>
 </div>
 <div class="beat" data-beat="2" id="s-hisob-3">
 <h3><span class="bn">3</span>Qurilma va sessiya</h3>
@@ -712,6 +725,10 @@ esac</code></pre>
 <div class="beat" data-beat="3" id="s-hisob-4">
 <h3><span class="bn">4</span>Huquqlar</h3>
 <p>Tomoshabin faqat o‘ziga berilgan stream, matn, rasm va videoni ko‘radi. Ruxsat berilmagan narsa umuman ko‘rinmaydi.</p>
+</div>
+<div class="beat" data-beat="4" id="s-hisob-5">
+<h3><span class="bn">5</span>Administrator himoyasi</h3>
+<p>Administrator parol va telefondagi autentifikator kodi (TOTP) bilan kiradi. Pult kalitini ko‘rish yoki hisobni o‘zgartirish kabi muhim amallar parolni qayta tasdiqlashni so‘raydi.</p>
 </div>
 </div>
 <button type="button" class="more" aria-expanded="false" aria-controls="d-hisob"><span class="more-t">Batafsil</span><span class="more-n"> · 5 bo‘lim</span></button>
@@ -722,9 +739,9 @@ esac</code></pre>
 <h2>Foydalanuvchi turlari</h2>
 <div class="tbl"><table><thead><tr><th>Tur</th><th>Qanday kiradi</th><th>Qachon ishlatiladi</th></tr></thead><tbody>
 <tr><td>Doimiy foydalanuvchi</td><td>Login va parol</td><td>Doimiy xodimlar. Admin yaratadi, bloklashi mumkin</td></tr>
-<tr><td>Mehmon (so'rov bilan)</td><td>Ismini yozib so'rov yuboradi, admin tasdiqlaydi</td><td>Oldindan hisob ochilmagan odam. Ism tasdiqlanmagan hisoblanadi</td></tr>
+<tr><td>Mehmon (so'rov bilan)</td><td>Ismini yozib so'rov yuboradi; admin mehmon ekranidagi tekshirish kodini kiritib tasdiqlaydi</td><td>Oldindan hisob ochilmagan odam. Ism tasdiqlanmagan hisoblanadi</td></tr>
 <tr><td>Maxsus havola</td><td>Havolani ochib kirish so'rovini yuboradi; admin aynan shu brauzerni tekshirish kodi bilan tasdiqlaydi</td><td>Login-parolsiz taklif; bir martalik, N martalik yoki vaqtinchalik; QR orqali ulashish</td></tr>
-<tr><td>Administrator</td><td>Login va parol</td><td>Tizimni boshqarish</td></tr>
+<tr><td>Administrator</td><td>Login, parol va ikkinchi bosqich kodi (TOTP)</td><td>Tizimni boshqarish</td></tr>
 </tbody></table></div>
 <div class="note warn">
 <p><strong>Havola — faqat taklif, kalit emas.</strong> Havolani ochish, QR kodni skanerlash yoki &quot;Kirish so'rovini yuborish&quot; tugmasini bosish hech qanday video yoki material bermaydi. Tugma bosilganda shu brauzerda kutayotgan so'rov yaratiladi va ekranda <strong>tekshirish kodi</strong> (masalan <code>K7Q-4MX</code>) chiqadi. Administrator tomoshabindan shu kodni ishonchli yo'l bilan (masalan telefon orqali) so'raydi va kod mos kelsa aynan shu brauzerni tasdiqlaydi. Havolani boshqa odamga yuborish unga hech narsa bermaydi — uning so'rovi alohida tasdiqlanishi kerak.</p>
@@ -736,7 +753,7 @@ esac</code></pre>
 <section class="sec" id="f-hisob" data-title="Hisoblar va mehmon so'rovlari">
 <h2>Hisoblar va mehmon so'rovlari</h2>
 <p><strong>Doimiy foydalanuvchilar</strong>: hisob yaratish, parolni tiklash, bloklash, barcha sessiyalaridan chiqarish, ruxsat berish.</p>
-<p><strong>Kirish so'rovlari</strong>: mehmon so'rovini tasdiqlash (qaysi kontent va qancha vaqtga) yoki rad etish. Mehmon kiritgan ism va xabar tasdiqlanmagan — ruxsat berishdan oldin u kim ekaniga boshqa yo'l bilan ishonch hosil qiling. Mehmon ekranidagi <strong>tekshirish kodi</strong> so'rov kartasida ham ko'rinadi: ularni telefon orqali solishtiring.</p>
+<p><strong>Kirish so'rovlari</strong>: mehmon so'rovini tasdiqlash (qaysi kontent va qancha vaqtga) yoki rad etish. Mehmon kiritgan ism va xabar tasdiqlanmagan. Mehmon ekranida <strong>tekshirish kodi</strong> chiqadi; uni mehmondan ishonchli yo'l bilan (telefon, shaxsan) so'rang va tasdiqlash oynasiga kiriting. Kod mos kelmasa tasdiqlanmaydi. Kod admin panelda ko'rsatilmaydi — uni faqat mehmonning o'zi aytishi mumkin.</p>
 </section>
 <section class="sec" id="f-sessiya" data-title="Faol sessiyalar">
 <h2>Faol sessiyalar</h2>
@@ -748,7 +765,7 @@ esac</code></pre>
 </section>
 <section class="sec" id="admin-mfa" data-title="Administrator himoyasi: TOTP va qayta tasdiqlash">
 <h2>Administrator himoyasi: TOTP va qayta tasdiqlash</h2>
-<ul><li><strong>Ikkinchi bosqich (TOTP)</strong>: <strong>Audit va sozlamalar → Sozlamalar → Ikkinchi bosqich (TOTP)</strong>. QR kodni autentifikator ilovasi bilan skanerlang, joriy 6 xonali kodni kiriting. Shundan keyin kirishda parol va kod so'raladi. Bir marta ishlatilgan kod qayta qabul qilinmaydi.</li><li><strong>Tiklash kodlari</strong>: TOTP yoqilganda 10 ta kod beriladi, har biri bir marta ishlaydi. Ularni telefondan alohida saqlang.</li><li><strong>Qayta tasdiqlash</strong>: pult kalitini ko'rish yoki almashtirish, stream o'chirish, foydalanuvchi yaratish yoki rolini o'zgartirish, parolni tiklash, server holatini o'zgartirish — oxirgi 10 daqiqada parol (+ kod) so'raydi. Oyna o'zi chiqadi; tasdiqlangach amal davom etadi.</li><li><strong>secure</strong> rejimda TOTP'siz administrator boshqa admin amallarini bajara olmaydi va TOTP'ni o'chira olmaydi (faqat yangisini yaratadi).</li><li>Passkey (WebAuthn) hali qo'llab-quvvatlanmaydi.</li></ul>
+<ul><li><strong>Ikkinchi bosqich (TOTP)</strong>: <strong>Audit va sozlamalar → Sozlamalar → Ikkinchi bosqich (TOTP)</strong>. QR kodni autentifikator ilovasi bilan skanerlang, joriy 6 xonali kodni kiriting. Shundan keyin kirishda parol va kod so'raladi. Bir marta ishlatilgan kod qayta qabul qilinmaydi.</li><li><strong>Tiklash kodlari</strong>: TOTP yoqilganda 10 ta kod beriladi, har biri bir marta ishlaydi. Ularni telefondan alohida saqlang.</li><li><strong>Qayta tasdiqlash</strong>: pult kalitini ko'rish yoki almashtirish, stream o'chirish, foydalanuvchi yaratish yoki rolini o'zgartirish, parolni tiklash, server holatini o'zgartirish — oxirgi 10 daqiqada parol (+ kod) so'raydi. Oyna o'zi chiqadi; tasdiqlangach amal davom etadi.</li><li><strong>secure</strong> rejimda TOTP'siz administrator boshqa admin amallarini bajara olmaydi va TOTP'ni o'chira olmaydi (faqat yangisini yaratadi).</li><li>Telefon yo'qolsa: tiklash kodi bilan kiring. Tiklash kodlari ham yo'q bo'lsa — server kompyuterida <code>dronstream reset-admin</code> buyrug'i (u TOTP'ni ham o'chiradi).</li><li>Passkey (WebAuthn) hali qo'llab-quvvatlanmaydi.</li></ul>
 </section>
 <p class="less-row"><button type="button" class="less">Batafsilni yopish ↑</button></p>
 </div>
@@ -1103,7 +1120,7 @@ esac</code></pre>
 <section class="sec" id="x-offline" data-title="Stream efirda emas">
 <h2>Stream efirda emas</h2>
 <p>Player &quot;Manba efirda emas (pult ulanmagan)&quot; desa, server ishlayapti, lekin pult video yubormayapti. Player o'zi kutib turadi va pult ulangach davom etadi.</p>
-<ul><li>Pultda jonli efir yoqilganmi va manzil to'g'rimi.</li><li>Kalit almashtirilmaganmi.</li><li>Stream uchun publish yoqilganmi.</li><li>Pult serverga yeta oladimi (VPN, 1935 porti).</li><li>Audit'da rad etilgan ulanish sababi yozilgan bo'ladi.</li></ul>
+<ul><li>Pultda jonli efir yoqilganmi va manzil to'g'rimi.</li><li>Kalit almashtirilmaganmi.</li><li>Stream uchun publish yoqilganmi.</li><li>Pult serverga yeta oladimi (RTMPS porti yoki tunnel; laboratoriya rejimida 1935).</li><li>Audit'da rad etilgan ulanish sababi yozilgan bo'ladi.</li></ul>
 </section>
 <section class="sec" id="x-limit" data-title="&quot;Juda ko'p ulanish&quot;">
 <h2>&quot;Juda ko'p ulanish&quot;</h2>
@@ -1175,7 +1192,7 @@ esac</code></pre>
 <p><strong>Server → brauzer:</strong></p>
 <ol><li><code>https://&lt;DOMEN&gt;</code> ochiladi va sertifikat ogohlantirishi chiqmaydi.</li><li>Login ishlaydi.</li><li>Demo video o'ynaydi (kamida 2 daqiqa uzluksiz — ijara yangilanishi ham tekshiriladi).</li><li>Player ostidagi bitreyt va o'lcham ko'rsatkichi o'zgarib turadi.</li></ol>
 <p><strong>Pult → server:</strong></p>
-<ol><li>Pult tanlangan yo'l orqali (VPN yoki RTMPS) ulanadi.</li><li>Admin panelda stream &quot;efirda&quot;.</li><li>Tomoshabinda haqiqiy pult videosi ko'rinadi.</li></ol>
+<ol><li>Pult tanlangan yo'l orqali (RTMPS yoki shifrlangan tunnel) ulanadi.</li><li>Admin panelda stream &quot;efirda&quot;.</li><li>Tomoshabinda haqiqiy pult videosi ko'rinadi.</li></ol>
 <div class="cmd k-diag" data-os="windows">
 <div class="cmd-h"><span class="cmd-t">Windows: tashqaridan TCP port ochiqligini tekshirish</span><span class="chip">PowerShell</span><span class="chip ">Oddiy foydalanuvchi</span><span class="chip k-diag">Diagnostika — faqat o‘qiydi</span></div>
 <dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Server tarmog'idan TASHQARIDAGI kompyuterda</dd><dt>Nima qiladi</dt><dd>Serverning TCP 8443 portiga ulanib ko'radi. UDP 8189 ni bu buyruq tekshira olmaydi — uni faqat demo video ko'rsatadi</dd><dt>Kutiladigan natija</dt><dd><code>TcpTestSucceeded : True</code></dd><dt>Xato bo‘lsa</dt><dd>False — firewall, router yo'naltirishi yoki CGNAT'ni tekshiring</dd></dl>
@@ -1223,7 +1240,7 @@ esac</code></pre>
 
 
     <footer class="foot">
-      <p>DronStream qo‘llanmasi v1.2.0 (2026-11-13). Bu fayl mustaqil: internetga ulanmaydi, hech narsa yubormaydi, serveringiz sozlamalarini o‘qimaydi va buyruqlarni o‘zi bajarmaydi. Undagi manzillar va nomlar — faqat namuna.</p>
+      <p>DronStream qo‘llanmasi v1.3.0 (2026-11-14). Bu fayl mustaqil: internetga ulanmaydi, hech narsa yubormaydi, serveringiz sozlamalarini o‘qimaydi va buyruqlarni o‘zi bajarmaydi. Undagi manzillar va nomlar — faqat namuna.</p>
       <p class="licenses"><strong>Litsenziyalar.</strong> 3D sahna <code>three.js</code> r187 kutubxonasi asosida qurilgan (MIT litsenziyasi, © three.js mualliflari). Litsenziyaning to‘liq matni sahifa skriptining boshida saqlangan.</p>
     </footer>
   </main>

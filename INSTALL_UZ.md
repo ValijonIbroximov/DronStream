@@ -34,8 +34,9 @@ web:
   public_hosts: [192.168.1.50, server.local]
 media:
   webrtc_additional_hosts: [192.168.1.50]
-  rtmp_listen: "10.8.0.1:1935"     # VPN interfeysi IP si (DJI_SETUP_UZ.md)
-  publish_host: "10.8.0.1"
+  rtmp_listen: ""                  # oddiy RTMP shifrlanmagan: secure rejimda faqat "" yoki "127.0.0.1:1935" (DJI_SETUP_UZ.md)
+  rtmps_listen: ""                 # RTMPS uchun masalan ":1936" + ishonchli sertifikat
+  publish_host: "localhost"        # pult URL ida ko'rinadigan manzil
 ```
 Har bir parametr izohi `dronstream.example.yaml` da.
 

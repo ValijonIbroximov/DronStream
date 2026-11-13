@@ -54,7 +54,7 @@ Manba: foydalanuvchining 2026-11-13 dagi topshirig'i. Har bir talab ID bilan; ho
 - R6.1 Pult → server va server → foydalanuvchi yo'llari alohida himoyalanadi.
 - R6.2 HTTPS interfeys; WebRTC (DTLS-SRTP) media.
 - R6.3 Mavic 3T / Pilot 2 da RTMPS va sertifikat tekshiruvini real qurilmada sinash yo'riqnomasi (kafolatsiz).
-- R6.4 Faqat RTMP bo'lsa — VPN orqali; RTMP porti VPN interfeysi/ruxsatlangan manbalar bilan cheklanadi; VPN uzilsa trafik ochiq internetga chiqmaydi.
+- R6.4 Faqat RTMP bo'lsa — VPN orqali; RTMP porti VPN interfeysi/ruxsatlangan manbalar bilan cheklanadi; VPN uzilsa trafik ochiq internetga chiqmaydi. *(v1.3 da R16.2 bilan qat'iylashtirildi: secure rejimda oddiy RTMP faqat 127.0.0.1 da; VPN interfeysiga bog'lash — faqat laboratoriya rejimida yoki serverdagi gateway orqali.)*
 - R6.5 Mavjud OpenVPN bilan moslik; UDP varianti faqat server qo'llasa.
 - R6.6 Public IP, NAT/CGNAT, firewall tushuntiriladi; o'zimiz boshqaradigan TURN, qisqa muddatli hisoblar; yashirin tashqi relay/cloud yo'q.
 - R6.7 Bu E2E shifrlash emas (server videoni ko'radi) — shunday nomlanmaydi.
@@ -132,3 +132,11 @@ Manba kod; Windows build/skript; README_UZ.md; ADMIN_GUIDE_UZ.md; DJI_SETUP_UZ.m
 - R15.6 Saqlangan media, thumbnail, Range, backup, log, crash dump ishonch chegaralari.
 - R15.7 SECURITY_ACCEPTANCE.md: dalil turlari ajratilgan (kod testi, integratsiya, CI, simulyatsiya, haqiqiy qurilma, mustaqil audit).
 - R15.8 info.html: haqiqiy 3D (Three.js, offline bundle), 12 sahna scroll timeline, kamera o'tishlari, obyektga bog'langan label, "Batafsil", qidiruv, avto namoyish, 2D fallback, reduced-motion, print; dark blue tech uslubi; stilizatsiyalangan modellar shunday deb belgilanadi.
+
+## R16. v1.3 davomi — 2026-11-14 topshirig'i
+- R16.1 Xulosa halol bo'lsin: "video maxfiyligi tayyor" deyilmaydi. Hujjat va interfeysda: kirish nazorati kuchaytirilgan; server videoni ochiq ko'radi; pult RTMPS va sertifikat tekshiruvi tasdiqlanmagan; E2EE amalga oshirilmagan. "DJI bilan E2EE mumkin emas" degan umumiy da'vo ishlatilmaydi.
+- R16.2 Secure rejim: shifrlanmagan har qanday tashqi ingest rad (xususiy IP ham); loopback/gateway istisnosining ishonch chegarasi hujjatlashtirilgan; laboratoriya rejimi production'dan aniq ajratilgan; himoya zaiflashtirilmaydi.
+- R16.3 Pult → tomoshabin E2EE: rasmiy DJI hujjatlari asosida qurilma mosligi; A (pultdagi publisher), B (lokal gateway), C (RTMPS → server → WebRTC) solishtiruvi; C E2EE deb ko'rsatilmaydi; standartlar asosida alohida proof-of-concept; "ortiqcha dastursiz" talab bilan ziddiyat aniq yozilgan; noma'lum qurilma ma'lumotlari bitta ro'yxatda so'ralgan.
+- R16.4 Brauzerda haqiqiy UI sinovlari: kutish sahifasi, kod bilan tasdiqlash/rad etish, noto'g'ri kod, nusxa havola, qayta tasdiqlash, TOTP va takroriy kod, tiklash kodi, chiqish/bloklash/revoke/muddat, migratsiyadan keyingi sessiyalar.
+- R16.5 3D qo'llanma yakunlanadi; yangi xavfsizlik bo'limlari sahnalarga ulanadi; mavjud bo'lmagan E2EE tayyor himoya sifatida ko'rsatilmaydi; desktop va mobil screenshotlar.
+- R16.6 Yakuniy commit uchun CI, test hisobotida aniq SHA, yangi paket va SHA256, paketning o'zida o'rnatish/yangilash/backup-restore/skript sinovlari.
