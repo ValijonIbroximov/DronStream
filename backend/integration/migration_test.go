@@ -3,7 +3,6 @@
 package integration
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -116,5 +115,4 @@ func TestMigrationFromV1(t *testing.T) {
 	}
 	s3.stop()
 	record("rollback_old_binary_refuses_v2_and_works_after_v1_backup_restore", "PASS")
-	fmt.Sprint()
 }

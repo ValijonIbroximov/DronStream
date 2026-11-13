@@ -71,6 +71,9 @@ func buildServer(t testing.TB) (bin string) {
 	return bin
 }
 
+// maxPerSubject is the per-subject player limit written into the test config.
+var maxPerSubject = 12
+
 func testConfig(lease int) string {
 	return fmt.Sprintf(`web:
   listen: "127.0.0.1:%s"
@@ -85,7 +88,7 @@ media:
   publish_host: "127.0.0.1"
   lease_seconds: %d
   ticket_ttl_seconds: 30
-  max_media_sessions_per_subject: 12
+  max_media_sessions_per_subject: %d
   reconcile_interval_ms: 1000
 security:
   audit_retention_days: 30
@@ -94,7 +97,7 @@ logging:
   level: debug
 demo:
   enabled: true
-`, webPort, apiAddr, rtmpPort, lease)
+`, webPort, apiAddr, rtmpPort, lease, maxPerSubject)
 }
 
 func startServer(t testing.TB, bin, root string) *server {

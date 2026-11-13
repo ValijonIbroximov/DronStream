@@ -190,7 +190,11 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 func writeErr(w http.ResponseWriter, err error) {
 	var ce *core.Error
 	if errors.As(err, &ce) {
-		writeJSON(w, ce.Status, map[string]string{"code": ce.Code, "message": ce.Msg})
+		out := map[string]any{"code": ce.Code, "message": ce.Msg}
+		if len(ce.Data) > 0 {
+			out["details"] = ce.Data
+		}
+		writeJSON(w, ce.Status, out)
 		return
 	}
 	writeJSON(w, 500, map[string]string{"code": "internal", "message": "Ichki xatolik"})

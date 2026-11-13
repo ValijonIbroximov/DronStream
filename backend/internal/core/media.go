@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"net"
 	"net/url"
 	"strings"
@@ -107,15 +108,65 @@ func sessionSubjectOf(sess *Session) (string, int64) {
 	return "user", sess.UserID
 }
 
-func (s *Service) activeCounts(ctx context.Context, q querier, sess *Session, streamID int64, tab string, now int64) (subject, tabStream int, err error) {
+// SlotSessionLimit is how many media sessions one player slot may hold at
+// once: the live one plus one make-before-break lease renewal.
+const SlotSessionLimit = 2
+
+// activeCounts counts in units of "player slots". A slot is one video tile:
+// (browser session, stream, client tab). The per-subject limit is about how
+// many tiles a subject has open, so the short overlap of a lease renewal (a
+// second session in the SAME slot) must not count twice, and an outstanding
+// ticket for a slot that is already open must not count either.
+//
+//	others = distinct slots of this subject, not counting the requested one
+//	here   = non-ended media sessions inside the requested slot
+func (s *Service) activeCounts(ctx context.Context, q querier, sess *Session, streamID int64, tab string, now int64) (others, here int, err error) {
 	subjType, subjID := sessionSubjectOf(sess)
 	col := subjectSessionsCol(subjType)
 	err = q.QueryRowContext(ctx, `SELECT
-	   (SELECT count(*) FROM media_sessions WHERE subject_type=? AND subject_id=? AND status!='ended') +
-	   (SELECT count(*) FROM playback_tickets t JOIN web_sessions w ON w.id=t.web_session_id WHERE w.`+col+`=? AND w.kind=? AND t.used_at IS NULL AND t.expires_at>?),
+	   (SELECT count(*) FROM (
+	      SELECT web_session_id, stream_id, client_tab FROM media_sessions WHERE subject_type=? AND subject_id=? AND status!='ended'
+	      UNION
+	      SELECT t.web_session_id, t.stream_id, t.client_tab FROM playback_tickets t JOIN web_sessions w ON w.id=t.web_session_id
+	        WHERE w.`+col+`=? AND w.kind=? AND t.used_at IS NULL AND t.expires_at>?
+	    ) x WHERE NOT (x.web_session_id=? AND x.stream_id=? AND x.client_tab=?)),
 	   (SELECT count(*) FROM media_sessions WHERE web_session_id=? AND stream_id=? AND client_tab=? AND status!='ended')`,
-		subjType, subjID, subjID, sess.Kind, now, sess.ID, streamID, tab).Scan(&subject, &tabStream)
+		subjType, subjID, subjID, sess.Kind, now, sess.ID, streamID, tab, sess.ID, streamID, tab).Scan(&others, &here)
 	return
+}
+
+// tooManyErr explains which limit was hit and what the viewer can do.
+func tooManyErr(scope string, used, max int) *Error {
+	msg := ReasonText("too_many_sessions")
+	if scope == "subject" {
+		msg = fmt.Sprintf("Bir vaqtda ochiq videolar soni chegaraga yetdi (%d/%d). Boshqa oyna yoki qurilmadagi videolarni yoping yoki keraksiz joylarni bo'shating, so'ng qayta urining", used, max)
+	} else if scope == "slot" {
+		msg = "Shu joydagi oldingi ulanishlar hali yopilmagan. Bir necha soniyadan keyin qayta urinib ko'ring"
+	}
+	return &Error{Status: 429, Code: "too_many_sessions", Msg: msg, Data: map[string]any{"scope": scope, "used": used, "max": max}}
+}
+
+// SlotSessions lists the non-ended media sessions of one player slot, newest first.
+func (s *Service) SlotSessions(ctx context.Context, sess *Session, streamID int64, tab string) ([]*MediaSession, error) {
+	return s.queryMedia(ctx, mediaSelect+` WHERE m.web_session_id=? AND m.stream_id=? AND m.client_tab=? AND m.status!='ended' ORDER BY m.created_at DESC, m.id DESC`,
+		sess.ID, streamID, cleanText(tab, 40, false))
+}
+
+// DropPendingMedia silently ends a media session that the auth hook recorded
+// but that MediaMTX then refused to start (for example the source is not
+// publishing). Without this the phantom "pending" row would occupy the slot
+// until the reconciler's grace period ends.
+func (s *Service) DropPendingMedia(ctx context.Context, nonce, reason string) {
+	if nonce == "" {
+		return
+	}
+	res, err := s.St.DB.ExecContext(ctx, `UPDATE media_sessions SET status='ended', ended_at=?, end_reason=? WHERE nonce=? AND status='pending'`, s.nowMs(), reason, nonce)
+	if err != nil {
+		return
+	}
+	if n, _ := res.RowsAffected(); n > 0 {
+		s.Events.ToAdmins("media", nil)
+	}
 }
 
 // IssueTicket creates a single-use, short-lived playback ticket bound to the
@@ -132,15 +183,15 @@ func (s *Service) IssueTicket(ctx context.Context, sess *Session, streamID int64
 		return nil, &Error{Status: 403, Code: d.Reason, Msg: ReasonText(d.Reason)}
 	}
 	tab = cleanText(tab, 40, false)
-	subj, tabStream, err := s.activeCounts(ctx, s.St.DB, sess, streamID, tab, now)
+	others, here, err := s.activeCounts(ctx, s.St.DB, sess, streamID, tab, now)
 	if err != nil {
 		return nil, err
 	}
-	if !sess.IsAdmin() && subj >= s.Cfg.Media.MaxPerUser {
-		return nil, &Error{Status: 429, Code: "too_many_sessions", Msg: ReasonText("too_many_sessions")}
+	if !sess.IsAdmin() && others >= s.Cfg.Media.MaxPerUser {
+		return nil, tooManyErr("subject", others, s.Cfg.Media.MaxPerUser)
 	}
-	if tabStream >= 2 { // one live + one make-before-break renewal per tab
-		return nil, &Error{Status: 429, Code: "too_many_sessions", Msg: ReasonText("too_many_sessions")}
+	if here >= SlotSessionLimit { // one live + one make-before-break renewal per slot
+		return nil, tooManyErr("slot", here, SlotSessionLimit)
 	}
 	t := &Ticket{Token: secure.Token(32), nonce: secure.Token(12), ExpiresAt: now + s.Cfg.TicketTTL().Milliseconds()}
 	t.LeaseUntil = minPositive(now+s.Cfg.Lease().Milliseconds(), d.Until)
@@ -254,12 +305,12 @@ func (s *Service) HookRead(ctx context.Context, r HookRequest) (int64, error) {
 			denyReason = d.Reason
 			return nil
 		}
-		subj, tabStream, err := s.activeCounts(ctx, tx, sess, streamID, tab, now)
+		others, here, err := s.activeCounts(ctx, tx, sess, streamID, tab, now)
 		if err != nil {
 			return err
 		}
 		// the ticket itself is no longer counted (used_at set above)
-		if (!sess.IsAdmin() && subj >= s.Cfg.Media.MaxPerUser) || tabStream >= 2 {
+		if (!sess.IsAdmin() && others >= s.Cfg.Media.MaxPerUser) || here >= SlotSessionLimit {
 			denyReason = "too_many_sessions"
 			return nil
 		}
@@ -500,7 +551,7 @@ func (s *Service) EndMedia(ctx context.Context, m *MediaSession, reason string) 
 	if n, _ := res.RowsAffected(); n == 0 {
 		return
 	}
-	if reason != "disconnected" && reason != "lease_expired" && reason != "client_closed" {
+	if reason != "disconnected" && reason != "lease_expired" && reason != "client_closed" && reason != "superseded" {
 		s.Audit(ctx, Actor{Type: "system", Name: "media"}, "view_disconnect", "stream:"+itoa(m.StreamID),
 			map[string]any{"reason": reason, "subject": m.SubjectType + ":" + itoa(m.SubjectID), "mtx": shortID(m.MtxID)})
 	}

@@ -22,11 +22,13 @@ type Error struct {
 	Status int
 	Code   string
 	Msg    string
+	// Data carries optional machine-readable details (e.g. which limit was hit).
+	Data map[string]any
 }
 
 func (e *Error) Error() string { return e.Code + ": " + e.Msg }
 
-func errf(status int, code, msg string) *Error { return &Error{status, code, msg} }
+func errf(status int, code, msg string) *Error { return &Error{Status: status, Code: code, Msg: msg} }
 
 var (
 	ErrUnauthorized = errf(401, "unauthorized", "Tizimga kirish talab qilinadi")

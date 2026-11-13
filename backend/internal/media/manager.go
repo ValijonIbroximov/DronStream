@@ -480,3 +480,26 @@ func (m *Manager) cancelAllTransfers(reason string) {
 		t.Cancel()
 	}
 }
+
+// SupersedeSlot is called when a player slot asks for a new ticket although
+// it already holds the maximum number of media sessions. That happens when
+// the page was reloaded or lost its network: the old connections are dead on
+// the client but not yet timed out here. The newest session is kept (it may
+// be the live one of a renewal in progress); older ones are disconnected.
+// Only the caller's own slot is touched. Returns how many were ended.
+func (m *Manager) SupersedeSlot(ctx context.Context, sess *core.Session, streamID int64, tab string) int {
+	list, err := m.Core.SlotSessions(ctx, sess, streamID, tab)
+	if err != nil || len(list) < core.SlotSessionLimit {
+		return 0
+	}
+	n := 0
+	for _, ms := range list[1:] {
+		if err := m.API.KickWebRTC(ctx, ms.MtxID); err != nil && !errors.Is(err, mtx.ErrNotFound) {
+			m.Log.Warn("supersede: kick failed", "mtx", ms.MtxID, "err", err)
+			continue
+		}
+		m.Core.EndMedia(ctx, ms, "superseded")
+		n++
+	}
+	return n
+}

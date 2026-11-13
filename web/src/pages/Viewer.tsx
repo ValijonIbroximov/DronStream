@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { get, type SessionInfo, type ViewerStream, type LibraryItem, type LibraryCollection, fmtTime } from '../api'
 import Materials from '../components/Materials'
 import { toast, Toasts } from '../components/ui'
@@ -12,13 +12,37 @@ const LAYOUTS = [
   { n: 9, label: '3×3' },
 ]
 
-function tabId() {
-  let t = sessionStorage.getItem('ds-tab')
-  if (!t) {
-    t = Math.random().toString(36).slice(2, 10)
-    sessionStorage.setItem('ds-tab', t)
-  }
+function newTabId() {
+  const t = Math.random().toString(36).slice(2, 10)
+  sessionStorage.setItem('ds-tab', t)
   return t
+}
+function tabId() {
+  return sessionStorage.getItem('ds-tab') || newTabId()
+}
+
+// The tab id names this page's player slots on the server. It survives a
+// reload (so the reloaded page takes over its own slots), but "Duplicate tab"
+// copies sessionStorage: two live tabs would then share slots and cut each
+// other off. A duplicate notices the original and takes a fresh id.
+function useTabId() {
+  const [tab, setTab] = useState(tabId)
+  const ref = useRef(tab)
+  ref.current = tab
+  useEffect(() => {
+    if (typeof BroadcastChannel === 'undefined') return
+    const ch = new BroadcastChannel('ds-tab')
+    const me = Math.random().toString(36).slice(2)
+    ch.onmessage = (e) => {
+      const m = e.data
+      if (!m || m.from === me || m.id !== ref.current) return
+      if (m.t === 'hello') ch.postMessage({ t: 'taken', id: m.id, from: me })
+      if (m.t === 'taken') setTab(newTabId())
+    }
+    ch.postMessage({ t: 'hello', id: ref.current, from: me })
+    return () => ch.close()
+  }, [])
+  return tab
 }
 
 export default function ViewerPage({ info, onLogout }: { info: SessionInfo; onLogout: () => void }) {
@@ -35,7 +59,7 @@ export default function ViewerPage({ info, onLogout }: { info: SessionInfo; onLo
   })
   const [err, setErr] = useState('')
   const gridRef = useRef<HTMLDivElement>(null)
-  const tab = useMemo(tabId, [])
+  const tab = useTabId()
 
   const load = useCallback(async () => {
     try {

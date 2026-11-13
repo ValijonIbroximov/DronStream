@@ -41,7 +41,9 @@ media:
   lease_seconds: 120
   # Bir martalik ko'rish chiptasi amal qilish muddati.
   ticket_ttl_seconds: 30
-  # Bitta foydalanuvchi/mehmonning bir vaqtdagi video ulanishlari chegarasi.
+  # Bitta foydalanuvchi / mehmon / maxsus havolaning bir vaqtda ochiq video oynalari (player joylari) chegarasi.
+  # Lease yangilanishidagi vaqtinchalik ikkinchi ulanish va efirda bo'lmagan joylar hisobga kirmaydi.
+  # Administratorlar uchun chegara qo'llanmaydi.
   max_media_sessions_per_subject: 12
   reconcile_interval_ms: 1000
   mediamtx_log_level: info

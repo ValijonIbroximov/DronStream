@@ -2,6 +2,8 @@ package web
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -73,7 +75,25 @@ func (s *Server) ticket(w http.ResponseWriter, r *http.Request) {
 	}
 	var in struct{ Tab string }
 	readJSON(r, &in)
+	// A source that is not publishing cannot be watched: answer right away
+	// instead of issuing a ticket that MediaMTX would only turn into a 404.
+	// (Authorisation first, so the online state is not leaked.)
+	if d, err := s.Core.ViewStatus(r.Context(), se, id); err == nil && d.OK && s.Media.MediaUp() {
+		if st, err := s.Core.GetStream(r.Context(), id); err == nil {
+			if p, err := s.Core.MediaPath(st); err == nil && !s.Media.Stats(p).Online {
+				writeErr(w, &core.Error{Status: 403, Code: "stream_offline", Msg: "Manba hozir efirda emas (pult ulanmagan)"})
+				return
+			}
+		}
+	}
 	t, err := s.Core.IssueTicket(r.Context(), se, id, in.Tab, clientIP(r))
+	if tooManyInSlot(err) {
+		// The same player asks again while its older connections are still
+		// registered (page reload, lost network): the newest request wins.
+		if s.Media.SupersedeSlot(r.Context(), se, id, in.Tab) > 0 {
+			t, err = s.Core.IssueTicket(r.Context(), se, id, in.Tab, clientIP(r))
+		}
+	}
 	if err != nil {
 		writeErr(w, err)
 		return
@@ -83,7 +103,7 @@ func (s *Server) ticket(w http.ResponseWriter, r *http.Request) {
 		label = "Mehmon (tasdiqlanmagan ism): " + se.Name
 	}
 	writeJSON(w, 200, map[string]any{
-		"ticket": t.Token, "ticketExpiresAt": t.ExpiresAt, "leaseUntil": t.LeaseUntil,
+		"ticket": t.Token, "ticketExpiresAt": t.ExpiresAt, "leaseUntil": t.LeaseUntil, "serverNow": time.Now().UnixMilli(),
 		"iceServers": s.iceServers(se.ID), "watermark": label,
 	})
 }
@@ -142,6 +162,7 @@ func (s *Server) whepOffer(w http.ResponseWriter, r *http.Request) {
 	req.Header.Set("User-Agent", r.UserAgent())
 	resp, err := s.whep.Do(req)
 	if err != nil {
+		s.Core.DropPendingMedia(context.WithoutCancel(r.Context()), nonce, "connect_failed")
 		s.Log.Error("whep proxy", "err", err)
 		writeErr(w, &core.Error{Status: 502, Code: "media_unavailable", Msg: "Media server javob bermadi"})
 		return
@@ -149,6 +170,8 @@ func (s *Server) whepOffer(w http.ResponseWriter, r *http.Request) {
 	defer resp.Body.Close()
 	answer, _ := io.ReadAll(io.LimitReader(resp.Body, 256<<10))
 	if resp.StatusCode != http.StatusCreated {
+		// The hook may already have recorded this attempt; it never started.
+		s.Core.DropPendingMedia(context.WithoutCancel(r.Context()), nonce, "connect_failed")
 		// Explain why (the hook decided; recompute the reason for the user).
 		d, _ := s.Core.ViewStatus(r.Context(), se, id)
 		code := d.Reason
@@ -207,4 +230,9 @@ func (s *Server) whepDelete(w http.ResponseWriter, r *http.Request) {
 	s.Media.API.KickWebRTC(r.Context(), ms.MtxID)
 	s.Core.EndMedia(r.Context(), ms, "client_closed")
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func tooManyInSlot(err error) bool {
+	var ce *core.Error
+	return errors.As(err, &ce) && ce.Code == "too_many_sessions" && ce.Data["scope"] == "slot"
 }
