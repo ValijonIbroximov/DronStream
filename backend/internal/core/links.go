@@ -55,7 +55,7 @@ func LinkStatusText(st string) string {
 }
 
 const linkCols = `l.id,l.name,l.preset,l.max_uses,l.uses_count,l.max_parallel,l.starts_at,l.ends_at,l.session_minutes,l.for_user_id,COALESCE((SELECT display_name FROM users WHERE id=l.for_user_id),''),l.note,l.token_version,l.created_at,l.revoked_at,l.token_enc,
- (SELECT count(*) FROM web_sessions w WHERE w.link_id=l.id AND w.revoked_at IS NULL AND w.expires_at > ?)`
+ (SELECT count(*) FROM web_sessions w WHERE w.link_id=l.id AND w.approval='approved' AND w.revoked_at IS NULL AND w.expires_at > ?)`
 
 func scanLink(row interface{ Scan(...any) error }, now int64) (*Link, error) {
 	var l Link
@@ -495,7 +495,9 @@ type PendingApproval struct {
 	Kind       string `json:"kind"` // link | guest
 	LinkID     int64  `json:"linkId,omitempty"`
 	LinkName   string `json:"linkName,omitempty"`
-	VerifyCode string `json:"verifyCode"`
+	// Never sent to the admin panel: the administrator has to get the code
+	// from the visitor over a trusted channel and type it.
+	VerifyCode string `json:"-"`
 	CreatedAt  int64  `json:"createdAt"`
 	IP         string `json:"ip"`
 	UserAgent  string `json:"userAgent"`
@@ -554,6 +556,13 @@ func (s *Service) ApproveLinkSession(ctx context.Context, a Actor, sessionID int
 			denyCode = "invalid_link"
 			return nil
 		}
+		// A session opened by a version before 1.3 already consumed its use at
+		// activation time (the migration keeps link_activations.approved = 1 for
+		// it). Approving it now must neither count a second use nor be refused
+		// because that very use exhausted a one-time link.
+		var counted int64
+		tx.QueryRowContext(ctx, `SELECT count(*) FROM link_activations WHERE session_id=? AND approved=1`, sessionID).Scan(&counted)
+		alreadyCounted := counted > 0
 		switch l.Status(now) {
 		case "revoked":
 			denyCode = "link_revoked"
@@ -562,7 +571,9 @@ func (s *Service) ApproveLinkSession(ctx context.Context, a Actor, sessionID int
 		case "pending":
 			denyCode = "link_not_started"
 		case "used_up":
-			denyCode = "link_used_up"
+			if !alreadyCounted {
+				denyCode = "link_used_up"
+			}
 		}
 		if denyCode != "" {
 			return nil
@@ -573,19 +584,23 @@ func (s *Service) ApproveLinkSession(ctx context.Context, a Actor, sessionID int
 			denyCode = "link_parallel_limit"
 			return nil
 		}
-		res, err := tx.ExecContext(ctx, `UPDATE access_links SET uses_count=uses_count+1 WHERE id=? AND (max_uses IS NULL OR uses_count < max_uses)`, linkID)
-		if err != nil {
-			return err
-		}
-		if n, _ := res.RowsAffected(); n != 1 {
-			denyCode = "link_used_up"
-			return nil
+		use := l.UsesCount
+		if !alreadyCounted {
+			res, err := tx.ExecContext(ctx, `UPDATE access_links SET uses_count=uses_count+1 WHERE id=? AND (max_uses IS NULL OR uses_count < max_uses)`, linkID)
+			if err != nil {
+				return err
+			}
+			if n, _ := res.RowsAffected(); n != 1 {
+				denyCode = "link_used_up"
+				return nil
+			}
+			use++
 		}
 		if _, err := tx.ExecContext(ctx, `UPDATE web_sessions SET approval='approved', approved_by=?, approved_at=? WHERE id=? AND approval='pending'`, a.ID, now, sessionID); err != nil {
 			return err
 		}
 		tx.ExecContext(ctx, `UPDATE link_activations SET approved=1 WHERE session_id=?`, sessionID)
-		s.auditExec(ctx, tx, a, "link_session_approve", "link:"+itoa(linkID), map[string]any{"session": sessionID, "use": l.UsesCount + 1})
+		s.auditExec(ctx, tx, a, "link_session_approve", "link:"+itoa(linkID), map[string]any{"session": sessionID, "use": use, "countedBeforeUpgrade": alreadyCounted})
 		return nil
 	})
 	if err != nil {

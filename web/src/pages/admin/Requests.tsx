@@ -18,14 +18,12 @@ export interface Guest {
   userAgent: string
   sessionId: number
   online: boolean
-  verifyCode: string
 }
 
 interface LinkRequest {
   sessionId: number
   linkId: number
   linkName: string
-  verifyCode: string
   createdAt: number
   ip: string
   userAgent: string
@@ -127,9 +125,9 @@ export default function Requests() {
               </span>
             </div>
             <p className="muted small">Ism foydalanuvchi o'zi yozgan matn — tasdiqlangan shaxs emas.</p>
-            {g.status === 'pending' && g.verifyCode && (
+            {g.status === 'pending' && (
               <p className="small">
-                Tekshirish kodi: <b className="mono">{g.verifyCode}</b> — mehmon ekranidagi kod bilan ishonchli yo'l orqali solishtiring.
+                Tasdiqlash uchun mehmon ekranidagi <b>tekshirish kodi</b> kerak: uni mehmondan ishonchli yo'l bilan (masalan telefon orqali) so'rang. Kod bu yerda ko'rsatilmaydi.
               </p>
             )}
             <div className="reason pre">{g.reason}</div>
@@ -194,12 +192,29 @@ function ApproveModal({ g, onClose, onDone }: { g: Guest; onClose: () => void; o
   const [custom, setCustom] = useState(toLocalInput(Date.now() + 2 * 3600_000))
   const [useCustom, setUseCustom] = useState(false)
   const [note, setNote] = useState('')
+  const [code, setCode] = useState('')
+  const needCode = g.status !== 'approved'
   const contents = useLoad(() => get<ContentLite[]>('/api/admin/contents'), [])
   const cols = useLoad(() => get<CollectionLite[]>('/api/admin/collections'), [])
   const { busy, run } = useAction()
   return (
     <Modal title={`Mehmonni tasdiqlash: ${g.displayName}`} onClose={onClose} wide>
       <div className="reason pre small">{g.reason}</div>
+      {needCode && (
+        <label className="form">
+          Tekshirish kodi (mehmon ekranidan)
+          <input
+            className="mono"
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            placeholder="XXX-XXX"
+            maxLength={9}
+            autoComplete="off"
+            aria-label="Mehmonning tekshirish kodi"
+          />
+          <span className="muted small">Ism va xabar shaxsni tasdiqlamaydi. Kod mos kelsagina aynan shu brauzerdagi so'rov tasdiqlanadi.</span>
+        </label>
+      )}
       <h4>Qaysi kontent / to'plamlar?</h4>
       {contents.data && cols.data && <ObjectPicker contents={contents.data} collections={cols.data} value={sel} onChange={setSel} />}
       <h4>Ruxsat muddati (Toshkent vaqti)</h4>
@@ -220,11 +235,12 @@ function ApproveModal({ g, onClose, onDone }: { g: Guest; onClose: () => void; o
       </label>
       <button
         className="primary"
-        disabled={busy || sel.length === 0}
+        disabled={busy || sel.length === 0 || (needCode && code.trim().length < 7)}
         onClick={() =>
           run(
             () =>
               post(`/api/admin/guests/${g.id}/approve`, {
+                verifyCode: code,
                 objects: sel,
                 until: useCustom ? tashkentInputToUTC(custom) : Date.now() + minutes * 60_000,
                 note,

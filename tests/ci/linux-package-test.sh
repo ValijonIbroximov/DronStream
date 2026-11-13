@@ -125,22 +125,59 @@ if sudo journalctl -u dronstream --no-pager -n 30 | grep -q "chmod 600"; then pa
 sudo systemctl stop dronstream; sudo chmod 600 "$ROOT/config/secrets/master.key"; sudo systemctl start dronstream
 if wait_health 60; then pass "huquq tuzatilgach ishga tushdi"; else fail "huquq tuzatilgach ishga tushmadi"; fi
 
-# ---- secure mode refuses to start with unencrypted RTMP on all interfaces ----
+# ---- secure mode refuses to start with unencrypted RTMP on ANY network address ----
+# A private (LAN/Wi-Fi/VPN-range) address is refused exactly like a public one: a private IP is not encryption.
 sudo systemctl stop dronstream
 sudo cp "$ROOT/config/dronstream.yaml" "$WORK/cfg.bak"
-sudo sed -i 's/^  rtmp_listen: ""/  rtmp_listen: ":1935"/' "$ROOT/config/dronstream.yaml"
-sudo systemctl start dronstream || true
-sleep 5
-if [ "$(systemctl is-active dronstream || true)" != "active" ] && sudo journalctl -u dronstream -n 30 --no-pager | grep -q "security.mode=secure"; then
-  pass "secure: rtmp_listen \":1935\" bilan xizmat ishga tushmaydi (aniq sabab jurnalda)"
-else
-  fail "secure: ochiq RTMP bilan ishga tushib ketdi"
-fi
+refuse_rtmp() { # LISTEN  WORDS-EXPECTED-IN-JOURNAL
+  local t0; t0="$(date '+%Y-%m-%d %H:%M:%S')"
+  sudo cp "$WORK/cfg.bak" "$ROOT/config/dronstream.yaml"
+  sudo sed -i "s|^  rtmp_listen: \"\"|  rtmp_listen: \"$1\"|" "$ROOT/config/dronstream.yaml"
+  sudo systemctl reset-failed dronstream || true
+  sudo systemctl start dronstream || true
+  sleep 5
+  if [ "$(systemctl is-active dronstream || true)" != "active" ] && sudo journalctl -u dronstream --since "$t0" --no-pager | grep "security.mode=secure" | grep -q "$2"; then
+    pass "secure: rtmp_listen \"$1\" bilan xizmat ishga tushmaydi (sabab jurnalda: $2)"
+  else
+    fail "secure: rtmp_listen \"$1\" bilan ishga tushib ketdi yoki sabab yozilmadi"
+  fi
+  sudo systemctl stop dronstream || true
+}
+refuse_rtmp ":1935" "barcha interfeyslarda"
+refuse_rtmp "10.8.0.1:1935" "xususiy IP shifrlash emas"
+refuse_rtmp "192.168.1.10:1935" "xususiy IP shifrlash emas"
+refuse_rtmp "localhost:1935" "host nomi qabul qilinmaydi"
+
+# The only accepted exception: loopback. The listener must really be bound to 127.0.0.1 and nowhere else.
+sudo cp "$WORK/cfg.bak" "$ROOT/config/dronstream.yaml"
+sudo sed -i 's|^  rtmp_listen: ""|  rtmp_listen: "127.0.0.1:1935"|' "$ROOT/config/dronstream.yaml"
+sudo systemctl reset-failed dronstream || true
+sudo systemctl start dronstream
+if wait_health 60 && login; then pass "secure: rtmp_listen 127.0.0.1:1935 bilan ishga tushadi"; else fail "secure: loopback RTMP bilan ishga tushmadi"; fi
+RTMP_BIND="$(sudo ss -H -ltnp | awk '$4 ~ /:1935$/ {print $4}' | sort -u | tr '\n' ' ')"
+expect "oddiy RTMP faqat 127.0.0.1:1935 da tinglaydi" "$RTMP_BIND" "127.0.0.1:1935 "
+expect "xavfsizlik holati: loopback RTMP = ok" "$(api GET /api/admin/security-status | jq -r '.items[] | select(.id=="ingest_plain") | .status')" "ok"
+
 sudo systemctl stop dronstream || true
 sudo cp "$WORK/cfg.bak" "$ROOT/config/dronstream.yaml"
 sudo systemctl reset-failed dronstream || true
 sudo systemctl start dronstream
 if wait_health 60 && login; then pass "sozlama tiklangach ishga tushdi"; else fail "sozlama tiklangach"; fi
+
+# ---- inventory of listening sockets in secure mode (package defaults) ----
+# Everything reachable from the network must be an encrypted service: HTTPS (TCP 8443) and WebRTC ICE (UDP 8189,
+# DTLS-SRTP). MediaMTX API, signalling, the hook listener and RTMP must be loopback-only or absent.
+echo "--- tinglovchi soketlar (dronstream + mediamtx) ---"
+sudo ss -H -ltnup | grep -E '"(dronstream|mediamtx)"' | awk '{print "    "$1" "$5}' | sort -u
+TCP_EXT="$(sudo ss -H -ltnp | grep -E '"(dronstream|mediamtx)"' | awk '{print $4}' | grep -vE '^(127\.[0-9.]+|\[::1\]):' | sed -E 's/.*:([0-9]+)$/\1/' | sort -un | tr '\n' ' ')"
+expect "tarmoqdan ko'rinadigan TCP tinglovchilar: faqat 8443 (HTTPS)" "$TCP_EXT" "8443 "
+MTX_UDP_EXT="$(sudo ss -H -lunp | grep -E '"mediamtx"' | awk '{print $4}' | grep -vE '^(127\.[0-9.]+|\[::1\]):' | sed -E 's/.*:([0-9]+)$/\1/' | sort -un | tr '\n' ' ')"
+expect "MediaMTX'ning tarmoqdan ko'rinadigan UDP porti: faqat 8189 (WebRTC, DTLS-SRTP)" "$MTX_UDP_EXT" "8189 "
+if sudo ss -H -ltnp | grep -E '"mediamtx"' | awk '{print $4}' | grep -E ':(1935|1936|8554|8888|8889|8890|9997|9998|9999)$' | grep -vqE '^(127\.[0-9.]+|\[::1\]):'; then
+  fail "MediaMTX'ning ichki yoki shifrlanmagan porti tarmoqqa ochiq"
+else
+  pass "RTMP/RTSP/HLS/API/metrics portlari tarmoqqa ochiq emas"
+fi
 
 # ---- backup / restore ----
 if sudo DRONSTREAM_BACKUP_PASSPHRASE="$BK_PASS" bash "$ROOT/scripts/backup.sh" --root "$ROOT" >/dev/null; then pass "backup.sh (server ishlab turganda)"; else fail "backup.sh"; fi

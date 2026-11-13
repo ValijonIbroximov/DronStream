@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -301,7 +302,19 @@ func TestGuestFlow(t *testing.T) {
 		t.Fatal("pending guest got ticket")
 	}
 	until := time.Now().Add(time.Hour).UnixMilli()
-	if err := s.ApproveGuest(ctx, admin, g.GuestID, []int64{st.ID}, until, ""); err != nil {
+	// the approval needs the code from the guest's own screen: without it, or with another code, nothing changes
+	for _, bad := range []string{"", "AAA-AAA", g.VerifyCode + "X"} {
+		if err := s.ApproveGuest(ctx, admin, g.GuestID, bad, []int64{st.ID}, until, ""); errCode(err) != "verify_code_mismatch" {
+			t.Fatalf("approve with code %q: %v", bad, err)
+		}
+	}
+	if list, _, _ := s.ViewableStreams(ctx, g); len(list) != 0 {
+		t.Fatal("guest got access after a wrong code")
+	}
+	if g.VerifyCode == "" {
+		t.Fatal("guest session has no verification code")
+	}
+	if err := s.ApproveGuest(ctx, admin, g.GuestID, " "+strings.ToLower(g.VerifyCode)+" ", []int64{st.ID}, until, ""); err != nil {
 		t.Fatal(err)
 	}
 	if err := connect(t, s, g, st, "g1"); err != nil {

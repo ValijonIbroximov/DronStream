@@ -128,6 +128,48 @@ func TestOneTimeLinkRequestsAndSingleApproval(t *testing.T) {
 	}
 }
 
+// A link session opened before v1.3 consumed its use at activation time. After
+// the upgrade it is pending; approving it must not count a second use and must
+// not be refused because its own use exhausted a one-time link. A new browser
+// still cannot get in through the used-up link.
+func TestApprovalOfSessionCountedBeforeUpgrade(t *testing.T) {
+	s, _ := newSvc(t)
+	ctx := context.Background()
+	st, _ := mustStream(t, s, "upg1")
+	c, _ := s.ContentForStream(ctx, st.ID)
+	l, tok := mkLink(t, s, LinkInput{Name: "Eski bir martalik", Preset: "once", Objects: []GrantObject{{Type: "content", ID: c.ID}}})
+	_, old, _, err := s.ActivateLink(ctx, tok, "req-old-browser-0001", "1.1.1.1", "ua")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// what the v2 -> v3 migration leaves behind: use counted, activation marked approved, session pending
+	if _, err := s.St.DB.ExecContext(ctx, `UPDATE access_links SET uses_count=1 WHERE id=?`, l.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.St.DB.ExecContext(ctx, `UPDATE link_activations SET approved=1 WHERE session_id=?`, old.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.IssueTicket(ctx, old, st.ID, "t", ""); errCode(err) != "link_pending_approval" {
+		t.Fatalf("migrated session before approval: %v", err)
+	}
+	if err := s.ApproveLinkSession(ctx, admin, old.ID, "WRONG-1"); errCode(err) != "verify_code_mismatch" {
+		t.Fatalf("wrong code on migrated session: %v", err)
+	}
+	if err := approve(t, s, old); err != nil {
+		t.Fatalf("approving a session whose use was counted before the upgrade: %v", err)
+	}
+	if n := uses(t, s, l.ID); n != 1 {
+		t.Fatalf("uses after approval = %d, want 1 (no double counting)", n)
+	}
+	if err := connect(t, s, old, st, "m1"); err != nil {
+		t.Fatalf("approved migrated session cannot watch: %v", err)
+	}
+	// the link is used up for everybody else
+	if _, _, _, err := s.ActivateLink(ctx, tok, "req-new-browser-0002", "2.2.2.2", "ua"); errCode(err) != "link_used_up" {
+		t.Fatalf("new browser on a used-up one-time link: %v", err)
+	}
+}
+
 func TestActivationRetryIsIdempotent(t *testing.T) {
 	s, _ := newSvc(t)
 	ctx := context.Background()

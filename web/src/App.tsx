@@ -53,6 +53,13 @@ function MainApp() {
       refresh()
     })
   }, [refresh])
+  useEffect(() => {
+    const stale = () => {
+      refresh()
+    }
+    window.addEventListener('ds-session-stale', stale)
+    return () => window.removeEventListener('ds-session-stale', stale)
+  }, [refresh])
 
   useServerEvents(
     (e) => {

@@ -111,8 +111,9 @@ func NormalizeRecoveryCode(s string) string {
 	return s[0:4] + "-" + s[4:8] + "-" + s[8:12]
 }
 
-// NewVerifyCode returns a short code shown both to a waiting visitor and to
-// the administrator (for comparison over a separate, trusted channel).
+// NewVerifyCode returns a short code shown only to the waiting visitor. The
+// administrator gets it from that person over a separate, trusted channel and
+// types it; the admin API never returns it.
 func NewVerifyCode() string {
 	const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 	b := make([]byte, 6)

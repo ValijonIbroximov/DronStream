@@ -192,9 +192,9 @@ func (s *Server) securityItems(r *http.Request) []SecurityItem {
 		out = append(out, SecurityItem{ID: id, Title: title, Status: status, Detail: detail})
 	}
 	if cfg.Secure() {
-		add("mode", "Xavfsizlik rejimi", "ok", "security.mode = secure: ochiq interfeysda shifrlanmagan RTMP va ikkinchi bosqichsiz administrator taqiqlangan")
+		add("mode", "Xavfsizlik rejimi", "ok", "security.mode = secure (production siyosati): shifrlanmagan RTMP faqat 127.0.0.1 da yoki o'chiq; ikkinchi bosqichsiz administrator bloklangan. Bu rejim videoni serverdan yashirmaydi")
 	} else {
-		add("mode", "Xavfsizlik rejimi", "warn", "security.mode = standard. Production uchun config faylida security.mode: secure qiling")
+		add("mode", "Xavfsizlik rejimi", "fail", "security.mode = standard — LABORATORIYA rejimi, production emas: hech bir cheklov majburiy emas. Production uchun config faylida security.mode: secure qiling")
 	}
 	add("links", "Havola faqat taklif", "ok", "Havola yoki QR video huquqini bermaydi: administrator aniq brauzer sessiyasini tekshirish kodi bilan tasdiqlaydi")
 	if n := s.Core.AdminsWithoutTOTP(r.Context()); n == 0 {
@@ -219,21 +219,24 @@ func (s *Server) securityItems(r *http.Request) []SecurityItem {
 	default:
 		add("tls", "HTTPS sertifikati", "unverified", "Holat aniqlanmadi")
 	}
-	if p := config.PlainRTMPProblem(cfg.Media.RTMPListen); p != "" {
-		add("ingest_plain", "Pult → server (oddiy RTMP)", "fail", p)
-	} else if cfg.Media.RTMPListen == "" {
+	switch config.ClassifyPlainRTMP(cfg.Media.RTMPListen) {
+	case config.IngestOff:
 		add("ingest_plain", "Pult → server (oddiy RTMP)", "ok", "Shifrlanmagan RTMP o'chirilgan")
-	} else {
-		add("ingest_plain", "Pult → server (oddiy RTMP)", "unverified", "RTMP faqat "+cfg.Media.RTMPListen+" da (VPN/lokal). Bu interfeysga faqat ishonchli tarmoq yetishini tekshiring: RTMP o'zi shifrlanmaydi")
+	case config.IngestLoopback:
+		add("ingest_plain", "Pult → server (oddiy RTMP)", "ok", "Oddiy RTMP faqat "+cfg.Media.RTMPListen+" da: tarmoqdan to'g'ridan-to'g'ri ulanib bo'lmaydi. Agar unga gateway (shifrlangan tunnel yoki TLS terminator) yo'naltirilgan bo'lsa, o'sha gateway'ning tashqi yo'li shifrlanganini dastur TEKSHIRMAYDI")
+	case config.IngestPrivate:
+		add("ingest_plain", "Pult → server (oddiy RTMP)", "fail", "Shifrlanmagan RTMP "+cfg.Media.RTMPListen+" da. Xususiy IP shifrlash emas: shu tarmoqdagi (Wi-Fi, LAN yoki VPN ichidagi) har qanday qurilma video va pult kalitini o'qiy oladi. Faqat laboratoriya sinovi uchun")
+	default:
+		add("ingest_plain", "Pult → server (oddiy RTMP)", "fail", config.PlainRTMPProblem(cfg.Media.RTMPListen))
 	}
 	if cfg.Media.RTMPSListen != "" {
-		add("ingest_rtmps", "Pult → server (RTMPS)", "unverified", "Server RTMPS'ni qabul qiladi. DJI Pilot 2 RTMPS'ni qo'llashi va sertifikatni tekshirishi real qurilmada tasdiqlanmagan")
+		add("ingest_rtmps", "Pult → server (RTMPS)", "unverified", "Server RTMPS'ni "+cfg.Media.RTMPSListen+" da qabul qiladi. Pult RTMPS'ni qo'llashi va server sertifikatini tekshirishi (noto'g'ri sertifikatni rad etishi) haqiqiy qurilmada TASDIQLANMAGAN")
 	} else {
-		add("ingest_rtmps", "Pult → server (RTMPS)", "not_implemented", "RTMPS yoqilmagan (media.rtmps_listen bo'sh)")
+		add("ingest_rtmps", "Pult → server (RTMPS)", "not_implemented", "RTMPS yoqilmagan (media.rtmps_listen bo'sh). Pult bilan ishlashi ham tasdiqlanmagan")
 	}
 	add("internal_ports", "Ichki API'lar", "ok", "MediaMTX API, WebRTC signalizatsiya va ichki hook faqat 127.0.0.1 da (ishga tushishda tekshiriladi)")
 	add("server_sees_video", "Videoni serverdan yashirish", "not_implemented", "Joriy arxitektura: TLS/DTLS serverda tugaydi, MediaMTX videoni ochiq qabul qilib qayta paketlaydi. Server root'i va operatori videoni ko'ra oladi")
-	add("e2ee", "Pultdan tomoshabingacha E2EE", "not_implemented", "Amalga oshirilmagan. DJI Pilot 2 manba tomonida E2EE qila olmaydi (SECURITY_MODEL.md)")
+	add("e2ee", "Pultdan tomoshabingacha E2EE", "not_implemented", "Amalga oshirilmagan. Joriy DJI Pilot 2 → MediaMTX oqimida E2EE yo'q; mos publisher/SDK imkoniyati haqiqiy qurilmada hali tekshirilmagan (SECURITY_MODEL.md, 6-bo'lim)")
 	add("stored_media", "Yuklangan media", "warn", "Diskda ochiq saqlanadi (fayl huquqlari bilan himoyalangan); har bir so'rovda ruxsat tekshiriladi. Serverdan yashirilmagan")
 	add("backup", "Backup", "ok", "Parol bilan shifrlanadi (Argon2id + AES-GCM)")
 	add("telemetry", "Tashqi telemetriya", "ok", "Dastur tashqi analytics/telemetriya yubormaydi; STUN sukut bo'yicha bo'sh")
@@ -241,5 +244,17 @@ func (s *Server) securityItems(r *http.Request) []SecurityItem {
 }
 
 func (s *Server) adminSecurityStatus(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, 200, map[string]any{"mode": s.Cfg.Security.Mode, "items": s.securityItems(r)})
+	writeJSON(w, 200, map[string]any{"mode": s.Cfg.Security.Mode, "summary": securitySummary(), "items": s.securityItems(r)})
+}
+
+// securitySummary is the fixed, honest headline of the security panel. It is
+// deliberately not derived from configuration: no setting of this version
+// hides the video from the server or provides end-to-end encryption.
+func securitySummary() []map[string]string {
+	return []map[string]string{
+		{"tone": "ok", "text": "Kirish nazorati kuchaytirilgan: havola va QR faqat taklif, administrator aniq brauzer sessiyasini kod bilan tasdiqlaydi, administrator uchun ikkinchi bosqich (TOTP) bor."},
+		{"tone": "bad", "text": "Server videoni ochiq ko'radi: TLS/DTLS serverda tugaydi. Server egasi, root huquqi bor odam yoki serverni egallagan hujumchi videoni ko'ra oladi."},
+		{"tone": "unverified", "text": "Pult → server yo'li: pultning RTMPS'ni qo'llashi va sertifikatni tekshirishi haqiqiy qurilmada tasdiqlanmagan. Oddiy RTMP shifrlanmagan."},
+		{"tone": "bad", "text": "Pultdan tomoshabingacha E2EE amalga oshirilmagan. Bu panel \"video maxfiyligi ta'minlangan\" degan xulosani bermaydi."},
+	}
 }

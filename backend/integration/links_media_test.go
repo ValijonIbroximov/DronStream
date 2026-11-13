@@ -49,6 +49,10 @@ func (c *client) upload(kind, title string, data []byte) (int, map[string]any) {
 // approve: the administrator approves exactly this browser's request,
 // using the verification code that the visitor's screen shows.
 func (c *client) approve(visitor *client) (int, string) {
+	// the admin API must not reveal the visitor's code: the administrator has to get it from the person
+	if _, raw := c.do("GET", "/api/admin/approvals", nil, nil); visitor.verifyCode != "" && strings.Contains(string(raw), visitor.verifyCode) {
+		c.t.Fatalf("admin API exposes the visitor's verification code")
+	}
 	st, b := c.do("POST", fmt.Sprintf("/api/admin/approvals/%d/approve", visitor.sessID), map[string]string{"verifyCode": visitor.verifyCode}, nil)
 	var e struct{ Code string }
 	json.Unmarshal(b, &e)

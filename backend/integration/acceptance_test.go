@@ -493,7 +493,22 @@ func TestAcceptance(t *testing.T) {
 				gid = x.ID
 			}
 		}
-		admin.mustJSON("POST", fmt.Sprintf("/api/admin/guests/%d/approve", gid), map[string]any{"streamIds": []int64{demoB}, "until": time.Now().Add(time.Hour).UnixMilli()}, nil)
+		// the admin API never reveals the guest's code, and approval without the right code is refused
+		if _, raw := admin.do("GET", "/api/admin/guests?status=pending", nil, nil); g.verifyCode == "" || strings.Contains(string(raw), g.verifyCode) {
+			t.Fatalf("guest verification code missing or exposed to the admin API")
+		}
+		for _, bad := range []string{"", "ZZZ-ZZZ"} {
+			if st, b := admin.do("POST", fmt.Sprintf("/api/admin/guests/%d/approve", gid), map[string]any{"verifyCode": bad, "streamIds": []int64{demoB}, "until": time.Now().Add(time.Hour).UnixMilli()}, nil); st != 409 || !strings.Contains(string(b), "verify_code_mismatch") {
+				t.Fatalf("guest approved with code %q: %d %s", bad, st, b)
+			}
+		}
+		var none []struct{ ID int64 }
+		g.mustJSON("GET", "/api/streams", nil, &none)
+		if len(none) != 0 {
+			t.Fatal("guest got streams after a wrong verification code")
+		}
+		record("guest_wrong_code_refused", "PASS")
+		admin.mustJSON("POST", fmt.Sprintf("/api/admin/guests/%d/approve", gid), map[string]any{"verifyCode": g.verifyCode, "streamIds": []int64{demoB}, "until": time.Now().Add(time.Hour).UnixMilli()}, nil)
 		var l []struct{ ID int64 }
 		g.mustJSON("GET", "/api/streams", nil, &l)
 		if len(l) != 1 || l[0].ID != demoB {

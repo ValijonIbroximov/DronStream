@@ -59,6 +59,16 @@ func TestMigrationFromV2(t *testing.T) {
 	if len(lib.Items) != 1 {
 		t.Fatalf("1.1.0 link session should see the text: %d", len(lib.Items))
 	}
+	// a ONE-TIME link whose single use is consumed by the old version
+	var once linkResp
+	admin.mustJSON("POST", "/api/admin/links", map[string]any{"name": "Eski bir martalik", "preset": "once", "sessionMinutes": 600, "objects": []map[string]any{{"type": "content", "id": txt.ID}}}, &once)
+	onceVisitor := newClient(t, "once-visitor")
+	if st, code := onceVisitor.activate(tokenOf(once.Share.URL), "old-once-session-0001"); st != 200 {
+		t.Fatalf("1.1.0 one-time activation: %d %s", st, code)
+	}
+	if n := admin.linkUses(once.Link.ID); n != 1 {
+		t.Fatalf("1.1.0 one-time link uses = %d", n)
+	}
 	s1.stop()
 
 	// ---- current build: same cookie, stricter policy ----
@@ -88,7 +98,7 @@ func TestMigrationFromV2(t *testing.T) {
 	}
 	var reqs []struct{ SessionID int64 }
 	a2.mustJSON("GET", "/api/admin/approvals", nil, &reqs)
-	if len(reqs) != 1 || reqs[0].SessionID != me.Session.ID {
+	if len(reqs) != 2 {
 		t.Fatalf("pending requests after upgrade: %+v", reqs)
 	}
 	if me.Session.VerifyCode == "" {
@@ -101,6 +111,35 @@ func TestMigrationFromV2(t *testing.T) {
 	if len(lib.Items) != 1 {
 		t.Fatalf("approved session sees %d items", len(lib.Items))
 	}
+	// The old sessions' uses were counted by 1.1.0: approving them again must not
+	// count a second use, and the one-time link's own session must still be
+	// approvable although the link is "used up" for everybody else.
+	if n := a2.linkUses(lr.Link.ID); n != 1 {
+		t.Fatalf("multi link uses after re-approval = %d, want 1 (no double counting)", n)
+	}
+	var onceMe struct {
+		Session struct {
+			ID         int64
+			Approval   string
+			VerifyCode string
+		}
+	}
+	onceVisitor.mustJSON("GET", "/api/session", nil, &onceMe)
+	if onceMe.Session.Approval != "pending" {
+		t.Fatalf("old one-time session after upgrade: %q", onceMe.Session.Approval)
+	}
+	stranger := newClient(t, "stranger")
+	if st, code := stranger.activate(tokenOf(once.Share.URL), "new-browser-after-upgrade-01"); st == 200 || code != "link_used_up" {
+		t.Fatalf("a new browser on the used-up one-time link: %d %s", st, code)
+	}
+	if st, b := a2.do("POST", fmt.Sprintf("/api/admin/approvals/%d/approve", onceMe.Session.ID), map[string]string{"verifyCode": onceMe.Session.VerifyCode}, nil); st != 200 {
+		t.Fatalf("approve migrated one-time session: %d %s", st, b)
+	}
+	onceVisitor.mustJSON("GET", "/api/library", nil, &lib)
+	if len(lib.Items) != 1 || a2.linkUses(once.Link.ID) != 1 {
+		t.Fatalf("migrated one-time session: items=%d uses=%d (want 1 and 1)", len(lib.Items), a2.linkUses(once.Link.ID))
+	}
+	record("migration_v2_old_link_sessions_pending_no_double_count", "PASS (real 1.1.0 database)")
 	ents, _ := filepath.Glob(filepath.Join(root, "data", "backups", "pre-migration-schema-v2-*.db"))
 	if len(ents) != 1 {
 		t.Fatalf("pre-migration copy missing: %v", ents)

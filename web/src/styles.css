@@ -256,3 +256,11 @@ pre.codes { background: var(--bg2); border: 1px solid var(--line); border-radius
 .s-unverified .sec-badge { color: #9db0c4; }
 .s-not_implemented .sec-badge { color: #c18cff; }
 @media (max-width: 560px) { .sec-item { grid-template-columns: 1fr; } .sec-badge { justify-self: start; } }
+
+/* security panel: fixed honest summary, laboratory-mode banner */
+.sec-summary { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 6px; }
+.sec-summary li { padding: 8px 10px 8px 12px; border-left: 3px solid var(--line); background: #0d1722; border-radius: 0 8px 8px 0; font-size: .92rem; }
+.sec-summary .t-ok { border-left-color: var(--ok); }
+.sec-summary .t-bad { border-left-color: var(--bad); }
+.sec-summary .t-unverified { border-left-color: #9db0c4; }
+.lab-banner a { color: inherit; text-decoration: underline; }

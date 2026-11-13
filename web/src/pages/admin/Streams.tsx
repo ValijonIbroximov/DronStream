@@ -215,13 +215,14 @@ function KeyModal({ s, k, fresh, onClose }: { s: AdminStream; k: KeyInfo; fresh?
           <p className="muted small">Bu ma'lumot faqat administratorga ko'rinadi. Kalitni ko'rish auditga yoziladi. Publish kaliti video ko'rish huquqini bermaydi.</p>
           {k.urls.rtmps && (
             <>
-              <h4>RTMPS (shifrlangan, agar pult qo'llasa)</h4>
+              <h4>RTMPS (shifrlangan; pult qo'llashi va sertifikatni tekshirishi tasdiqlanmagan)</h4>
               <CopyField value={k.urls.rtmps} secret />
             </>
           )}
           {k.urls.rtmp && (
             <>
-              <h4>RTMP (faqat VPN orqali ishlating)</h4>
+              <h4>RTMP — SHIFRLANMAGAN: video va kalit yo'lda ochiq ketadi</h4>
+              <p className="muted small">Xususiy IP yoki Wi-Fi paroli shifrlash o'rnini bosmaydi. Faqat laboratoriya sinovi yoki shu kompyuterdagi shifrlangan gateway (tunnel/TLS) orqali.</p>
               <CopyField value={k.urls.rtmp} secret />
             </>
           )}

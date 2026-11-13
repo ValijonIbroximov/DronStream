@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"dronstream/internal/config"
 	"dronstream/internal/core"
 	"dronstream/internal/media"
 )
@@ -61,7 +62,8 @@ func (s *Server) adminOverview(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, 200, map[string]any{
 		"state": st, "streams": streams, "pendingGuests": len(pending), "pendingLinkRequests": len(linkReqs), "mediaSessions": len(live),
-		"webSessions": len(sessions), "onlineSessions": nOnline,
+		"webSessions": len(sessions), "onlineSessions": nOnline, "securityMode": s.Cfg.Security.Mode,
+		"plainIngest": plainIngestName(s.Cfg.Media.RTMPListen),
 		"health": map[string]any{"auth": s.Media.Healthy(), "media": s.Media.MediaUp(), "lastReconcile": s.Media.LastPass(), "lastEnforceMicros": s.Media.LastEnforce.Load()},
 	})
 }
@@ -255,15 +257,17 @@ func (s *Server) adminApproveGuest(w http.ResponseWriter, r *http.Request) {
 		Objects   []core.GrantObject `json:"objects"`
 		Until     int64              `json:"until"`
 		Note      string             `json:"note"`
+		// VerifyCode: the code from the guest's screen; required while the guest is not approved yet.
+		VerifyCode string `json:"verifyCode"`
 	}
 	if err == nil {
 		err = readJSON(r, &in)
 	}
 	if err == nil {
 		if len(in.Objects) > 0 {
-			err = s.Core.ApproveGuestObjects(r.Context(), actor(r), id, in.Objects, in.Until, in.Note)
+			err = s.Core.ApproveGuestObjects(r.Context(), actor(r), id, in.VerifyCode, in.Objects, in.Until, in.Note)
 		} else {
-			err = s.Core.ApproveGuest(r.Context(), actor(r), id, in.StreamIDs, in.Until, in.Note)
+			err = s.Core.ApproveGuest(r.Context(), actor(r), id, in.VerifyCode, in.StreamIDs, in.Until, in.Note)
 		}
 	}
 	if err != nil {
@@ -639,4 +643,19 @@ func (s *Server) adminDownloadBackup(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", `attachment; filename="`+r.PathValue("name")+`"`)
 	http.ServeContent(w, r, r.PathValue("name"), st.ModTime(), f)
+}
+
+// plainIngestName tells the admin UI who can reach the unencrypted RTMP
+// listener: "off", "loopback", "private" (any device on that network can read
+// the stream) or "open".
+func plainIngestName(listen string) string {
+	switch config.ClassifyPlainRTMP(listen) {
+	case config.IngestOff:
+		return "off"
+	case config.IngestLoopback:
+		return "loopback"
+	case config.IngestPrivate:
+		return "private"
+	}
+	return "open"
 }

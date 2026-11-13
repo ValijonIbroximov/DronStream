@@ -46,6 +46,9 @@ export async function api<T = unknown>(method: string, path: string, body?: unkn
     if (e instanceof ApiError && e.code === 'reauth_required' && reauthHandler && path !== '/api/me/reauth') {
       if (await reauthHandler(e.message)) return apiOnce<T>(method, path, body, raw)
     }
+    // The server now demands the second factor (e.g. it was restarted in secure mode while this
+    // page was open): reload the session info so the enrolment screen replaces the stale page.
+    if (e instanceof ApiError && e.code === 'mfa_setup_required') window.dispatchEvent(new Event('ds-session-stale'))
     throw e
   }
 }
@@ -118,6 +121,8 @@ export interface SessionInfo {
   guestEnabled: boolean
   guest?: { status: string; accessUntil: number | null; note: string; name: string }
   mfaSetupRequired?: boolean
+  securityMode?: string
+  plainIngest?: string
 }
 export interface ViewerStream {
   id: number

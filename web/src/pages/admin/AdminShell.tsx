@@ -32,6 +32,9 @@ export default function AdminShell({ info, route, onLogout }: { info: SessionInf
   const [sound, setSound] = useState(() => localStorage.getItem('ds-sound') === '1')
   const [menu, setMenu] = useState(false)
   const [instance, setInstance] = useState('active')
+  // from the session info: known even when the admin API is still locked behind TOTP enrolment
+  const secMode = info.securityMode || 'standard'
+  const plainIngest = info.plainIngest || 'off'
 
   const refreshCounts = async () => {
     try {
@@ -139,6 +142,13 @@ export default function AdminShell({ info, route, onLogout }: { info: SessionInf
             {instance === 'standby'
               ? "Server KUTISH rejimida (backupdan tiklangan). Publish va tomosha rad etiladi. Eski server o'chirilganini tekshirib, Tarmoq va tizim bo'limida faollashtiring."
               : "Bu server boshqa kompyuterga KO'CHIRILGAN deb belgilangan: publish va tomosha rad etiladi."}
+          </div>
+        )}
+        {secMode !== 'secure' && (
+          <div className="alert error lab-banner" role="status">
+            <b>Laboratoriya rejimi — production emas.</b> security.mode = standard: xavfsizlik siyosati majburiy emas
+            {plainIngest === 'private' || plainIngest === 'open' ? "; shifrlanmagan RTMP tarmoqqa ochiq — shu tarmoqdagi kuzatuvchi video va pult kalitini o'qiy oladi" : ''}.{' '}
+            <a href="#/system">Xavfsizlik holati</a>
           </div>
         )}
         {body}

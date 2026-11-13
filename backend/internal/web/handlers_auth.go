@@ -15,6 +15,10 @@ type sessionOut struct {
 	Guest         any           `json:"guest,omitempty"`
 	// Secure mode: this administrator must enable TOTP before anything else.
 	MFASetupRequired bool `json:"mfaSetupRequired,omitempty"`
+	// Administrators only: "secure" or "standard" (laboratory), and who can reach
+	// the unencrypted RTMP listener (off | loopback | private | open).
+	SecurityMode string `json:"securityMode,omitempty"`
+	PlainIngest  string `json:"plainIngest,omitempty"`
 }
 
 func (s *Server) sessionPayload(r *http.Request, se *core.Session) sessionOut {
@@ -28,6 +32,10 @@ func (s *Server) sessionPayload(r *http.Request, se *core.Session) sessionOut {
 		out.CSRF = se.CSRF
 		out.Session = se
 		out.MFASetupRequired = s.mfaSetupRequired(se)
+		if se.IsAdmin() {
+			out.SecurityMode = s.Cfg.Security.Mode
+			out.PlainIngest = plainIngestName(s.Cfg.Media.RTMPListen)
+		}
 		if se.Kind == "guest" {
 			gs, _ := s.Core.ListGuests(r.Context(), "")
 			for _, g := range gs {

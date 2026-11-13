@@ -141,10 +141,16 @@ type SecurityConfig struct {
 	SameSite          string `yaml:"cookie_samesite"` // Strict (default) or Lax
 	// LinkRatePerMinute limits special-link inspect/activate requests per IP.
 	LinkRatePerMinute int `yaml:"link_rate_per_minute"`
-	// Mode: "standard" or "secure". secure = production policy:
-	//   - plain (unencrypted) RTMP may only listen on a loopback or private
-	//     (VPN/LAN) address, never on all interfaces; there is no fallback;
-	//   - every administrator must enable TOTP before using the admin API.
+	// Mode: "standard" or "secure".
+	//   secure   = production policy:
+	//     - plain (unencrypted) RTMP may listen on a loopback address only, or
+	//       be off. A private (LAN/Wi-Fi/VPN) address is NOT accepted: a private
+	//       address says nothing about encryption, and the program cannot tell
+	//       an encrypted tunnel interface from an ordinary network card;
+	//     - there is no fallback from RTMPS to RTMP;
+	//     - every administrator must enable TOTP before using the admin API.
+	//   standard = laboratory/test mode: nothing is enforced; the admin panel
+	//     marks it as "not production".
 	// Missing value = "standard" (keeps existing installations starting).
 	Mode string `yaml:"mode"`
 }
@@ -152,25 +158,66 @@ type SecurityConfig struct {
 // Secure reports whether the production security policy is on.
 func (c *Config) Secure() bool { return c.Security.Mode == "secure" }
 
-// PlainRTMPProblem explains why the plain RTMP listener is not acceptable in
-// secure mode ("" = acceptable). Plain RTMP is unencrypted: it must be
-// reachable only from a VPN or a closed network.
-func PlainRTMPProblem(listen string) string {
+// IngestExposure says who can reach the plain (unencrypted) RTMP listener.
+type IngestExposure int
+
+const (
+	IngestOff      IngestExposure = iota // listener disabled
+	IngestLoopback                       // only processes on this computer
+	IngestPrivate                        // a private/CGNAT address: every device on that network can read the stream
+	IngestOpen                           // all interfaces or a public address
+	IngestInvalid                        // not "ip:port"
+)
+
+// ClassifyPlainRTMP classifies media.rtmp_listen. Only a literal IP is
+// classified: a host name (even "localhost") is IngestInvalid, because what
+// it resolves to is not under this program's control.
+func ClassifyPlainRTMP(listen string) IngestExposure {
 	if listen == "" {
-		return ""
+		return IngestOff
 	}
 	host, _, err := net.SplitHostPort(listen)
 	if err != nil {
-		return "media.rtmp_listen noto'g'ri: " + listen
+		return IngestInvalid
+	}
+	if host == "" {
+		return IngestOpen
 	}
 	ip := net.ParseIP(host)
-	if host == "" || ip == nil || ip.IsUnspecified() {
-		return "media.rtmp_listen barcha interfeyslarda (" + listen + "): shifrlanmagan RTMP internetga ochiq bo'lishi mumkin. VPN/lokal interfeys IP sini yozing (masalan 10.8.0.1:1935) yoki bo'sh qoldiring"
+	switch {
+	case ip == nil:
+		return IngestInvalid
+	case ip.IsUnspecified():
+		return IngestOpen
+	case ip.IsLoopback():
+		return IngestLoopback
+	case ip.IsPrivate() || ip.IsLinkLocalUnicast() || isCGNAT(ip):
+		return IngestPrivate
 	}
-	if ip.IsLoopback() || ip.IsPrivate() || isCGNAT(ip) {
+	return IngestOpen
+}
+
+// PlainRTMPProblem explains why the plain RTMP listener is not acceptable in
+// secure mode ("" = acceptable: off or loopback).
+//
+// Plain RTMP carries the video and the publish key unencrypted. A private
+// address does not change that: anyone on the same Wi-Fi/LAN segment, or
+// inside the same VPN, can read it. The only exception is loopback, where the
+// listener is reachable from this computer alone. A trusted local gateway (a
+// TLS terminator or the end of an encrypted tunnel, run by the operator on
+// this computer) may forward into it; the encryption of that gateway's outer
+// leg is the operator's responsibility and is NOT verified by this program.
+func PlainRTMPProblem(listen string) string {
+	const how = " secure rejimda oddiy RTMP faqat 127.0.0.1 da bo'lishi yoki o'chiq turishi mumkin. Shifrlangan yo'l: RTMPS (media.rtmps_listen) yoki shu kompyuterda tugaydigan shifrlangan tunnel/TLS gateway'ni 127.0.0.1 ga yo'naltirish. Laboratoriya sinovi uchun security.mode: standard"
+	switch ClassifyPlainRTMP(listen) {
+	case IngestOff, IngestLoopback:
 		return ""
+	case IngestPrivate:
+		return "media.rtmp_listen xususiy manzilda (" + listen + "): xususiy IP shifrlash emas - shu tarmoqdagi (Wi-Fi, LAN yoki VPN ichidagi) har qanday qurilma video va pult kalitini o'qiy oladi." + how
+	case IngestOpen:
+		return "media.rtmp_listen barcha interfeyslarda yoki ommaviy manzilda (" + listen + "): shifrlanmagan RTMP tarmoqqa ochiq." + how
 	}
-	return "media.rtmp_listen ommaviy manzilda (" + listen + "): shifrlanmagan RTMP faqat VPN/lokal interfeysda bo'lishi mumkin"
+	return "media.rtmp_listen noto'g'ri (" + listen + "): aniq IP va port yozing, masalan 127.0.0.1:1935 (host nomi qabul qilinmaydi)." + how
 }
 
 func isCGNAT(ip net.IP) bool {
@@ -266,8 +313,8 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("security.mode must be standard or secure; got %q", c.Security.Mode)
 	}
 	if c.Secure() {
-		// Fail closed: refuse to start rather than accept unencrypted ingest
-		// from the internet. RTMPS (if configured) is unaffected.
+		// Fail closed: refuse to start rather than accept unencrypted ingest from
+		// any network (public or private). RTMPS (if configured) is unaffected.
 		if p := PlainRTMPProblem(c.Media.RTMPListen); p != "" {
 			return fmt.Errorf("security.mode=secure: %s", p)
 		}

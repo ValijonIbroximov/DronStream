@@ -118,7 +118,7 @@ export default function ShareDialog({ share, onClose, heading }: { share: Share;
       ) : (
         <>
           <p className="small muted">
-            Havola bir yoki bir necha kishiga beriladi. Kim olsa — o'sha foydalana oladi: oluvchi nomi tasdiqlangan shaxs emas. Havolani ommaviy joylarga qo'ymang.
+            Havola — faqat taklif: uni olgan har kim kirish so'rovini yubora oladi, lekin siz so'rovni tekshirish kodi bilan tasdiqlamaguningizcha hech narsa ochilmaydi. Oluvchi nomi tasdiqlangan shaxs emas. Havolani ommaviy joylarga qo'ymang — ortiqcha so'rovlar keladi.
           </p>
           <div className="copy-field">
             <input readOnly value={share.url} onFocus={(e) => e.currentTarget.select()} style={{ flex: '1 1 300px' }} aria-label="Havola" />

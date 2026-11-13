@@ -3,6 +3,9 @@ package core
 import (
 	"context"
 	"database/sql"
+	"strings"
+
+	"dronstream/internal/secure"
 )
 
 type GuestInfo struct {
@@ -19,9 +22,10 @@ type GuestInfo struct {
 	UserAgent   string `json:"userAgent"`
 	SessionID   int64  `json:"sessionId"`
 	Online      bool   `json:"online"`
-	// Shown on the guest's waiting screen too; compare it over a trusted
-	// channel (phone call) before approving. Name and message prove nothing.
-	VerifyCode string `json:"verifyCode"`
+	// The code shown on the guest's waiting screen. It is never sent to the
+	// admin panel: the administrator must get it from the person over a
+	// trusted channel (phone call) and type it. Name and message prove nothing.
+	VerifyCode string `json:"-"`
 }
 
 // CreateGuestRequest creates an unverified guest identity bound to a brand
@@ -67,16 +71,22 @@ func (s *Service) CreateGuestRequest(ctx context.Context, name, reason, ip, ua s
 
 // ApproveGuest grants the guest access to the given streams until `until`
 // (unix ms; 0 = default duration). Previous grants are replaced.
-func (s *Service) ApproveGuest(ctx context.Context, a Actor, guestID int64, streamIDs []int64, until int64, note string) error {
+func (s *Service) ApproveGuest(ctx context.Context, a Actor, guestID int64, verifyCode string, streamIDs []int64, until int64, note string) error {
 	objs, err := s.streamContentIDs(ctx, streamIDs)
 	if err != nil {
 		return err
 	}
-	return s.ApproveGuestObjects(ctx, a, guestID, objs, until, note)
+	return s.ApproveGuestObjects(ctx, a, guestID, verifyCode, objs, until, note)
 }
 
 // ApproveGuestObjects approves a guest for contents/collections until `until`.
-func (s *Service) ApproveGuestObjects(ctx context.Context, a Actor, guestID int64, objs []GrantObject, until int64, note string) error {
+//
+// A guest who is not approved yet is approved only with the verification code
+// shown in that guest's browser: the administrator has to obtain it from the
+// person over a trusted channel and type it, so the approval lands on exactly
+// that browser session and not on another request with the same name. Changing
+// the access of an already approved guest needs no code.
+func (s *Service) ApproveGuestObjects(ctx context.Context, a Actor, guestID int64, verifyCode string, objs []GrantObject, until int64, note string) error {
 	if len(objs) == 0 {
 		return errf(400, "no_streams", "Kamida bitta kontent yoki to'plamni tanlang")
 	}
@@ -102,6 +112,15 @@ func (s *Service) ApproveGuestObjects(ctx context.Context, a Actor, guestID int6
 		}
 		if status == "ended" {
 			return errf(409, "ended", "Bu mehmon sessiyasi yakunlangan; u qaytadan so'rov yuborishi kerak")
+		}
+		if status != "approved" {
+			var code string
+			if err := tx.QueryRowContext(ctx, `SELECT COALESCE((SELECT verify_code FROM web_sessions WHERE guest_id=? AND revoked_at IS NULL ORDER BY id DESC LIMIT 1),'')`, guestID).Scan(&code); err != nil {
+				return err
+			}
+			if code == "" || !secure.Equal([]byte(strings.ToUpper(strings.TrimSpace(verifyCode))), []byte(code)) {
+				return errf(409, "verify_code_mismatch", "Tekshirish kodi mos emas: mehmon ekranidagi kodni qayta so'rang")
+			}
 		}
 		if _, err := tx.ExecContext(ctx, `UPDATE guests SET status='approved', decided_at=?, decided_by=?, decision_note=?, access_until=? WHERE id=?`, now, a.ID, cleanText(note, 300, false), until, guestID); err != nil {
 			return err

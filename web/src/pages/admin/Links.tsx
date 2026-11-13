@@ -99,8 +99,9 @@ export default function Links() {
         </button>
       </div>
       <p className="muted small">
-        Login-parolsiz kirish. Havola ochilganda hech narsa sarflanmaydi — faqat "Tomosha qilish" bosilganda. Oluvchi nomi tasdiqlangan shaxs emas: havolani kim olsa, o'sha
-        foydalana oladi. Barcha vaqtlar Toshkent vaqtida (UTC+5).
+        Havola — faqat taklif: uni ochgan odam kirish so'rovini yuboradi, siz esa "Kirish so'rovlari" bo'limida tomoshabin aytgan tekshirish kodi bilan aynan o'sha brauzerni
+        tasdiqlaysiz. Havolani ochish yoki so'rov yuborish hech narsa sarflamaydi — foydalanish tasdiqlaganingizda sanaladi. Oluvchi nomi tasdiqlangan shaxs emas. "Faol
+        sessiyalar" — tasdiqlangan sessiyalar soni. Barcha vaqtlar Toshkent vaqtida (UTC+5).
       </p>
       <div className="filters">
         <input placeholder="Nomi bo'yicha qidirish…" value={q} onChange={(e) => setQ(e.target.value)} />

@@ -238,7 +238,7 @@ const STATUS_LABEL: Record<SecItem['status'], string> = {
 }
 
 export function SecurityStatus() {
-  const st = useLoad(() => get<{ mode: string; items: SecItem[] }>('/api/admin/security-status'), [], 30000)
+  const st = useLoad(() => get<{ mode: string; summary?: { tone: string; text: string }[]; items: SecItem[] }>('/api/admin/security-status'), [], 30000)
   return (
     <div className="card">
       <h2>Xavfsizlik holati</h2>
@@ -247,6 +247,15 @@ export function SecurityStatus() {
         "Mavjud emas" — bu versiyada yo'q himoya. Batafsil: SECURITY_MODEL.md.
       </p>
       {st.err && <div className="alert error small">{st.err}</div>}
+      {st.data?.summary && (
+        <ul className="sec-summary" aria-label="Joriy holat xulosasi">
+          {st.data.summary.map((x, n) => (
+            <li key={n} className={`t-${x.tone}`}>
+              {x.text}
+            </li>
+          ))}
+        </ul>
+      )}
       <ul className="sec-list">
         {st.data?.items.map((i) => (
           <li key={i.id} className={`sec-item s-${i.status}`}>

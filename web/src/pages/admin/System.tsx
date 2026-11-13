@@ -69,7 +69,7 @@ export default function System() {
         <h2>Media (pult → server, server → brauzer)</h2>
         <div className="kv small">
           <span>RTMP (pult)</span>
-          <span>{m.rtmp || "o'chiq"} — faqat VPN interfeysiga bog'lash tavsiya etiladi</span>
+          <span>{m.rtmp ? `${m.rtmp} — shifrlanmagan (holatini pastdagi "Xavfsizlik holati"da ko'ring)` : "o'chiq"}</span>
           <span>RTMPS (pult)</span>
           <span>{m.rtmps || "o'chiq"}</span>
           <span>Pult URL dagi host</span>
