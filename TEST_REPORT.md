@@ -220,6 +220,8 @@ Izoh: to'liq integratsiya to'plamining birinchi yurishida `TestMigrationFromV1` 
 
 CI'da ishlatilgan versiya raqamlari (9.9.1, 9.9.2) faqat sinov uchun; chiqarilgan paket — 1.2.0 (xuddi shu skript bilan yig'iladi). **Aynan `dist` dagi 1.2.0 tar.gz fayli Linux'da ishga tushirilmagan** — u Windows'da cross-compile qilingan; CI esa xuddi shu manbadan Linux'ning o'zida yig'ilgan paketni sinaydi.
 
+CI yurishlari tarixi halol ko'rinishda: #1–#5 yiqilgan (workflow va sinov skriptlarini sozlash; #5 da yuqoridagi "setup kodi jurnalda" nuqsoni topilgan). **#6 — uchala ish ham o'tdi** (bu jadvaldagi natijalar). #7 da Linux ishi yana to'liq o'tdi (unit 7, integratsiya 4/4, paket 45/45), lekin Windows ishi yiqildi: sinov skripti multipart maydonlarini tasodifiy tartibda yuborgan (PowerShell hashtable), server esa `kind` maydoni fayldan oldin kelishini talab qiladi — shu sababli u #6 da o'tib, #7 da yiqilgan. Bu sinov skriptining xatosi; tartib qat'iy qilib tuzatildi. Keyingi yurishlar holati GitHub'dagi Actions sahifasida ko'rinadi; ushbu hujjat yozilganda Windows → Linux ko'chirishning tasdiqlangan yurishi — #6.
+
 ## C. Talablar bo'yicha
 | Talab | Natija |
 |---|---|

@@ -58,7 +58,16 @@ try {
   # a small valid PNG (1x1) as uploaded media
   $png = Join-Path $Out "pixel.png"
   [IO.File]::WriteAllBytes($png, [Convert]::FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="))
-  $img = Invoke-RestMethod -Method Post -Uri "$base/api/admin/contents/upload" -WebSession $ws -Headers $h -SkipCertificateCheck -Form @{ kind = "image"; title = "Xarita"; file = (Get-Item $png) }
+  # The server reads the upload as a stream and needs "kind" before the file part (as the web UI sends it).
+  # A plain hashtable has no defined order, which made this step pass or fail at random: use an ordered one.
+  $form = [ordered]@{ kind = "image"; title = "Xarita"; file = (Get-Item $png) }
+  try {
+    $img = Invoke-RestMethod -Method Post -Uri "$base/api/admin/contents/upload" -WebSession $ws -Headers $h -SkipCertificateCheck -Form $form
+  } catch {
+    $detail = ""
+    if ($_.ErrorDetails -and $_.ErrorDetails.Message) { $detail = $_.ErrorDetails.Message }
+    throw ("POST /api/admin/contents/upload: {0} {1}" -f $_.Exception.Message, $detail)
+  }
   $mk = [IO.File]::ReadAllBytes((Join-Path $root "config\secrets\master.key"))
   $mkFormat = [Text.Encoding]::ASCII.GetString($mk, 0, 4)
   if ($mkFormat -ne "DSK1") { throw "expected a DPAPI-wrapped master key (DSK1) on Windows, got $mkFormat" }
