@@ -25,6 +25,33 @@ DJI pult --RTMP (VPN orqali) / RTMPS--> [ Windows server: DronStream + MediaMTX 
 | [TEST_REPORT.md](TEST_REPORT.md) | Nima sinaldi, natijalar, nima sinalmadi |
 | [ARCHITECTURE.md](ARCHITECTURE.md), [REQUIREMENTS.md](REQUIREMENTS.md), [PROGRESS.md](PROGRESS.md) | Arxitektura, talablar, ish jurnali |
 
+## Bir bosishda ishlatish (4 ta BAT fayl)
+Loyiha ildizida (va tarqatish paketida — birinchi ikkitasi):
+
+| Fayl | Nima qiladi |
+|---|---|
+| `DronStreamStart.bat` | Tekshiradi → kerak bo'lsa **bir marta** avtomatik tayyorlaydi → serverni ishga tushiradi → health-check → brauzerni ochadi. Server allaqachon ishlayotgan bo'lsa ikkinchi nusxa ochmaydi, faqat brauzerni ochadi. Birinchi ishga tushirishda admin yaratish sahifasi ochiladi, bir martalik kod shu oynada ko'rinadi (logga yozilmaydi). |
+| `DronStreamTayyorla.bat` | Kompyuterni tayyorlaydi: Windows x64 tekshiruvi; paketda kompilyatorsiz; manba kodda mahkamlangan Go 1.27.4, Node 22.23.5, MediaMTX v1.21.3 ni `.tools` ga (rasmiy manbadan, SHA256 bilan) yuklaydi, `npm ci` (package-lock) va `go.sum` bo'yicha build qiladi; papkalar va sirsiz konfiguratsiya shablonini yaratadi (mavjudini ustidan yozmaydi); oxirida tayyorlik tekshiruvi. |
+| `pull.bat` | Repozitoriy ichida: faqat fast-forward yangilash; lokal o'zgarish bo'lsa to'xtaydi (o'chirmaydi, stash qilmaydi); kod o'zgargan bo'lsa Tayyorla'ni ishga tushiradi, server ishlayotgan bo'lsa uni to'xtatmaydi. Yangi kompyuterda: yonidagi `DronStream` papkasiga clone qiladi va tayyorlaydi. |
+| `push.bat` | O'zgarishlarni ko'rsatadi, sir/baza/log/media/build fayllarini (yangi commitlar tarixida ham) tekshiradi, commit qiladi, force'siz push qiladi, lokal va remote SHA ni solishtiradi, commit havolasini chiqaradi. Avtomatik: `push.bat -Message "xabar"`. |
+
+Chiqish kodlari: 0 tayyor, 1 xato, 2 port band, 3 boshqa nusxa ishlamoqda, 4 qo'lda harakat kerak, 5 platforma qo'llanmaydi, 6 internet yo'q va vosita yetishmaydi, 7 server ishlayapti (binary ustidan yozilmaydi). Loglar: `runtime\logs\` (manba kod) yoki `<ROOT>\logs\` (paket).
+
+Avtomatik "tuzatilmaydigan" holatlar (aniq tashxis beriladi): boshqa dastur band qilgan port (u to'xtatilmaydi), buzilgan yoki yangi sxemadagi baza, noto'g'ri TLS kalit, noto'g'ri konfiguratsiya. Firewall, Windows service va sertifikatni ishonch omboriga qo'shish — alohida, administrator bilan bajariladigan amallar (`scripts\firewall-rules.ps1`, `scripts\service-install.ps1`).
+
+### Ikki kompyuter o'rtasida ishlash
+1. Birinchi kompyuterda ish tugagach → `push.bat`
+2. Ikkinchi kompyuterda → `pull.bat`
+3. Dasturni ochish → `DronStreamStart.bat`
+4. Zarur bo'lsa qo'lda tayyorlash → `DronStreamTayyorla.bat`
+
+Git **faqat kod va xavfsiz loyiha fayllarini** ko'chiradi. Foydalanuvchilar bazasi, media, haqiqiy konfiguratsiya (`runtime\config\dronstream.yaml`), master kalit va TLS kalitlari Git'ga kirmaydi va yangi clone'da avtomatik paydo bo'lmaydi. Ularni ko'chirish yo'li — shifrlangan backup/restore ([BACKUP_RESTORE_UZ.md](BACKUP_RESTORE_UZ.md)); yoki yangi kompyuterda birinchi sozlash (bir martalik kod bilan yangi admin).
+
+### Yangi kompyuterga `pull.bat` ning o'zini olish
+- GitHub sahifasida `pull.bat` faylini oching → **Raw** → `Ctrl+S` bilan masalan `D:\Ish\pull.bat` sifatida saqlang (yoki repozitoriyni ZIP qilib yuklab, ichidan `pull.bat` ni oling).
+- Shu papkada `pull.bat` ni ikki marta bosing: Git bo'lmasa o'rnatish yo'lini ko'rsatadi; bor bo'lsa `D:\Ish\DronStream` ga clone qiladi va `DronStreamTayyorla.bat` ni ishga tushiradi. Agar `DronStream` papkasi bor va bo'sh bo'lmasa — ustidan yozmaydi.
+- Shaxsiy (private) repozitoriy uchun Git birinchi marta GitHub'ga kirishni so'raydi (Git Credential Manager oynasi). Token/parolni BAT faylga yoki remote URL ga yozmang.
+
 ## Tezkor boshlash (tayyor paketdan)
 ```powershell
 # paketni oching, so'ng:

@@ -4,3 +4,4 @@
 *.cmd text eol=crlf
 *.h264 binary
 *.png binary
+*.bat text eol=crlf

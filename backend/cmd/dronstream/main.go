@@ -25,6 +25,7 @@ Foydalanish:
   dronstream restore   [--root DIR] --in FILE --passphrase-file F [--force]
   dronstream activate  [--root DIR]            standby/migrated -> active
   dronstream reset-admin [--root DIR] --username NAME
+  dronstream check     [--root DIR] [--json]   tayyorlik tekshiruvi (0=tayyor, 3=Tayyorla tuzatadi, 4=qo'lda)
   dronstream version
 `
 
@@ -43,6 +44,7 @@ func main() {
 	migrate := fs.Bool("migrate-out", false, "after backup, switch this server to 'migrated' (stops serving)")
 	force := fs.Bool("force", false, "replace existing database")
 	username := fs.String("username", "", "admin username")
+	asJSON := fs.Bool("json", false, "JSON output")
 	fs.Parse(os.Args[2:])
 	r, err := config.ResolveRoot(*root)
 	if err != nil {
@@ -93,6 +95,8 @@ func main() {
 		if err := app.ResetAdmin(r, *username); err != nil {
 			fail(err)
 		}
+	case "check":
+		os.Exit(app.CheckCLI(r, *asJSON))
 	case "version":
 		fmt.Println(version, "mediamtx", mtx.PinnedVersion)
 	default:

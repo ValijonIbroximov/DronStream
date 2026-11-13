@@ -18,12 +18,13 @@ Get-Content (Join-Path $pkg "SHA256SUMS.txt") | ForEach-Object {
 }
 if ($bad -gt 0) { throw "Paket yaxlitligi buzilgan ($bad fayl). O'rnatish to'xtatildi." }
 
-foreach ($d in "app", "config", "config\secrets", "data", "data\backups", "data\runtime", "logs", "scripts", "docs") {
+foreach ($d in "app", "config", "config\secrets", "data", "data\media", "data\backups", "data\runtime", "logs", "scripts", "docs") {
   New-Item -ItemType Directory -Force (Join-Path $Root $d) | Out-Null
 }
 if (Test-Path (Join-Path $Root "app\$version")) { Write-Host "app\$version allaqachon mavjud - fayllar yangilanadi" }
 Copy-Item (Join-Path $pkg "app\$version") (Join-Path $Root "app") -Recurse -Force
 Copy-Item (Join-Path $pkg "scripts\*") (Join-Path $Root "scripts") -Force
+foreach ($b in "DronStreamStart.bat", "DronStreamTayyorla.bat") { if (Test-Path (Join-Path $pkg $b)) { Copy-Item (Join-Path $pkg $b) $Root -Force } }
 Copy-Item (Join-Path $pkg "docs\*") (Join-Path $Root "docs") -Force -ErrorAction SilentlyContinue
 Copy-Item (Join-Path $pkg "config\dronstream.example.yaml") (Join-Path $Root "config") -Force
 $cfg = Join-Path $Root "config\dronstream.yaml"

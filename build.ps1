@@ -89,8 +89,10 @@ Copy-Item (Join-Path $Root "build\dronstream.exe") $appDir
 Copy-Item $mtxExe (Join-Path $appDir "mediamtx")
 Copy-Item (Join-Path $mtxDir "LICENSE") (Join-Path $appDir "mediamtx\LICENSE-mediamtx.txt")
 Copy-Item (Join-Path $Root "packaging\scripts\*") (Join-Path $pkg "scripts")
+foreach ($s in "ds-common.ps1", "ds-start.ps1", "ds-prepare.ps1") { Copy-Item (Join-Path $Root "scripts\$s") (Join-Path $pkg "scripts") }
+foreach ($s in "DronStreamStart.bat", "DronStreamTayyorla.bat") { Copy-Item (Join-Path $Root $s) $pkg }
 Copy-Item (Join-Path $Root "config\dronstream.example.yaml") (Join-Path $pkg "config")
-foreach ($d in "README_UZ.md","ADMIN_GUIDE_UZ.md","DJI_SETUP_UZ.md","SECURITY.md","BACKUP_RESTORE_UZ.md","INSTALL_UZ.md","TEST_REPORT.md","ARCHITECTURE.md") {
+foreach ($d in "README_UZ.md","REQUIREMENTS.md","PROGRESS.md","ADMIN_GUIDE_UZ.md","DJI_SETUP_UZ.md","SECURITY.md","BACKUP_RESTORE_UZ.md","INSTALL_UZ.md","TEST_REPORT.md","ARCHITECTURE.md") {
   $p = Join-Path $Root $d
   if (Test-Path $p) { Copy-Item $p (Join-Path $pkg "docs") }
 }
