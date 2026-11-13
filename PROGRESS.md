@@ -80,7 +80,7 @@ Keyingi ish shu bo'lim + `git log` + `TEST_REPORT.md` (v1.2 bo'limi) dan boshlan
 4. Haqiqiy DJI pulti: RTMP + VPN; RTMPS'ni alohida sinash (`DJI_SETUP_UZ.md`).
 5. Telefon(lar)da 1.2.0 interfeysini tekshirish (player joylari, "?" oynasi, `info.html`).
 
-## v1.3.0 — ISH JARAYONIDA (boshlandi 2026-11-13 kech)
+## v1.3.0 — sinov relizi (boshlandi 2026-11-13, yakunlandi 2026-11-14)
 Topshiriq (ustuvorlik bo'yicha): 1) video maxfiyligi — xavfsizlik modeli, havola = faqat taklif (admin aniq sessiyani tasdiqlaydi), admin TOTP/recovery/qayta tasdiqlash, secure rejimda shifrlanmagan ingest cheklovi, pult→server→brauzer auditi, E2EE imkoniyati va blockerlari; 2) haqiqiy 3D interaktiv `info.html` (Three.js offline, 12 sahna, scroll timeline).
 Avvalgi xavfsizlik va info.html dizayniga oid zid talablar shu topshiriq bilan almashtirildi.
 
@@ -99,29 +99,29 @@ Avvalgi xavfsizlik va info.html dizayniga oid zid talablar shu topshiriq bilan a
 - [x] D. security.mode secure (paket sukuti): ochiq oddiy RTMP bilan ishga tushmaydi; TOTP gate; xavfsizlik holati paneli.
 - [x] CI run 43469801243 (commit 4449afa): Ubuntu paket sinovi 55/55 (secure, TOTP, RTMP rad), Windows->Linux 12/12, pcap: 45444 WebRTC UDP paketida ochiq H.264 0, oddiy RTMP'da kalit ochiq.
 - [x] Frontend: kutish sahifasida kod, so'rovlarni kod bilan tasdiqlash, TOTP yoqish, ReauthHost, xavfsizlik holati (brauzerda tekshirildi).
-- [ ] E. 3D qo'llanma — agent worktree'da; birlashtirilgach scenes.json ga yangi bo'limlar (kim-koradi, admin-mfa, secure-rejim) qo'shiladi.
-- [ ] F. Vizual qabul, 1.3.0 paket, TEST_REPORT v1.3, push.
+- [x] E. 3D qo'llanma main'ga birlashtirildi; yangi bo'limlar sahnalarga ulandi.
+- [x] F. Vizual qabul, 1.3.0 paketlari, TEST_REPORT v1.3, push.
 
-### Reja
-- [ ] A. Audit + `SECURITY_MODEL.md` (kim videoni ochiq ko'radi, TLS qayerda tugaydi, E2EE blockerlari).
-- [ ] B. Havola = taklif: link sessiyasi admin tasdiqlamaguncha media/kontent olmaydi; tasdiqlash kodi; eski havolalar migratsiyasi (sxema v3).
-- [ ] C. Admin TOTP (RFC 6238) + recovery kodlar + muhim amallarda qayta tasdiqlash.
-- [ ] D. `security.mode: secure`: ochiq interfeysdagi oddiy RTMP rad; RTMPS fallback yo'q; `check` hisobotida tasdiqlangan/tasdiqlanmagan himoyalar.
-- [ ] E. 3D qo'llanma birlashtirish (agent natijasi) + guide.md matni yangi siyosatga.
-- [ ] F. `SECURITY_ACCEPTANCE.md`, testlar, vizual qabul, 1.3.0 paket, push.
+### v1.3.0 — SINOV RELIZI YAKUNLANDI (2026-11-14)
 
-### v1.3.0 — 2-sessiya holati (2026-11-14, limit sabab to'xtadi)
-Bajarildi va push qilindi:
-- 3D qo'llanma worktree'dan saqlandi (branch worktree-agent-aa03d029b6b65a1ce, 8303b37) va main bilan birlashtirildi.
-- Secure rejim: oddiy RTMP faqat 127.0.0.1 yoki o'chiq (xususiy IP ham rad); standard = laboratoriya rejimi (admin panelda ogohlantirish).
-- Mehmon ham kod bilan tasdiqlanadi; kodlar admin API'ga yuborilmaydi; eski havola sessiyasi ikki marta sanalmaydi.
-- Xavfsizlik holati: o'zgarmas 4 xulosa. Hujjatlar: SECURITY_MODEL (4- va 6-bo'lim qayta yozildi, DJI SDK faktlari, A/B/C), DJI_SETUP_UZ, guide.md, sahnalar.
-- Brauzerda UI sinovlari o'tkazildi (migratsiya, kod, nusxa havola, rad, mehmon, muddat, revoke, chiqish, blok, qayta tasdiqlash, TOTP, takroriy kod, tiklash kodi).
-- Qo'llanma: 18 ta headless tekshiruv o'tdi, 28 screenshot (docs/guide-preview), build.ps1 tartibi tuzatildi (npm ci qo'llanmadan oldin).
-Qolgan (keyingi sessiya shu ro'yxatdan boshlaydi):
-1. poc/e2ee (diskda, commit qilinmagan, ko'rib chiqilmagan): kodni o'qish, run-tests, brauzerda tekshirish, README, keyin commit va hujjatlardagi "ish jarayonida" yozuvini yangilash.
-2. SECURITY_ACCEPTANCE.md ni yangilash (yangi testlar, brauzer sinovlari turi, 3.1 test nomi eskirgan).
-3. 3D: desktop-20 va mobil screenshotlarni ko'zdan kechirish (mobil panel), kadr vaqti o'lchovi (preview.mjs --perf), --nowebgl.
-4. To'liq testlar bitta yurishda (unit, integratsiya, ps-lint, install-roundtrip, update-rollback 1.2.0->1.3.0, scripts-test), 1.3.0 paket + SHA256, TEST_REPORT v1.3 (aniq SHA), yakuniy commit uchun CI.
-5. Foydalanuvchidan qurilma ma'lumotlari (SECURITY_MODEL 6.5).
-6. Tozalash: build/devbin/dronstream-dev.exe, scratch test ildizlari.
+Bu "to'liq maxfiy production tizim" emas. Hal qilinmagan: server videoni ochiq ko'radi; haqiqiy pultda RTMPS va sertifikat tekshiruvi tasdiqlanmagan; E2EE mahsulotda yo'q.
+
+**Paketlar** (manba commit `cdf1441`, `BUILD_INFO.txt` ichida): `dist/DronStream-1.3.0-win64.zip`, `dist/DronStream-1.3.0-linux-amd64.tar.gz` (+ `.sha256`). Natijalar va SHA-256: `TEST_REPORT.md`, v1.3.0 bo'limi.
+
+Bajarildi:
+- 3D qo'llanma `main`ga birlashtirildi; yangi xavfsizlik bo'limlari sahnalarga ulandi; 30 screenshot ko'zdan kechirilib tuzatildi; 18/18 headless tekshiruv; WebGL'siz zaxira; kadr vaqti o'lchandi; `guide-scroll-demo.mp4`.
+- Secure rejim: oddiy RTMP faqat `127.0.0.1` yoki o'chiq (xususiy IP ham rad); `standard` = laboratoriya rejimi.
+- Mehmon ham kod bilan tasdiqlanadi; kodlar admin API'ga chiqmaydi; eski havola sessiyasi ikki marta sanalmaydi.
+- Xavfsizlik holati: o'zgarmas 4 xulosa; hujjatlar (SECURITY_MODEL 4- va 6-bo'lim, DJI_SETUP_UZ, SECURITY_ACCEPTANCE, TEST_REPORT).
+- Brauzerda UI sinovlari; to'liq integratsiya 7/7 bitta yurishda (`4c92930`); CI `cdf1441` da muvaffaqiyatli; paketning o'zida: secure tekshiruvi 24/24, o'rnatish/backup/restore 19/19, yangilash/rollback 10/10, skriptlar 21/21.
+- Paketlarda `BUILD_INFO.txt` (manba commit, reliz turi) va xavfsizlik hujjatlari.
+
+E2EE tajribasi: faqat `experiment/e2ee-poc` branch'ida (`poc/e2ee/`), worktree `.claude/worktrees/e2ee-poc`. `main` va paketga kirmaydi.
+
+Qolgan (haqiqiy qurilma yoki muhit kerak):
+1. Foydalanuvchidan: pult modeli va firmware, DJI Pilot 2 versiyasi, dron modeli va firmware, `rtmps://` qabul qilinishi, pultga publisher ilovasini o'rnatish mumkinligi (SECURITY_MODEL 6.5).
+2. Haqiqiy pultda RTMPS va sertifikat sinovi (DJI_SETUP_UZ 5-bo'lim) — dastlab yerda, uchmasdan.
+3. Haqiqiy R570 / Windows Server / Ubuntu 26.04; tashqi internet; haqiqiy telefon.
+4. Passkey, qurilma kalitiga bog'lash; mustaqil audit.
+
+Eslatma: foydalanuvchining 8443 dagi serveri bu sessiyada ishlamayotgan edi (tegilmagan). Uni 1.3.0 ga yangilash bazani sxema v3 ga o'tkazadi; sozlamada `security.mode` bo'lmagani uchun u laboratoriya rejimida qoladi.

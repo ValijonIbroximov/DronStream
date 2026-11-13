@@ -34,8 +34,13 @@ function ApiCode([scriptblock]$call) {
   try { & $call | Out-Null; return "ok" } catch {
     $resp = $_.Exception.Response
     if ($null -eq $resp) { return "noresponse" }
-    $rd = New-Object IO.StreamReader($resp.GetResponseStream()); $body = $rd.ReadToEnd()
-    try { return ($body | ConvertFrom-Json).code } catch { return "http" + [int]$resp.StatusCode }
+    $stream = $resp.GetResponseStream()
+    if ($stream.CanSeek) { $stream.Position = 0 }   # PowerShell 5.1 has already read the error body once
+    $body = (New-Object IO.StreamReader($stream)).ReadToEnd()
+    $code = ""
+    try { $code = "" + ($body | ConvertFrom-Json).code } catch { $code = "" }
+    if ($code -eq "") { return "http" + [int]$resp.StatusCode }
+    return $code
   }
 }
 
@@ -89,17 +94,22 @@ $pw = "Pkg-" + [Guid]::NewGuid().ToString("N").Substring(0, 14) + "-9a"
 $r = Invoke-RestMethod -Method Post -Uri "$base/api/setup" -WebSession $ws -Headers $h -ContentType "application/json" -Body (@{ setupToken = $tok; username = "boss"; displayName = "Boss"; password = $pw } | ConvertTo-Json)
 $h["X-CSRF-Token"] = $r.csrf
 Check "secure: first administrator must enrol TOTP (mfaSetupRequired)" ($r.authenticated -and $r.mfaSetupRequired -and ($r.securityMode -eq "secure"))
-Check "secure: admin API locked without TOTP (mfa_setup_required)" ((ApiCode { Invoke-RestMethod -Uri "$base/api/admin/users" -WebSession $ws -Headers $h }) -eq "mfa_setup_required")
+$c1 = ApiCode { Invoke-RestMethod -Uri "$base/api/admin/users" -WebSession $ws -Headers $h }
+Check "secure: admin API locked without TOTP (mfa_setup_required)" ($c1 -eq "mfa_setup_required")
+if ($c1 -ne "mfa_setup_required") { Write-Host "   got: $c1" }
 $ts = Invoke-RestMethod -Method Post -Uri "$base/api/me/totp/setup" -WebSession $ws -Headers $h -ContentType "application/json" -Body "{}"
 $en = Invoke-RestMethod -Method Post -Uri "$base/api/me/totp/enable" -WebSession $ws -Headers $h -ContentType "application/json" -Body (@{ code = (Totp $ts.secret) } | ConvertTo-Json)
 Check "secure: TOTP enabled, 10 one-time recovery codes" (@($en.recoveryCodes).Count -eq 10)
 $ws2 = New-Object Microsoft.PowerShell.Commands.WebRequestSession
 $h2 = @{ "X-DS-Request" = "1" }
-Check "secure: password alone is refused (mfa_required)" ((ApiCode { Invoke-RestMethod -Method Post -Uri "$base/api/login" -WebSession $ws2 -Headers $h2 -ContentType "application/json" -Body (@{ username = "boss"; password = $pw } | ConvertTo-Json) }) -eq "mfa_required")
+$c2 = ApiCode { Invoke-RestMethod -Method Post -Uri "$base/api/login" -WebSession $ws2 -Headers $h2 -ContentType "application/json" -Body (@{ username = "boss"; password = $pw } | ConvertTo-Json) }
+Check "secure: password alone is refused (mfa_required)" ($c2 -eq "mfa_required")
+if ($c2 -ne "mfa_required") { Write-Host "   got: $c2" }
 Start-Sleep -Seconds 31   # the enabling code's 30 s step is spent
 $l = Invoke-RestMethod -Method Post -Uri "$base/api/login" -WebSession $ws2 -Headers $h2 -ContentType "application/json" -Body (@{ username = "boss"; password = $pw; otp = (Totp $ts.secret) } | ConvertTo-Json)
 $h2["X-CSRF-Token"] = $l.csrf
-Check "secure: login with password + TOTP" ($l.authenticated -and -not $l.mfaSetupRequired)
+# mfaSetupRequired is omitted from the answer when it is false
+Check "secure: login with password + TOTP" ($l.authenticated -and (($l.PSObject.Properties.Name -notcontains "mfaSetupRequired") -or (-not $l.mfaSetupRequired)))
 $ss = Invoke-RestMethod -Uri "$base/api/admin/security-status" -WebSession $ws2 -Headers $h2
 $st = @{}; foreach ($i in $ss.items) { $st[$i.id] = $i.status }
 Check "status: mode ok, plain RTMP off, links and admin MFA ok" (($ss.mode -eq "secure") -and ($st["mode"] -eq "ok") -and ($st["ingest_plain"] -eq "ok") -and ($st["links"] -eq "ok") -and ($st["admin_mfa"] -eq "ok"))
@@ -109,10 +119,11 @@ Check "status: honest about what is NOT there (server sees video, no E2EE, RTMPS
 # ---- secure mode refuses unencrypted RTMP on any network address (packaged binary) ----
 foreach ($case in @(@(":1935", "barcha interfeyslarda"), @("192.168.1.10:1935", "xususiy IP shifrlash emas"), @("10.8.0.1:1935", "xususiy IP shifrlash emas"), @("localhost:1935", "host nomi qabul qilinmaydi"))) {
   Set-Content "$A\config\dronstream.yaml" ($secureCfg.Replace('rtmp_listen: ""', ('rtmp_listen: "' + $case[0] + '"'))) -Encoding utf8
-  $ErrorActionPreference = "Continue"
-  $out = (& $exe run --root $A 2>&1 | Out-String)
+  # through cmd.exe into a file: PowerShell would wrap the long stderr line and split the words we look for
+  $outFile = "$Work\refuse.txt"
+  & cmd.exe /c ('"' + $exe + '" run --root "' + $A + '" > "' + $outFile + '" 2>&1')
   $rc = $LASTEXITCODE
-  $ErrorActionPreference = "Stop"
+  $out = Get-Content $outFile -Raw
   Check ("secure: rtmp_listen `"" + $case[0] + "`" -> does not start, reason given") (($rc -ne 0) -and ($out -match "security.mode=secure") -and ($out -match [regex]::Escape($case[1])))
 }
 # the only exception: loopback

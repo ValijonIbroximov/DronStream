@@ -287,3 +287,155 @@ Jami: 21/21. Shu jumladan bo'sh joy va Unicode belgili papka, band port, bitta u
 8. Haqiqiy telefon/planshetda yangi interfeys. Foydalanuvchining Pixel 6 Pro (Android 17, Chrome 156) sinovi **1.1.0** da o'tkazilgan; 1.2.0 tuzatishlari faqat brauzer panelidagi 375 px emulyatsiyada ko'rilgan.
 9. Clipboard orqali muvaffaqiyatli nusxalash; PDF sahifalarining ko'rinishi; Firefox va Safari.
 10. Foydalanuvchining ishlab turgan serveri (`runtime\`) 1.2.0 ga o'tkazilmagan — u hali 1.1.0 jarayonida.
+
+---
+
+# v1.3.0 — sinov relizi (2026-11-14)
+
+> **Bu sinov relizi, "to'liq maxfiy production tizim" emas.** Quyidagi uch masala bu relizda hal qilinmagan va hech bir test ularni yopmaydi:
+> 1. server videoni ochiq ko'radi (TLS/DTLS serverda tugaydi);
+> 2. haqiqiy pultda RTMPS va sertifikat tekshiruvi tasdiqlanmagan — haqiqiy DJI ingest'i sinalmagan;
+> 3. pultdan tomoshabingacha shifrlash (E2EE) mahsulotda yo'q.
+>
+> TOTP, administrator tasdig'i va CI muvaffaqiyati kirish nazoratiga tegishli; ular yuqoridagi uch masalani hal qilmaydi.
+
+## Commitlar
+
+| Nima | Commit |
+|---|---|
+| **Paketlar yig'ilgan manba commit** (`BUILD_INFO.txt` ichida) | `cdf1441e11a31338e19ebb04a50f43c933cd5275` |
+| To'liq integratsiya to'plami bitta yurishda o'tkazilgan commit | `4c92930cdd7614f109d384176a0de8282cd6a5ca` |
+| Shu ikki commit orasidagi farq | faqat `tests/package-secure-check.ps1` (yangi sinov skripti) va `build.ps1` (manifest sanasi, Git Bash'ni topish). Backend, frontend, qo'llanma va paket tarkibiga kiradigan boshqa fayllar bir xil |
+| Brauzer sinovlari o'tkazilgan kod | `183d648` ga aylangan ishchi daraxt (sinov paytida topilgan nuqsonlar tuzatilib, shu commitga kirgan) |
+| Bu hisobot | alohida, keyingi commitda (manba commit emas) |
+| `tests/package-secure-check.ps1` ning yakuniy varianti | shu hisobot commitida: paket yig'ilgandan keyin skriptning o'zidagi ikki xato tuzatildi (PowerShell 5.1 xato javobini o'qish; uzun xato satrining bo'linishi). Mahsulot kodi o'zgarmagan |
+
+Paket ichidagi `docs/TEST_REPORT.md` — manba commit holatidagi nusxa: unda shu v1.3 bo'limi **yo'q** (paket sinovlari paket yig'ilgandan keyin o'tkaziladi). To'liq hisobot — repozitoriydagi shu fayl.
+
+## Muhit
+
+- **Lokal**: bitta ishlab chiquvchi kompyuteri, Windows 11 Pro, 16 mantiqiy yadro, Intel Iris Xe (integratsiyalashgan GPU), Go 1.27.4, Node 22.7, PowerShell 5.1. Hamma narsa loopback'da, alohida vaqtinchalik papka, baza va portlarda. Foydalanuvchining 8443 dagi serveri, bazasi va sozlamasiga tegilmagan (sinovlar boshlanganda u portda hech narsa tinglamayotgan edi).
+- **CI**: GitHub Actions — Ubuntu 24.04.5 LTS (x86_64, systemd) va Windows (windows-latest) virtual mashinalari. Bu haqiqiy Linux runtime, lekin haqiqiy R570 ham, Ubuntu 26.04 ham emas.
+- **Brauzer (qo'lda)**: ilova ichidagi Chromium 156 asosidagi brauzer; Vite proxy orqali lokal sinov serveriga; har bir "tomoshabin" alohida cookie omborida (`*.localhost` nomlari).
+- **Brauzer (headless)**: Google Chrome 157, DevTools protokoli orqali; sahifa `file://` dan, DNS butunlay o'chirilgan.
+
+Belgilar: ✅ avtomatik test o'tdi · 🖐 qo'lda (brauzerda) tekshirildi · ⛔ sinalmagan.
+
+## A. Avtomatik testlar (lokal, Windows 11)
+
+| To'plam | Commit | Natija |
+|---|---|---|
+| Go unit: backup, core, logx, mediafiles, mtx, secure, web | `4c92930` | ✅ 7 paket |
+| Integratsiya, **bitta yurishda**, kompyuter bo'sh holatda (432,8 s): `TestAcceptance` (226 s), `TestLinksAndMedia`, `TestLoad`, `TestMigrationFromV1` (haqiqiy 1.0.0 bazasi), `TestMigrationFromV2` (haqiqiy 1.1.0 bazasi), `TestPlayerSlots`, `TestTURNRelay` | `4c92930` | ✅ 7/7 |
+| `tests\ps-lint.ps1` — 24 skript (StrictMode 3.0, ASCII, PS 5.1 sintaksisi) | `cdf1441` | ✅ 0 xato, 0 ogohlantirish |
+| `node guide/build.mjs --check` | `cdf1441` | ✅ |
+| Paket yig'ish ichidagi `go test ./internal/...`, `tsc`, `vite build` | `cdf1441` | ✅ |
+
+**Yiqilgan yurish haqida (yashirilmagan).** Shu kuni avvalroq, `2b23bbd` ustidagi ishchi daraxtda to'liq to'plam 6/7 bilan tugadi: `TestLoad` "5 viewers stalled" bilan yiqildi. O'sha paytda shu kompyuterda headless Chrome dasturiy (SwiftShader) render bilan qo'llanma screenshotlarini olayotgan edi va barcha yadrolarni band qilgan. `TestLoad` yolg'iz qayta ishga tushirilganda o'tdi (116 s), keyin esa `4c92930` da butun to'plam bitta yurishda, boshqa og'ir jarayonsiz 7/7 o'tdi. Assertion o'zgartirilmagan. Xulosa: bu test bitta kompyuterda manba, server va 20 tomoshabin birga ishlaganda protsessor yetishmasligiga sezgir; bu haqiqiy server sig'imi o'lchovi emas.
+
+Bu relizda qo'shilgan yoki o'zgargan testlar: `TestSecureModeRefusesPlainRTMPOnAnyNetwork`, `TestSecurityStatusIsHonestAboutIngestAndE2EE`, `TestApprovalOfSessionCountedBeforeUpgrade`, mehmon kodi (`core_test.go`, `TestAcceptance: guest_wrong_code_refused`), kodlar admin API'da yo'qligi, `TestMigrationFromV2` (bir martalik havola, ikki marta sanalmaslik).
+
+## B. CI (GitHub Actions)
+
+| Commit | Yurish | Natija |
+|---|---|---|
+| `2b23bbd` | [43499375348](https://github.com/ValijonIbroximov/DronStream/actions/runs/43499375348) | ✅ Linux paket sinovi **64/64** (secure rejim, haqiqiy TOTP, `:1935` / `10.8.0.1` / `192.168.1.10` / `localhost` bilan ishga tushmasligi, `127.0.0.1` bilan faqat loopback'da tinglashi, tinglovchi soketlar inventarizatsiyasi); unit 7 paket; integratsiya 4 test; Windows backup → Linux restore **12/12**; pcap: 46 048 WebRTC UDP paketida ochiq H.264 belgisi 0, oddiy RTMP'da pult kaliti ochiq o'qildi |
+| `4c92930` | [43505602434](https://github.com/ValijonIbroximov/DronStream/actions/runs/43505602434) | bekor qilingan (keyingi push yangi yurishni boshlagani uchun to'xtatilgan) — natija yo'q |
+| `cdf1441` (paketlar manbasi) | [43507219574](https://github.com/ValijonIbroximov/DronStream/actions/runs/43507219574) | ✅ Linux paket sinovi **64/64**; unit 7 paket; integratsiya 4 test; Windows backup → Linux restore **12/12**; pcap: 46 446 WebRTC UDP paketida ochiq H.264 belgisi 0, oddiy RTMP'da pult kaliti ochiq o'qildi |
+
+CI Linux paketini **o'zi manbadan Linux'da yig'ib** sinaydi; `dist` dagi cross-compile qilingan aynan shu Linux arxivi Linux'da ishga tushirilmagan (F bo'lim).
+
+## C. Paketlar va paketning o'zidagi sinovlar
+
+| Fayl | SHA-256 |
+|---|---|
+| `dist/DronStream-1.3.0-win64.zip` (38 421 690 bayt) | `d061221f1c4898c48764681f57b2df0f61d780b609faf9cb327d5e0b5f57e7ab` |
+| `dist/DronStream-1.3.0-linux-amd64.tar.gz` (38 015 200 bayt) | `1057c24f07b66d250cf95a892ecda9c89cfee5d1f918c8616c2b01dfddae583f` |
+
+Har birining yonida `.sha256` fayli, ichida `SHA256SUMS.txt` (har bir fayl uchun) va `BUILD_INFO.txt` (manba commit, daraxt toza, reliz turi: sinov relizi, E2EE yo'q, DJI ingest tasdiqlanmagan). Oldingi 1.0.0–1.2.0 paketlariga tegilmagan. `dist/` Git'ga yuborilmaydi.
+
+| Sinov (Windows paketi, toza vaqtinchalik papka, sinov portlari) | Natija |
+|---|---|
+| `tests\package-secure-check.ps1` — tarkib: barcha fayllar `SHA256SUMS.txt` ga mos; `BUILD_INFO` dagi commit kutilgan; `info.html` shu versiya, ichida three.js, tashqi resurs yo'q; xavfsizlik hujjatlari bor; sozlama namunasi secure, RTMP va RTMPS o'chiq; baza, backup, log, kalit, credential, media, PoC fayli **yo'q** | ✅ 8/8 |
+| shu skript — paketdagi sukut sozlama bilan (faqat portlar almashtirilgan): ishga tushadi; birinchi administrator TOTP yoqishi shart; TOTP'siz admin API yopiq; TOTP yoqiladi, 10 tiklash kodi; parolning o'zi rad; parol + TOTP bilan kirish; holat paneli: rejim/RTMP/havola/MFA "tekshirilgan", server videoni ko'rishi va E2EE "mavjud emas", 4 xulosa bor | ✅ 9/9 |
+| shu skript — paketdagi binary `rtmp_listen` = `:1935`, `192.168.1.10:1935`, `10.8.0.1:1935`, `localhost:1935` bilan **ishga tushmaydi** va sababini yozadi; `127.0.0.1:27935` bilan ishga tushadi va faqat 127.0.0.1 da tinglaydi; to'xtatilgach jarayon qolmaydi | ✅ 7/7 |
+| `tests\install-roundtrip.ps1` — toza papkaga o'rnatish, start/status/stop, ishlab turganda shifrlangan backup, noto'g'ri parol rad, toza ildizga restore, STANDBY, kalit qayta bog'lanishi, faollashtirish | ✅ 19/19 |
+| `tests\update-rollback.ps1` — 1.2.0 → 1.3.0 (sxema v2 → v3, yangilashdan oldingi backup) → rollback 1.2.0, ma'lumot joyida | ✅ 10/10 |
+| `tests\scripts-test.ps1` — BAT/PS1 skriptlari, bo'sh joyli papka, band port, parallel start, push/pull himoyalari, toza clone + tayyorlash, `-Offline` | ✅ 21/21 |
+| Ikkala paketdagi binary ichida yangi frontend va qo'llanma (yangi interfeys satrlari bo'yicha qidiruv); `dronstream.exe version` = 1.3.0 | ✅ |
+| Linux arxivi: tarkib, Unix huquqlari (755/644), `SHA256SUMS.txt` 29/29, taqiqlangan fayl yo'q, sozlama namunasi secure | ✅ (faqat tarkib; runtime — B bo'lim) |
+
+`install-roundtrip` va `update-rollback` ataylab `standard` (laboratoriya) rejimida ishlaydi, chunki ular admin API'ni TOTP'siz chaqiradi; secure rejim alohida — yuqoridagi `package-secure-check` va CI'da.
+
+## D. Brauzerda qo'lda o'tkazilgan xavfsizlik sinovlari 🖐 (2026-11-14, 00:27–00:48)
+
+Hammasi kutilgandek ishladi; yo'lda topilgan nuqsonlar E bo'limda.
+
+| Sinov | Natija |
+|---|---|
+| Migratsiya: chiqarilgan 1.2.0 binary'da havola ochilgan (video ko'ringan) → shu papkada yangi versiya → o'sha brauzer "tasdiq kutilmoqda" + kod, kutubxona bo'sh | 🖐 |
+| Havola kutish sahifasi va tekshirish kodi; noto'g'ri kod → "Tekshirish kodi mos emas", tomoshabin kutishda qoladi | 🖐 |
+| To'g'ri kod → tomoshabin sahifasi **o'zi** tomoshaga o'tdi, video 640×360 | 🖐 |
+| Havola nusxasi ikkinchi cookie omborida: yangi so'rov, boshqa kod, kutubxona bo'sh, chipta 403; birinchi sessiya kodi ikkinchisiga yaramadi | 🖐 |
+| Rad etish → sahifa "So'rovingiz rad etildi" (qayta yuklamasdan) | 🖐 |
+| Mehmon: kutish sahifasida kod; admin kartasida kod **ko'rinmaydi**; noto'g'ri kod rad; to'g'ri kod bilan sahifa o'zi ochildi | 🖐 |
+| Muddat: 200 soniyalik havola tasdiqlangan → muddat tugagach sessiya yo'q, kutubxona 401; havola "muddati tugadi" | 🖐 |
+| Revoke: havola bekor qilindi → video to'xtadi, sessiya yopildi (aniq kechikish brauzerda o'lchanmagan; integratsiya testida o'lchangan) | 🖐 |
+| Chiqish → 401, "orqaga" tugmasi tiklamaydi. Bloklash → "Hisobingiz administrator tomonidan bloklandi", qayta kirish 403 | 🖐 |
+| Qayta tasdiqlash: 10 daqiqadan keyin muhim amalda oyna; noto'g'ri parol rad; to'g'ri parol bilan amal davom etdi | 🖐 |
+| Secure rejimga o'tkazilganda ochiq admin sahifasi o'zi TOTP yoqish ekraniga o'tdi; QR, kalit, 10 tiklash kodi | 🖐 |
+| Parol → ikkinchi bosqich so'raladi; kod bilan kirildi; **shu kod ikkinchi marta rad etildi**; tiklash kodi bir marta ishladi, ikkinchi marta rad | 🖐 |
+| Laboratoriya rejimi ogohlantirishi (standard) va holat panelining 4 xulosasi (secure) | 🖐 |
+
+Cheklovlar: bitta kompyuter, bitta brauzer dvigateli; haqiqiy telefon yoki boshqa jismoniy brauzer emas; brauzerning o'z `confirm`/`prompt` oynalari ichki brauzerda avtomatik yopilgani uchun ular skript bilan javoblantirilgan.
+
+## E. Topilgan va tuzatilgan nuqsonlar
+
+1. Migratsiya qilingan havola sessiyasi tasdiqlanganda foydalanish ikkinchi marta sanalardi; bir martalik havolaning o'z sessiyasi "limit tugagan" deb rad etilardi.
+2. Havolalar sahifasi va ulashish oynasida eski siyosat matni ("kim olsa, o'sha foydalana oladi") qolgan edi.
+3. "Faol sessiyalar" kutayotgan va rad etilgan sessiyalarni ham sanardi.
+4. Server boshqa rejimda qayta ishga tushganda ochiq admin sahifasi eski rejimni ko'rsatardi.
+5. Tekshirish kodlari admin API orqali o'qilishi mumkin edi (endi yuborilmaydi); mehmon kodi admin kartasida ko'rsatilardi.
+6. Qo'llanma: telefon asboblar qatori o'ngda kesilgan; namuna kod satrga bo'lingan; panel ichidagi uzun bosqichda davomi borligi bilinmagan; legend model ustiga tushgan; chop etishda och rangli matn; havola sahnasi eski tartibni ("ikkala ekranda bir xil kod") tasvirlagan.
+7. `build.ps1`: qo'llanma `npm ci` dan oldin yig'ilardi; Git Bash'dan ishga tushirilganda Linux bosqichi bash'ni topolmasdi; manifest sanasi alohida qatorga tushardi.
+8. Qo'llanma tekshiruv skripti qat'iy kutish vaqtiga tayangan (sekin renderda yolg'on xato) — endi sahna tinchiguncha kutadi.
+
+## F. 3D qo'llanma (`info.html`, 807 KB)
+
+| Tekshiruv | Natija |
+|---|---|
+| `guide/tools/preview.mjs --checks` — 18 tekshiruv: 3D yoqiladi; bo'sh turganda kadr chizilmaydi; **oldinga-orqaga aylantirilganda holat aynan tiklanadi**; mundarijadan bo'limga sakrash va "Batafsil"; qidiruv; avto namoyish va uning g'ildirak/nusxalash/ochishda to'xtashi; **clipboard ishlamaganda kod belgilanib, qo'lda nusxalash xabari**; oddiy rejim va qaytish; `prefers-reduced-motion`; chop etish (PDF 54 bet); `pagehide` | ✅ 18/18 |
+| `--nowebgl` — WebGL o'chirilganda avtomatik oddiy (2D) qo'llanma | ✅ |
+| Offline / `file://`: DNS o'chirilgan holda `file:` dan boshqa so'rov | ✅ 0 ta |
+| 30 ta screenshot (`docs/guide-preview/`: 21 desktop 1440×900, 9 mobil 390×844) — **barchasi ko'zdan kechirildi**; topilgan kamchiliklar (E-6) tuzatilib qayta olindi | 🖐 |
+| Ekran yozuvi: `docs/guide-preview/guide-scroll-demo.mp4` (1280×720, 45 s, H.264, 4,5 MB) — skriptli aylantirish kadrlari DevTools orqali olinib ffmpeg bilan yig'ilgan; real vaqt yozuvi emas, harakat tezligi unumdorlik ko'rsatkichi emas | ✅ |
+| E2EE faqat "Reja — amalga oshirilmagan" sifatida (punktir chiziq, alohida tugma); joriy pult → server yo'lida "himoyalangan" tunnel tasviri yo'q | 🖐 |
+
+**Kadr vaqti** (20 soniyalik skriptli aylantirish, `--perf-only`):
+
+| Sharoit | Render | rAF oralig'i: mediana / p95 / max | Sahna chizish (CPU): mediana / p95 |
+|---|---|---|---|
+| Desktop 1440×900, sifat "high" | Intel Iris Xe (D3D11), headless Chrome 157 | 16,7 / 16,8 / 283 ms | 2,3 / 3,9 ms |
+| Desktop 1440×900, sifat "light" | xuddi shu | 16,7 / 16,8 / 267 ms | 1,8 / 3,2 ms |
+| Mobil o'lcham 390×844 (yengil profil) | xuddi shu | 16,7 / 16,8 / 50 ms | 1,5 / 2,9 ms |
+| Desktop "high", **GPU'siz** (SwiftShader dasturiy render) | CPU | 267 / 450 / 467 ms | 3,1 / 7,6 ms |
+| Mobil o'lcham, GPU'siz | CPU | 33 / 67 / 350 ms | 2,5 / 4,6 ms |
+
+Cheklovlar: o'lchov bitta noutbukda; DPR 1; ekran yangilanishi 60 Hz bilan cheklangan (16,7 ms — shu chegara); "max" — birinchi kadrdagi shader kompilyatsiyasi. **Mobil qator — desktop GPU'da telefon o'lchamini emulyatsiya qilish, haqiqiy telefon emas.** GPU'siz kompyuterda 3D sekin (≈4 kadr/s); buning uchun "Oddiy rejim" va WebGL'siz avtomatik 2D bor. Boshqa qurilma uchun kadr tezligi va'da qilinmaydi.
+
+## G. Yuklama (`TestLoad`, `4c92930`, to'liq yurish ichida)
+
+4 stream × 5 tomoshabin (20 ta), 66,0 s, hammasi bitta kompyuterda loopback orqali: 20/20 to'xtamadi; MediaMTX bitta yadroning 36 %, backend 4 %; RAM 135 / 92 MB; kirish 5,9 Mbit/s, chiqish 29,6 Mbit/s. Manbalar (ffmpeg) va tomoshabinlar ham shu kompyuterda — bu haqiqiy tarmoq yoki server sig'imi o'lchovi emas (A bo'limdagi yiqilgan yurishga qarang).
+
+## H. v1.3.0 da sinalmagan ⛔
+
+1. **Haqiqiy DJI pulti**: RTMP ham, RTMPS ham, sertifikat tekshiruvi ham (tartib: `DJI_SETUP_UZ.md` 5-bo'lim). Secure rejimda pultni ulashning tasdiqlangan yo'li yo'q.
+2. **Tunnel + serverdagi gateway** sxemasi (hujjatdagi namuna buyruqlar bajarilmagan).
+3. **Haqiqiy Dell PowerEdge R570**, Windows Server, Ubuntu 26.04; server qayta yuklanishi.
+4. `dist` dagi aynan shu Linux arxivi Linux'da ishga tushirilmagan (CI o'zi yig'ganini sinaydi).
+5. Tashqi internet, NAT/CGNAT, haqiqiy tarmoqda TURN; faol MITM sinovi; serverda chiquvchi ulanishlar inventarizatsiyasi.
+6. Haqiqiy telefon/planshet (interfeys ham, qo'llanma ham); Firefox va Safari; qo'llanmaning haqiqiy telefondagi kadr vaqti.
+7. Clipboard orqali **muvaffaqiyatli** nusxalash (headless'da faqat zaxira yo'li tekshirilgan).
+8. Passkey va qurilma kalitiga bog'lash — amalga oshirilmagan.
+9. E2EE — mahsulotda yo'q; alohida tajriba `experiment/e2ee-poc` branch'ida, u bu paketga kirmaydi.
+10. **Mustaqil xavfsizlik auditi.** Kod va testlarni AI yozgan; testlarning o'tishi audit emas.
