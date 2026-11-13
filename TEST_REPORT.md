@@ -166,3 +166,122 @@ Paket: `dist\DronStream-1.1.0-win64.zip`. Muhit o'sha: bitta Windows 11 kompyute
 
 ## E. Yuklama (v1.1 kodida qayta)
 4 stream × 5 tomoshabin, 62 s: 20/20 to'xtamadi; MediaMTX 38 % bitta yadro, backend 5.5 %; RAM 135 / 92 MB; chiqish 29.8 Mbit/s.
+
+---
+
+# v1.2.0 test hisoboti (2026-11-13)
+Paketlar: `dist\DronStream-1.2.0-win64.zip`, `dist\DronStream-1.2.0-linux-amd64.tar.gz`.
+
+Ikki xil muhit bor va ular aralashtirilmaydi:
+- **Lokal**: bitta ishlab chiquvchi kompyuteri, Windows 11 Pro, loopback (avvalgi bo'limlardagi kabi).
+- **CI**: GitHub Actions'ning bir martalik virtual mashinalari — Ubuntu 24.04.5 LTS (x86_64, systemd bor) va Windows Server (windows-latest). Bu **haqiqiy Linux runtime**, lekin haqiqiy R570 serveri ham, Ubuntu 26.04 ham emas.
+
+Belgilar yuqoridagidek: ✅ avtomatik test o'tdi · 🖐 qo'lda (brauzerda) tekshirildi · ⛔ sinalmagan.
+
+## A. Avtomatik testlar (lokal, Windows 11)
+| To'plam | Natija |
+|---|---|
+| Go unit: core (shu jumladan `slots_test.go` — player joylari), secure, logx, backup, mtx, mediafiles, web (shu jumladan `help_test.go`) | ✅ 7 paket |
+| Integratsiya `TestAcceptance` (17 ssenariy) | ✅ |
+| Integratsiya `TestLinksAndMedia` | ✅ |
+| Integratsiya `TestPlayerSlots` (yangi) | ✅ |
+| Integratsiya `TestMigrationFromV1` (haqiqiy 1.0.0 binary yaratgan baza) | ✅ |
+| Integratsiya `TestTURNRelay`, `TestLoad` | ✅ |
+| `tests\install-roundtrip.ps1` (1.2.0 paket) | ✅ 19/19 |
+| `tests\update-rollback.ps1` 1.1.0 → 1.2.0 → rollback 1.1.0 | ✅ 10/10 |
+| `tests\scripts-test.ps1` (BAT/PS1, StrictMode 3.0 ostida) | ✅ 21/21 |
+| `tests\ps-lint.ps1` — 23 skript: PS 5.1 sintaksisi, ASCII, qiymat berilmagan o'zgaruvchi, xavfli `.Count`, StrictMode yoqilganligi | ✅ 0 xato, 0 ogohlantirish |
+| `node guide/build.mjs --check` — qo'llanma manbasi = hosil qilingan fayllar | ✅ |
+| Frontend `tsc -b` + `vite build` | ✅ |
+| Cross-compile `GOOS=linux go build ./...` va `go vet` | ✅ (bu runtime sinovi emas — runtime B bo'limda) |
+
+Izoh: to'liq integratsiya to'plamining birinchi yurishida `TestMigrationFromV1` yiqildi (test chiptani demo manba efirga chiqmasdan so'ragan — endi bunday holatda server ataylab `stream_offline` qaytaradi) va qolgan ikki test shu yiqilgan test qoldirgan server tufayli yiqildi. Test tuzatildi (real player kabi kutadi), harness yiqilgan testdan keyin serverni albatta to'xtatadigan qilindi. Yakuniy to'liq yurish: 6 testning hammasi bitta yurishda o'tdi (519 s). Xuddi shunday, `tests\install-roundtrip.ps1` ham birinchi yurishda ikki joyda to'xtadi (StrictMode ostida yo'q property; efirda bo'lmagan stream uchun chipta kutilgani) — test tuzatildi, mahsulot kodi emas.
+
+## B. Linux — CI'da, haqiqiy Ubuntu 24.04 (run #6, commit fd90b53, `.github/workflows/ci.yml`)
+| Tekshiruv | Natija |
+|---|---|
+| `go vet` va unit testlar Linux'da | ✅ 7 paket |
+| Integratsiya Linux'da (haqiqiy MediaMTX linux/amd64, WebRTC, FFmpeg RTMP): `TestAcceptance`, `TestLinksAndMedia`, `TestPlayerSlots`, `TestTURNRelay` | ✅ 4/4. Shu jumladan backend `kill` qilinganda MediaMTX o'lishi (`PR_SET_PDEATHSIG`) |
+| Linux paketi shu yerda yig'ildi (`packaging/linux/build-package.sh`) va o'rnatildi | ✅ |
+| `tests/ci/linux-package-test.sh` — jami | ✅ 45/45 |
+| · preflight: to'siq yo'q; to'ldirilmagan `<...>` va tizim papkasi ROOT sifatida rad etiladi | ✅ |
+| · `install.sh --enable --start`: systemd `active` va `enabled` | ✅ |
+| · xizmat root emas, `dronstream` hisobida; MediaMTX uning child jarayoni | ✅ |
+| · huquqlar: `master.key` 600 (format `DSK0`), sozlama 640 root:dronstream, `data` 700; xizmat o'z binary'sini o'zgartira olmaydi | ✅ |
+| · birinchi administrator bir martalik kod bilan; **kod journald'ga yozilmagan** | ✅ (birinchi yurishda ❌ edi — nuqson topildi va tuzatildi) |
+| · demo manbalar efirda, chipta beriladi; efirda bo'lmagan stream → `stream_offline` | ✅ |
+| · fail-closed: backend `kill -9` → MediaMTX 3 s ichida yo'q; systemd xizmatni qayta ishga tushirdi | ✅ |
+| · `install.sh` qayta ishga tushirilganda sozlama o'zgarmadi | ✅ |
+| · `master.key` huquqi 644 qilinsa xizmat ishga tushmaydi va sababini yozadi; 600 ga qaytarilgach ishlaydi | ✅ |
+| · `backup.sh` (ishlab turganda), fayl shifrlangan, vaqtinchalik parol fayli qolmadi; noto'g'ri parol rad; `restore.sh`; tiklangach standby; faollashtirish | ✅ |
+| · `update.sh` 9.9.1 → 9.9.2, ma'lumotlar joyida; `rollback.sh` (yangilashdan oldingi backup tiklandi) | ✅ |
+| · `uninstall-service.sh`: unit olib tashlandi, ma'lumotlar qoldi, jarayon qolmadi | ✅ |
+| **Windows → Linux**: Windows mashinasida server ishga tushirildi (master kalit DPAPI, `DSK1`), ma'lumot yaratildi, shifrlangan backup olindi; Ubuntu'da tiklandi | ✅ 12/12: admin kiradi, server standby'da boshlanadi, pult kaliti o'qiladi, ruxsat va matn ko'chgan, rasm SHA-256 bir xil, master kalit `DSK0` 600 ga qayta bog'langan |
+
+CI'da ishlatilgan versiya raqamlari (9.9.1, 9.9.2) faqat sinov uchun; chiqarilgan paket — 1.2.0 (xuddi shu skript bilan yig'iladi). **Aynan `dist` dagi 1.2.0 tar.gz fayli Linux'da ishga tushirilmagan** — u Windows'da cross-compile qilingan; CI esa xuddi shu manbadan Linux'ning o'zida yig'ilgan paketni sinaydi.
+
+## C. Talablar bo'yicha
+| Talab | Natija |
+|---|---|
+| "Juda ko'p ulanish" sababi | Aniqlandi: (1) efirda bo'lmagan stream joyi har 5 s da chipta + WHEP urinardi, hook `pending` sessiya yozardi, MediaMTX 404 qaytarardi, lekin yozuv 10 s yashardi → uchinchi urinish joy chegarasiga (2) urilardi; (2) ijara yangilanishida 429 kelsa player o'ynayotgan videoni ham to'xtatardi; (3) chegara sessiyalarni sanardi — 9 player bir vaqtda yangilansa vaqtincha 18 bo'lardi |
+| Offline joy uzoq vaqt qayta urinadi | ✅ unit; ✅ integratsiya (8 urinish — har biri `stream_offline`, sessiya qolmadi); 🖐 brauzerda 30 s dan keyin ham "Manba efirda emas… Kutilmoqda" |
+| Hook qabul qilgan, MediaMTX rad etgan urinish sessiya qoldirmaydi | ✅ integratsiya (manba chipta bilan ulanish orasida uzildi: 3 urinish, 0 sessiya) |
+| Chegaradagi ijara yangilanishi | ✅ unit (chegara 3: uch joy bir vaqtda yangilandi); ✅ integratsiya (chegara 2) |
+| Chegara haqiqatan tugasa: son va maslahat | ✅ integratsiya (429, `scope=subject`, 2/2); 🖐 brauzerda "…chegaraga yetdi (3/3). Boshqa oyna yoki qurilmadagi videolarni yoping…" + "Qayta urinish" |
+| Sahifa qayta yuklanishi / eski sessiyalar | ✅ integratsiya (3 marta ketma-ket: yangisi ulandi, eskisi uzildi, boshqa joy tegilmadi); 🖐 yangilanganda eski sessiya `client_closed`, tab yopilganda ~1 daqiqada `disconnected` |
+| Mobil player: sarlavha, statistika, watermark | 🖐 375 px da o'lchandi: uch qatlam bir-birini kesmaydi; shriftlar 12.8 / 11.2 / 10.9 px. (Video ichidagi "DEMO" yozuvi va vaqt kodi — tasvirning o'zi, overlay emas) |
+| "?" tugmasi | 🖐 tartib Parol → Chiqish → ?; `title` va `aria-label` "Yordam va qo'llanma"; haqiqiy `button`, fokus oladi; 36×36 px (teginish ekranida CSS bo'yicha 44×44); `Esc` yopadi, fokus tugmaga qaytadi; "Yangi tabda ochish" havolasi |
+| Yordam endpointi faqat adminga | ✅ `help_test.go`: anonim 401; oddiy foydalanuvchi va mehmon 403 (sahifa va ikkala fayl); qat'iy CSP; boshqa fayllar berilmaydi; boshqa javoblar `X-Frame-Options: DENY` |
+| Yordam ochilganda streamlar qayta yuklanmaydi | 🖐 ikki video: yordam ochiq turgan 5.6 s davomida o'sha `<video>` elementlari, `currentTime` 6.78 → 12.38 s, holat `playing`; yangi chipta faqat efirda bo'lmagan joyning davriy urinishi |
+| `info.html` offline / `file://` | ✅ headless Chrome, `file://`, DNS to'liq bloklangan: sahifa ochildi, skript ishladi (34 kod paneli, 17 placeholder belgisi, 54 bo'lim); sahifaning o'zi hech qanday tarmoq so'rovi yubormadi (brauzer jurnalidagi 6 ta so'rov — Chrome'ning o'z fon xizmatlari). ✅ `help_test.go`: tashqi resurs, tarmoq chaqiruvi, inline handler yo'q |
+| Qidiruv, mundarija | 🖐 "havola" → 10 bo'lim, belgilangan parchalar; topilmasa "Hech narsa topilmadi"; mundarijadan sakrash sarlavhani panel ostiga qo'yadi |
+| XSS | ✅ generator hamma matnni escape qiladi, testda placeholderlar `&lt;…&gt;`; 🖐 qidiruvga `<img onerror>` kiritilganda element yaratilmadi; skriptda `innerHTML`/`eval` yo'q (test) |
+| Nusxalash fallback'i | 🖐 "Belgilash" kodni belgiladi; "Nusxalash" clipboard ishlamagan muhitda "Avtomatik nusxalab bo'lmadi. Kod belgilandi — Ctrl+C" ko'rsatdi. Clipboard'ning **muvaffaqiyatli** yo'li ⛔ (sinov brauzerida foydalanuvchi harakatisiz ruxsat berilmaydi) |
+| Chop etish | ✅ headless Chrome PDF: 41 bet; 🖐 print uslublari ekranda qo'llanganda: panel, mundarija, sahna va tugmalar yashirin, oq fon, 6 bosqich ro'yxat ko'rinishida, kod qatorlari o'raladi. PDF sahifalari ko'z bilan ko'rilmadi (bu kompyuterda PDF ko'rsatuvchi vosita yo'q) |
+| Avto namoyish | 🖐 sukut bo'yicha o'chiq; tugma bilan boshlanadi (≈110 px/s, 2× da ≈210 px/s); g'ildirak, klaviatura, kod belgilash va tab yashirilishi to'xtatadi; oddiy rejimda tugma o'chiq |
+| `prefers-reduced-motion` | ✅ headless Chrome `--force-prefers-reduced-motion`: animatsiya sinfi yo'q, "Animatsiya: o'chirilgan", avto namoyish o'chiq |
+| Qo'llanma mobil ko'rinishi | 🖐 375 px: sahna markazda, to'rt obyekt ham ko'rinadi, gorizontal aylantirish yo'q, asboblar bir qatorda |
+| Bir manba — ikki ko'rinish | ✅ test: `info.html` va admin yordam asosiy qismi bayt-ma-bayt bir xil; `--check` push va CI'da |
+| StrictMode | ✅ `Set-StrictMode -Version 3.0` barcha skriptlarda; lint; skript testlari shu rejimda |
+
+## D. Skriptlar (StrictMode 3.0 ostida qayta)
+| Tekshiruv | Natija |
+|---|---|
+| tayyorla: paket rejimi, bo'sh joy+Unicode papka, kompilyatorsiz | ✅ |
+| tayyorla: qayta ishga tushirish mavjud konfiguratsiyani buzmaydi | ✅ |
+| start: yetishmagan fayl -> avtomatik tayyorlash -> ishga tushdi | ✅ |
+| start: birinchi ishga tushirishda setup kodi konsolda | ✅ |
+| start: setup kodi logga yozilmagan | ✅ |
+| start: ikkinchi bosishda takroriy jarayon yaratilmaydi | ✅ |
+| start: parallel ishga tushirishda bittasi kutadi/rad etadi | ✅ |
+| start: band port aniq tashxis, begona jarayon to'xtatilmaydi (kod 2) | ✅ |
+| start: tayyorlash xatosida bitta urinish, cheksiz sikl yo'q | ✅ |
+| pull: lokal o'zgarish bor -> to'xtaydi, o'zgarish saqlanadi (stash yo'q) | ✅ |
+| push: sir topildi -> to'xtadi, qiymat chiqmadi, commit yo'q | ✅ |
+| push: o'zgarish commit+push, SHA mos, baza/runtime yuborilmadi | ✅ |
+| push: remote oldinda -> force'siz to'xtaydi, lokal commitlar saqlanadi | ✅ |
+| pull: tarixlar ajralgan -> reset/force yo'q, aniq xabar | ✅ |
+| push: remote'ga ulanib bo'lmasa lokal commit saqlanadi va aytiladi | ✅ |
+| pull: toza papkada fast-forward, olingan commit ko'rsatiladi | ✅ |
+| pull (yangi kompyuter): band papka ustidan yozilmaydi | ✅ |
+| pull (yangi kompyuter): clone + DronStreamTayyorla (Go/Node/MediaMTX .tools ga, build) | ✅ |
+| yangi clone'da sir/baza yo'q (runtime faqat shablondan) | ✅ |
+| tayyorla -Offline: mavjud lokal vositalar bilan ishlaydi, qayta yuklamaydi | ✅ |
+| tayyorla -Offline, vositalar yo'q: tushunarli xabar (kod 6) | ✅ |
+
+Jami: 21/21. Shu jumladan bo'sh joy va Unicode belgili papka, band port, bitta urinish (cheksiz sikl yo'q), `-Offline` rejimi, toza papkaga clone va vositalarni checksum bilan yuklash. "Internet yo'q" holati haqiqiy uzilish emas, `-Offline` rejimi bilan taqlid qilingan.
+
+## E. Yuklama (v1.2 kodida, lokal)
+4 stream × 5 tomoshabin (20 ta), 65.8 s, to'liq integratsiya yurishi ichida: 20/20 to'xtamadi; MediaMTX bitta yadroning 55 %, backend 7 %; RAM 135 / 91 MB; chiqish 29.5 Mbit/s. Shu paytda kompyuterda boshqa testlar ham ishlab turgan (toza clone yig'ish), shuning uchun protsessor raqamlari v1.1 dagidan (38 % / 5.5 %) yuqori; ular taxminiy.
+
+## F. v1.2 da sinalmagan ⛔
+1. **Haqiqiy Dell PowerEdge R570** — har qanday OS bilan. Serverga kirish yo'q edi.
+2. **Windows Server 2022/2025** va **Ubuntu Server 26.04 LTS**. (Sinalgan: Windows 11; Ubuntu 24.04 — faqat CI virtual mashinasi.)
+3. `dist` dagi aynan 1.2.0 Linux arxivi (cross-compile) Linux'da ishga tushirilmagan; CI shu manbadan Linux'da yig'ilganini sinagan.
+4. Tashqi internetdan kirish, NAT/CGNAT, router yo'naltirishi, haqiqiy tarmoqda TURN.
+5. Haqiqiy DJI pulti; RTMPS va pultning sertifikat tekshiruvi.
+6. Server qayta yuklangandan keyin avtomatik ishga tushish (faqat `enabled` holati va qulaganda qayta ishga tushish tekshirilgan).
+7. ufw va Windows Firewall qoidalarini amalda qo'llash (buyruqlar hujjatlarga mos, bajarilmagan).
+8. Haqiqiy telefon/planshetda yangi interfeys. Foydalanuvchining Pixel 6 Pro (Android 17, Chrome 156) sinovi **1.1.0** da o'tkazilgan; 1.2.0 tuzatishlari faqat brauzer panelidagi 375 px emulyatsiyada ko'rilgan.
+9. Clipboard orqali muvaffaqiyatli nusxalash; PDF sahifalarining ko'rinishi; Firefox va Safari.
+10. Foydalanuvchining ishlab turgan serveri (`runtime\`) 1.2.0 ga o'tkazilmagan — u hali 1.1.0 jarayonida.

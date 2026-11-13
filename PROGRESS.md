@@ -42,43 +42,40 @@
 - Real DJI, VPN, internet/NAT/TURN, toza yangi Windows kompyuter, Windows service, haqiqiy ikki kompyuter orasida ko'chirish.
 - Clipboard rasm va tizim ulashishining muvaffaqiyatli yo'li real Chrome/Edge va telefonda (ichki sinov brauzerida faqat fallback sinaldi).
 
-## v1.2.0 — ISH JARAYONIDA (boshlandi 2026-11-13)
+## v1.2.0 (2026-11-13) — YAKUNLANDI
 Topshiriq: R570 serveriga tayyorlash, admin "?" yordam, mustaqil `info.html`, Linux yo'li, skriptlarni yakunlash.
-Kontekst siqilsa shu bo'lim + `git log` + `git status` orqali davom eting. Tayyor ishni qayta yozmang.
+Keyingi ish shu bo'lim + `git log` + `TEST_REPORT.md` (v1.2 bo'limi) dan boshlanadi.
 
-### Boshlanish holati (tekshirilgan)
-- `main` = `7baf400`, remote bilan bir xil, ish daraxti toza. CLAUDE.md / AGENTS.md yo'q.
-- Foydalanuvchi serveri `build\dronstream.exe run --root runtime` (8443/1935/9997/9180/8889) ishlab turibdi — TO'XTATILMAYDI. Dev build boshqa faylga (`build\devbin\`), testlar boshqa portlarda.
-- Foydalanuvchi tasdiqlagan: Pixel 6 Pro (Android 17, Chrome 156) USB lokal tarmoq orqali 2 ta demo WebRTC video ko'rdi (Chrome'ga "Yaqin-atrofdagi qurilmalar" ruxsati kerak bo'ldi). Bu faqat lokal + demo.
+### Bajarildi
+1. **"Juda ko'p ulanish" nuqsoni** (v1.1.0 da bor edi). Sabablar: efirda bo'lmagan joy har 5 s da 10 s yashaydigan `pending` sessiya qoldirardi; ijara yangilanishidagi 429 o'ynayotgan videoni to'xtatardi; chegara sessiyalarni sanardi. Tuzatish: chegara **player joylari** bo'yicha (`core/media.go` activeCounts), offline stream uchun chipta berilmaydi, MediaMTX rad etgan urinish darhol yopiladi (`DropPendingMedia`), shu joyning eski ulanishi yangi so'rovda uziladi (`Manager.SupersedeSlot`), `Player.tsx` qayta yozildi (epoch, pagehide, server soati bo'yicha ijara). Testlar: `core/slots_test.go`, `integration/slots_test.go`.
+2. **Mobil player**: sarlavha, statistika va watermark alohida joylarda (container query).
+3. **StrictMode 3.0** barcha PowerShell skriptlarida qayta yoqildi; sabablar tuzatildi; `tests/ps-lint.ps1`.
+4. **Linux**: SIGTERM, `PR_SET_PDEATHSIG`, platformaga xos fayllar, `master.key` 0600 tekshiruvi; `packaging/linux/` (preflight, install, systemd unit, backup, restore, update, rollback, uninstall-service, build-package); tanlangan distributiv Ubuntu Server 26.04 / 24.04 LTS.
+5. **CI** (`.github/workflows/ci.yml`, `tests/ci/`): Ubuntu 24.04 da unit + integratsiya + paket sinovi (systemd), Windows runner'da olingan shifrlangan backupni Linux'da tiklash.
+6. **Qo'llanma**: yagona manba `guide/src/guide.md` → `node guide/build.mjs` → `info.html` + `backend/internal/webui/help/`; `/api/admin/help/` faqat adminga; "?" tugmasi (`web/src/components/Help.tsx`).
+7. **Hujjatlar**: `SERVER_INSTALL_UZ.md` (yangi), README, SECURITY (13), ARCHITECTURE (9, D35–D43), REQUIREMENTS (R14), ADMIN_GUIDE (13), INSTALL (10), TEST_REPORT (v1.2), `guide/SOURCES.md`.
+8. **Paketlar**: `dist/DronStream-1.2.0-win64.zip`, `dist/DronStream-1.2.0-linux-amd64.tar.gz`. `build.ps1`: `-Linux`, `-Force`, qo'llanmani hosil qiladi, mavjud paket ustidan yozmaydi, `build\dronstream.exe` ga tegmaydi.
 
-### Topilgan nuqsonlar (v1.1.0 da bor, tuzatilishi kerak)
-1. **"Juda ko'p ulanish" (asosiy sabab)**: efirda bo'lmagan stream sloti har 5 s da chipta + WHEP urinadi; hook chiptani sarflab `media_sessions` ga `pending` yozadi, MediaMTX 404 qaytaradi, lekin `pending` yozuv reconciler'da 10 s yashaydi (`manager.go` pass, `age < 10_000`). 3-urinishda slot chegarasi (`tabStream >= 2`, `core/media.go` IssueTicket) → 429 → Player `deny()` (avtomatik qayta urinmaydi).
-2. Lease yangilanishida 429 kelsa `Player.tsx` o'ynayotgan videoni ham `deny()` qiladi (403 uchun `renewal && cur.current` tekshiruvi bor, 429 uchun yo'q).
-3. Subyekt chegarasi (12) sessiyalarni sanaydi: 3×3 da 9 player bir vaqtda yangilansa vaqtincha 18 → yangilanishlar rad.
-4. Sahifa yangilanganda/yopilganda React unmount ishlamaydi → WHEP DELETE yuborilmaydi; eski sessiya MediaMTX ICE timeout'igacha (~30 s) qoladi.
-5. `Player.tsx`: muvaffaqiyatsiz renewal ulanishi yopilmaydi (`onDrop` da `cur.current !== dropped` → return); WHEP 201 dan keyingi xatoda resurs DELETE qilinmaydi; `alive` ref effekt qayta ishlaganda eski `connect` ni to'xtatmaydi.
-6. Mobil: `.player-top` (sarlavha + statistika) va `.watermark` (pos2/pos3 `top:14%`) kichik playerda ustma-ust tushadi.
+### Ish davomida topilgan va tuzatilgan boshqa nuqsonlar
+- systemd ostida bir martalik o'rnatish kodi journald'ga yozilardi (CI topdi) → faqat interaktiv terminalda chop etiladi.
+- `restore`: yozib bo'lmagan nusxa haqida "yozildi" deb xabar berardi → endi haqiqiy holat.
+- Integratsiya testi yiqilganda serverini qoldirardi va keyingi testlarni yiqitardi → `t.Cleanup`.
+- `build.ps1` paket yig'ishda `build\dronstream.exe` ni almashtirardi (server shu fayldan ishlab turgan edi) → alohida `build\release\`.
 
-### Reja (tartib bilan) va holat — yangilangan 2026-11-13 kechqurun
-- [x] A. Sessiya limiti/Player tuzatishlari + testlar (commit c024c46). Brauzerda tasdiqlangan: offline joy 30 s dan keyin ham "kutilmoqda"; chegara xabari "3/3"; 375 px da overlaylar ustma-ust emas.
-- [x] B. StrictMode 3.0 qayta yoqildi (`ds-common.ps1`, `packaging/scripts/common.ps1`, testlar, `build.ps1`); `tests/ps-lint.ps1` (commit 2721eb4).
-- [x] C. Linux kodi va paketlash: SIGTERM, Pdeathsig, mediamtx nomi, master.key 0600 tekshiruvi, `packaging/linux/*` (preflight/install/backup/restore/update/rollback/uninstall-service, systemd unit), `build-package.sh`.
-- [~] C2. CI (`.github/workflows/ci.yml`, `tests/ci/*`): Ubuntu 24.04 runner'da unit (7 paket) va integratsiya (4 test) O'TDI; paket sinovi 44/45 (topilgan nuqson: setup kodi journald'ga tushardi — tuzatildi, commit a13ba0e, CI qayta tekshirishi kerak). Windows→Linux backup ko'chirish (windows-backup + migrate ishlari) HALI O'TMAGAN: `make-windows-backup.ps1` da 400 xato, sababi aniqlanmoqda (annotatsiyaga server javobi qo'shildi).
-- [x] D. Qo'llanma: `guide/src/{guide.md,template.html,guide.css,guide.js,meta.json}` → `node guide/build.mjs` → `info.html` + `backend/internal/webui/help/*`; `/api/admin/help/` (faqat admin, alohida CSP, `help_test.go`); admin panel va tomosha sahifasida "?" (`web/src/components/Help.tsx`). Brauzerda tekshirilgan: qidiruv, mundarija, kod belgilash, Esc, fokus, video uzilmasligi.
-- [ ] D2. `info.html` ni haqiqiy file:// da (headless Edge) tarmoq so'rovisiz ochilishini tekshirish; chop etish; avto namoyish va reduced-motion.
-- [ ] E. `SERVER_INSTALL_UZ.md`, README/SECURITY/TEST_REPORT/ARCHITECTURE/REQUIREMENTS yangilash.
-- [ ] F. `build.ps1`: guide build + info.html + SERVER_INSTALL_UZ + Linux paket, mavjud versiya ustidan yozmaslik (`-Force`). Testlar: go unit, integratsiya (hammasi), install-roundtrip, update-rollback 1.1.0→1.2.0, scripts-test. Paketlar: `dist/DronStream-1.2.0-win64.zip` va `-linux-amd64.tar.gz`. Push (`push.bat`).
+### Muhim qarorlar
+- Chegara birligi — player joyi; joyda eng ko'pi 2 sessiya (ARCHITECTURE D35).
+- Linux'da kalit himoyasi: fayl 0600 + alohida hisob; ko'chirish faqat parolli `.dsbak` orqali (D38, SECURITY 13).
+- Qo'llanma bitta manbadan; admin sahifasi inline'siz, qat'iy CSP ostida (D40).
+- Linux runtime sinovi faqat CI'da: bu kompyuterda WSL ham, Docker ham yo'q (D42).
 
-### Sinov muhiti eslatmasi
-- Brauzer sinovi uchun vaqtinchalik server: scratchpad ichidagi `uiroot` (portlar 58443/59180/59997/58889/58189/51935), binary `build/devbin/dronstream-dev.exe`, Vite: launch config `web-dev-test` (5174, `DS_DEV_API`). Ish tugagach to'xtatiladi.
-- CI holatini ko'rish (ochiq repo, autentifikatsiyasiz): GitHub API `actions/runs` va `check-runs/<job id>/annotations` (skriptlar `::error` / `::notice` chiqaradi).
-- Foydalanuvchining o'z serveri (`runtime/`, 8443) butun ish davomida ishlab turibdi va eski 1.1.0 binary'da — unga tegilmagan.
+### Hozirgi holat va to'siqlar
+- Foydalanuvchining serveri (`runtime\`, 8443) hali **1.1.0 jarayonida** ishlab turibdi; `build\dronstream.exe` fayli esa 1.2.0 (yig'ish paytida almashgan, eski tasvir `dronstream.exe~`). Server qayta ishga tushirilganda 1.2.0 bo'ladi; sxema o'zgarmagan (v2).
+- Haqiqiy R570 ga kirish yo'q: OS noma'lum, o'rnatish bajarilmagan.
+- GitHub API autentifikatsiyasiz soatiga 60 so'rov: CI natijasini tez-tez so'ramang yoki run sahifasini brauzerda oching.
 
-### Qarorlar (v1.2)
-- Versiya 1.2.0 (sxema o'zgarmasa v2 qoladi; 1.1.0 paketi ustidan yozilmaydi).
-- Linux'da master kalit: `DSK0` (ochiq 32 bayt) + fayl 0600, papka 0700, alohida xizmat foydalanuvchisi; DPAPI Linux'da ochilmaydi → ko'chirish faqat parolli `.dsbak` orqali (backup ichida xom kalit bor, restore qayta bog'laydi).
-- Qo'llanma kontenti bitta manbada; `info.html` va admin ko'rinishi build paytida hosil qilinadi; push oldidan sinxronlik tekshiriladi.
-
-### To'siqlar
-- Haqiqiy R570 ga kirish yo'q: OS noma'lum → o'rnatish bajarilmaydi, faqat preflight + qo'llanma + paket.
-- Bu kompyuterda WSL ham, Docker ham yo'q: Linux runtime sinovi faqat GitHub Actions (Ubuntu 24.04 runner) orqali. Haqiqiy R570 va Ubuntu 26.04 sinalmagan.
+### Keyingi aniq qadamlar (real muhit kerak)
+1. R570 da `SERVER_INSTALL_UZ.md` 1-bo'limidagi faqat o'qiydigan buyruqlar bilan OS'ni aniqlash; Linux bo'lsa `scripts/preflight.sh`.
+2. Tanlangan yo'l bo'yicha o'rnatish; health-check; demo video boshqa qurilmadan; birinchi backup; rejali qayta yuklash sinovi.
+3. Tashqi internet: public IP/domen, sertifikat, firewall, `webrtc_additional_hosts`; boshqa internetdan qabul testi.
+4. Haqiqiy DJI pulti: RTMP + VPN; RTMPS'ni alohida sinash (`DJI_SETUP_UZ.md`).
+5. Telefon(lar)da 1.2.0 interfeysini tekshirish (player joylari, "?" oynasi, `info.html`).

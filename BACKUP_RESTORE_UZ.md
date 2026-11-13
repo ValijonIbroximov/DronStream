@@ -78,3 +78,17 @@ powershell -File C:\DronStream\scripts\rollback.ps1 -ToVersion 1.0.0 -Backup C:\
 - Sxema v1 → v2 migratsiyasi birinchi ishga tushishda avtomatik; oldidan `data\backups\pre-migration-schema-v1-*.db` izchil nusxa olinadi.
 - **Rollback 1.1.0 → 1.0.x:** eski dastur v2 bazani ochmaydi. `rollback.ps1 -ToVersion 1.0.1` yangilashdan oldingi backupni (`pre-update-1.0.1-to-1.1.0-*.dsbak`) avtomatik topib tiklaydi; boshqasi uchun `-Backup`. Backupdan keyingi o'zgarishlar yo'qoladi. Real 1.0.0 binary bilan sinalgan.
 - Git bazani, media va sirlarni ko'chirmaydi: kompyuterlar o'rtasida faqat shu backup/restore yo'li.
+
+## 9. Linux va Windows'dan Linux'ga ko'chirish (v1.2)
+Linux'da xuddi shu amallar bash skriptlari bilan bajariladi (`sudo` kerak; parol ekranda ko'rinmaydi va jarayon argumentlariga tushmaydi):
+
+| Amal | Buyruq |
+|---|---|
+| Backup | `sudo bash /opt/dronstream/scripts/backup.sh` (ixtiyoriy `--out <FAYL>`, `--migrate-out`) |
+| Tiklash (xizmat to'xtatilgan) | `sudo bash /opt/dronstream/scripts/restore.sh --in <FAYL>` (mavjud baza ustiga: `--force`) |
+| Yangilash | `sudo bash <YANGI_PAKET>/scripts/update.sh` |
+| Rollback | `sudo bash /opt/dronstream/scripts/rollback.sh --to-version <VERSIYA>` |
+
+**Windows'dan Linux'ga.** Windows'dagi master kalit DPAPI bilan o'sha kompyuterga bog'langan, Linux'da uni ochib bo'lmaydi — shuning uchun `config\secrets` papkasini nusxalash ishlamaydi. `.dsbak` fayli esa platformaga bog'liq emas: ichida kalit parol bilan shifrlangan holda turadi va tiklashda yangi serverga qayta bog'lanadi (Linux'da — fayl huquqi 600 bilan). Tartib `SERVER_INSTALL_UZ.md` 8-bo'limda.
+
+Bu yo'l CI'da tekshiriladi: Windows virtual mashinasida olingan backup Ubuntu 24.04 da tiklanadi; administrator kiradi, pult kaliti o'qiladi, yuklangan rasm bayt-ma-bayt bir xil chiqadi (`TEST_REPORT.md`, v1.2, B bo'lim). Teskari yo'nalish (Linux'dan Windows'ga) xuddi shu format bilan ishlashi kerak, lekin sinalmagan.
