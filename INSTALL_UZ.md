@@ -82,3 +82,16 @@ powershell -File C:\DronStream\scripts\firewall-rules.ps1 -RtmpRemote 10.8.0.0/2
 - [ ] Boshqa kompyuter/telefondan `https://<server>:8443` ochiladi va DEMO video ko'rinadi
 - [ ] Pult ulanishi: DJI_SETUP_UZ.md
 - [ ] Backup yaratildi va boshqa joyda saqlandi: BACKUP_RESTORE_UZ.md
+
+## 9. Eng oson yo'l: `DronStreamStart.bat` (v1.1)
+Paketni istalgan papkaga oching (bo'sh joy va o'zbekcha harfli papka ham bo'ladi) va **`DronStreamStart.bat`** ni ikki marta bosing:
+1. Birinchi marta u avtomatik `DronStreamTayyorla.bat` ni bir marta ishga tushiradi (papkalar, faol versiya, sirsiz konfiguratsiya; kompilyator kerak emas), so'ng serverni ishga tushiradi va brauzerni ochadi. Paket papkasining o'zi ROOT bo'ladi (`config\`, `data\`, `logs\` shu yerda).
+2. Oynada bir martalik admin kodi ko'rinadi (logga yozilmaydi) — brauzerdagi birinchi sozlash sahifasiga kiriting.
+3. Keyingi bosishlarda: server ishlayotgan bo'lsa ikkinchi nusxa ochilmaydi, faqat brauzer ochiladi.
+4. Muammo bo'lsa oyna yopilmaydi: sabab, keyingi qadam va log manzili ko'rsatiladi. Band port, buzilgan baza yoki noto'g'ri TLS avtomatik "tuzatilmaydi".
+
+`install.ps1` bilan `C:\DronStream` ga o'rnatish (2-bo'lim) ham ishlaydi; o'rnatilgan papkaga ham `DronStreamStart.bat` / `DronStreamTayyorla.bat` nusxalanadi.
+
+Manba koddan ishlash (Git): `pull.bat` → `DronStreamTayyorla.bat` (Go 1.27.4, Node 22.23.5, MediaMTX v1.21.3 ni checksum bilan `.tools` ga — loyiha yo'li juda uzun bo'lsa `%LOCALAPPDATA%\DronStream\t-<id>` ga — yuklab, build qiladi; runtime `runtime\` papkasida) → `DronStreamStart.bat`. Batafsil: README_UZ.md.
+
+**Faqat x64 Windows 10/11.** ARM64 va 32-bit Windows aniq xabar bilan rad etiladi (sinalmagan). Tavsiya: loyihani qisqa yo'lda saqlang (masalan `D:\DronStream`).

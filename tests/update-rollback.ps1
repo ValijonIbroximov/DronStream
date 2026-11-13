@@ -36,8 +36,8 @@ $base = "https://127.0.0.1:38443"
 $ws = New-Object Microsoft.PowerShell.Commands.WebRequestSession
 $h = @{ "X-DS-Request" = "1" }
 $tok = (Get-Content "$R\data\runtime\setup-token.txt" -Raw).Trim()
-$r = Invoke-RestMethod -Method Post -Uri "$base/api/setup" -WebSession $ws -Headers $h -ContentType "application/json" -Body (@{ setupToken = $tok; username = "boss"; password = "Update-Test-Pass-1" } | ConvertTo-Json)
-$h["X-CSRF-Token"] = $r.csrf
+$setupResp = Invoke-RestMethod -Method Post -Uri "$base/api/setup" -WebSession $ws -Headers $h -ContentType "application/json" -Body (@{ setupToken = $tok; username = "boss"; password = "Update-Test-Pass-1" } | ConvertTo-Json)
+$h["X-CSRF-Token"] = $setupResp.csrf
 Invoke-RestMethod -Method Post -Uri "$base/api/admin/users" -WebSession $ws -Headers $h -ContentType "application/json" -Body (@{ username = "olduser"; password = "Old-User-Pass-12"; role = "user" } | ConvertTo-Json) | Out-Null
 
 $env:DRONSTREAM_BACKUP_PASSPHRASE = "Update-Test-Passphrase-1"

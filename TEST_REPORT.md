@@ -96,3 +96,73 @@ Izoh: FFmpeg kodlovchilar va 20 pion mijoz ham shu kompyuterda ishladi (ular his
 
 ## 7. Xulosa
 Ruxsat va majburiy uzish integratsiyasi (eng xavfli qism) real MediaMTX va real WebRTC sessiyalari bilan isbotlandi: revoke/blok/favqulodda/muddat holatlarida media 3 s maqsaddan ancha tez (ms darajasida, lokal) to'xtadi, poyga holatlarida sizish topilmadi, backend yoki baza ishdan chiqqanda tizim yopiq holatga o'tdi. Real qurilma, real tarmoq va boshqa kompyuter bilan bog'liq bandlar yuqoridagi ro'yxatda — ular bajarilmaguncha ishlab chiqarishga tayyor deb hisoblanmasin.
+
+---
+
+# v1.1.0 test hisoboti (2026-11-13)
+Paket: `dist\DronStream-1.1.0-win64.zip`. Muhit o'sha: bitta Windows 11 kompyuter, loopback. Belgilar yuqoridagidek.
+
+## A. Avtomatik testlar
+| To'plam | Natija |
+|---|---|
+| Go unit (core: havolalar, to'plamlar, migratsiya; mediafiles; backup v2; web: QR decode, base URL, PNG nomi; eski unit testlar) | ✅ |
+| Integratsiya `TestAcceptance` (v1.0 ning 17 ssenariysi, sxema v2 da qayta) | ✅ 17/17 |
+| Integratsiya `TestLinksAndMedia` | ✅ |
+| Integratsiya `TestMigrationFromV1` (real 1.0.0 binary yaratgan baza) | ✅ |
+| Integratsiya `TestTURNRelay`, `TestLoad` | ✅ |
+| `tests\install-roundtrip.ps1` (1.1.0 paket) | ✅ 19/19 |
+| `tests\update-rollback.ps1` 1.0.1 → 1.1.0 → rollback 1.0.1 | ✅ 10/10 |
+| `tests\scripts-test.ps1` (BAT/PS1 skriptlar) | ✅ 21/21 |
+| Frontend `tsc -b` + `vite build` | ✅ |
+
+## B. Talablar bo'yicha (8-bo'lim)
+| Talab | Natija |
+|---|---|
+| Bir martalik havolaga parallel urinishlar: faqat bittasi sessiya oladi | ✅ HTTP orqali 20 brauzer → 1 g'olib; unit: 30 → 1 |
+| Preview GET va QR ko'rish sarflamaydi | ✅ `/link` GET ×3, admin QR/share ×3, inspect ×3 → foydalanish 0; brauzerda landing ochilganda 0, bosilgandan keyin 1 🖐 |
+| Faollashtirish qayta yuborilsa ikki marta sarflanmaydi | ✅ bir xil `requestId` → foydalanish 1, oldingi sessiya almashtirildi |
+| Refresh, tab va media qayta ulanishi sarflamaydi | ✅ 5× session/library, 2 tab WebRTC, qayta ulanish → 1; brauzerda reload → 1 🖐 |
+| Boshqa brauzerda ishlatilgan bir martalik token rad | ✅ `link_used_up` |
+| N martalik limit parallel kirishda oshmaydi | ✅ N=3: HTTP 15 parallel → 3; unit 25 → 3 |
+| Vaqt boshlanishidan oldin va tugagandan keyin rad | ✅ `link_not_started`, `link_expired` |
+| Muddat tugashi yoki revoke ochiq jonli va yuklangan videoni uzadi | ✅ havola revoke: jonli video −10 ms; 20 MB video yuklash 0.33 MB da, revoke'dan 5 ms keyin uzildi; havola muddati: jonli −20 ms, yuklash 1.08 MB da uzildi |
+| Media URL, thumbnail va Range orqali aylanib o'tib bo'lmaydi | ✅ ruxsatsiz user 403, anonim 401 (fayl, thumb, Range); yashirin kontent 403; yo'l hiylalari ma'lumot qaytarmadi |
+| Ruxsat olib tashlanganda matn/rasm interfeysdan yo'qoladi | ✅ API; 🖐 brauzerda matn va rasm real vaqtda yo'qoldi, video qoldi; havola bekor qilinganda kirish sahifasi + sabab. Olingan nusxani qaytarib bo'lmasligi SECURITY.md 12-bo'limda |
+| To'plam o'zgarishi ruxsat siyosatiga muvofiq | ✅ dinamik: yangi element ochiladi, olib tashlangan yopiladi; "hozirgi elementlar": yangi element ochilmaydi |
+| QR decode = yaratilgan havola | ✅ Go: matritsa render → gozxing; 🖐 **brauzer canvas'idan olingan haqiqiy PNG** dekodlandi — aynan teng |
+| Clipboard image va ulashish fallback | 🖐 ichki brauzerda ikkalasi qo'llanmaydi → tushunarli xabar + "PNG yuklab olish" taklifi chiqdi. Muvaffaqiyatli yo'l (real Chrome/Edge, telefon) ⛔ sinalmagan |
+| Eski baza migratsiyasida hisob va ruxsatlar saqlanadi | ✅ real 1.0.0 bazasi: login, muddatli ruxsat (muddati saqlangan), bekor qilingan ruxsat bekorligicha; avtomatik pre-migration nusxa; audit `schema_migrate`; devroot dev bazasi ham migratsiya qilindi 🖐 |
+| Backup/restore media, havola hisoblagichlari va bekor qilinganlikni saqlaydi | ✅ video SHA-256 bir xil; uses_count va `revoked` saqlandi |
+| Restore'dan keyin eski sessiyalar bekor; ishlatilgan bir martalik havola qayta ochilmaydi | ✅ eski cookie 401; yangi va eski `requestId` bilan faollashtirish rad |
+| Rollback: eski binary yangi sxemaga ulanmaydi | ✅ 1.0.0 binary v2 bazani "newer than this program" bilan rad etdi; v1 backup tiklangach ishladi; `rollback.ps1` mos `pre-update-*.dsbak` ni avtomatik tikladi |
+| Yuklash tekshiruvi | ✅ H.265 MP4, SVG (onload), HTML, soxta PNG sarlavhasi, exe rad; PNG/JPEG/GIF, H.264 MP4 (faststart va oddiy), VP9 WebM qabul |
+
+## C. Skriptlar (4-bo'lim F)
+| Tekshiruv | Natija |
+|---|---|
+| Bo'sh joy va Unicode (`Yangi papka ўзбek`, `Yangi kompyuter ğ`) papkada | ✅ |
+| Tayyor serverni qayta ochish — takroriy jarayon yo'q | ✅ jarayonlar 1 → 1; parallel ikki Start → 1 jarayon |
+| Yetishmayotgan fayl → avtomatik tayyorlash va bir martalik qayta urinish | ✅ (paket: `active.txt` yo'q; manba: eskirgan build — Node 22.23.5 checksum bilan yuklandi, Go qayta yuklanmadi) |
+| Tayyorlash xatosida cheksiz sikl yo'q | ✅ MediaMTX olib tashlanganda: aynan 1 ta tayyorlash, "Qayta urinilmaydi", kod 4 |
+| Band port | ✅ kod 2, port va egasi jarayon nomi bilan ko'rsatildi; begona listener to'xtatilmadi |
+| Internet yo'q | ✅ `-Offline`: vositalar bor — qayta yuklamay ishladi; vositalar yo'q — kod 6 va aniq xabar. (Haqiqiy tarmoq uzilishi emas, `-Offline` rejimi bilan simulyatsiya) |
+| Pull lokal o'zgarishni saqlaydi | ✅ kod 4, o'zgarish joyida, stash yo'q |
+| Push muvaffaqiyatsiz — lokal commit saqlanadi | ✅ remote yetib bo'lmaganda "SAQLANGAN" |
+| Remote oldinda / tarixlar ajralgan | ✅ push force'siz to'xtadi; pull reset/merge qilmadi |
+| Yangi kompyuterni taqlid qiluvchi toza papkada clone | ✅ faqat `pull.bat` → clone → Tayyorla (Go 1.27.4, Node 22.23.5, MediaMTX yuklandi, checksum, npm ci, build) → `DronStreamStart.bat` manzili ko'rsatildi; band `DronStream` papka ustidan yozilmadi |
+| Sir va ma'lumot fayllari push'ga kirmaydi | ✅ PEM kalit — push to'xtadi, qiymat chiqmadi, commit yo'q; `baza.db`, `runtime\` yuborilmadi; yangi clone'da baza/master kalit yo'q |
+| Setup kodi logga yozilmaydi | ✅ |
+| Topilgan nuqson | PS 5.1 260 belgilik yo'l chegarasi: uzun papkada Go arxivi ochilmay qolardi (jim) → vositalar qisqa `%LOCALAPPDATA%\DronStream\t-<id>` ga, kutilmagan xatolar endi sabab+log bilan |
+
+## D. v1.1 da sinalmagan ⛔
+1. Real DJI / VPN / internet / NAT / CGNAT / TURN (o'zgarmagan, v1.0 ro'yxati).
+2. **Real yangi Windows kompyuteri** (skriptlar shu kompyuterdagi toza papkalarda sinaldi; Git, PowerShell, .NET bu yerda allaqachon bor edi). Windows 10 da sinalmagan.
+3. Clipboard rasm nusxasi va tizim ulashishining **muvaffaqiyatli** yo'li (real Chrome/Edge, Android/iOS).
+4. Haqiqiy internet uzilishi (faqat `-Offline` simulyatsiyasi).
+5. Windows service va firewall skriptlari (tizim sozlamasi).
+6. Backend qotib qolganda jonli video ≤ lease (120 s) davom etishi mumkinligi — cheklov saqlanadi, bartaraf etilmagan; yuklangan media uchun baho SECURITY.md 12-bo'limda; qotishning o'zi sinalmagan.
+7. Katta (GB) videolar bilan backup va yuklash (20 MB gacha sinalgan; oqimli dizayn bo'yicha xotira chegaralangan).
+8. GitHub'ga birinchi push GitHub hisobi orqali (natija yakuniy javobda).
+
+## E. Yuklama (v1.1 kodida qayta)
+4 stream × 5 tomoshabin, 62 s: 20/20 to'xtamadi; MediaMTX 38 % bitta yadro, backend 5.5 %; RAM 135 / 92 MB; chiqish 29.8 Mbit/s.

@@ -27,3 +27,17 @@
 - Dev muhit: `source scripts/devenv.sh` (Git Bash) — Go `.tools/go` dan.
 - Dev server: `build/dronstream.exe run --root devroot`; UI: `npm --prefix web run dev` (5173, `/api` → 8443 proxy).
 - Kontekst qisqarsa: REQUIREMENTS.md → ARCHITECTURE.md → shu fayl → TEST_REPORT.md.
+
+## v1.1.0 (2026-11-13)
+### Bajarildi
+- Sxema v2 migratsiyasi (kontent, to'plam, grant, maxsus havola, link sessiyalar); migratsiyadan oldin avtomatik izchil nusxa; real 1.0.0 bazasidan migratsiya sinalgan.
+- Maxsus havolalar (bir/N martalik, vaqtinchalik, parallel chegara, sessiya davomiyligi), fragment-token, idempotent atomar faollashtirish, bekor qilish/yangilash, QR (o'z serverimizda) va ulashish.
+- Kontent: matn/rasm/video yuklash (haqiqiy format tekshiruvi, H.265/SVG/HTML rad), to'plamlar (dinamik/hozirgi), ommaviy sarlavha, yashirish, tartib; fayl/thumbnail/Range har so'rovda ruxsat; revoke'da yuklash uziladi.
+- Admin: yangi menyu, 3 bosqichli wizard, havola kartalari, sessiyalar, "Nimani ko'radi?", sozlamalar (public base URL), Toshkent vaqti.
+- Backup v2 (oqimli shifrlash, media bilan); rollback skripti sxema o'zgarishida mos backupni tiklaydi.
+- `DronStreamStart.bat`, `DronStreamTayyorla.bat`, `push.bat`, `pull.bat` + `scripts\ds-*.ps1`, `dronstream check`.
+- Topilgan/tuzatilgan: Tashkent vaqt regexi (`\d` yo'qolgan), test binary'da SPA yo'qligi, link rate limit NAT uchun konfiguratsiyaga chiqarildi, PS 5.1 da 260 belgilik yo'l chegarasi (vositalar uchun qisqa zaxira papka), eski binary `check` ni bilmasligi.
+
+### Keyingi (real muhit kerak)
+- Real DJI, VPN, internet/NAT/TURN, toza yangi Windows kompyuter, Windows service, haqiqiy ikki kompyuter orasida ko'chirish.
+- Clipboard rasm va tizim ulashishining muvaffaqiyatli yo'li real Chrome/Edge va telefonda (ichki sinov brauzerida faqat fallback sinaldi).

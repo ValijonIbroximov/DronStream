@@ -85,7 +85,7 @@ Check "restore: starts in STANDBY" ($sys2.state.instanceState -eq "standby")
 $streams = Invoke-RestMethod -Uri "$base/api/admin/streams" -WebSession $ws2 -Headers $h2
 $perms = Invoke-RestMethod -Uri "$base/api/admin/permissions" -WebSession $ws2 -Headers $h2
 Check "restore: streams restored" (@($streams | Where-Object { $_.slug -eq "pultx" }).Count -eq 1)
-Check "restore: permissions restored" (@($perms | Where-Object { $_.streamName -eq "Pult X" }).Count -eq 1)
+Check "restore: permissions restored" (@($perms | Where-Object { $_.streamName -eq "Pult X" -or $_.objectTitle -eq "Pult X" }).Count -eq 1)
 $k2 = Invoke-RestMethod -Uri "$base/api/admin/streams/$($st.stream.id)/key" -WebSession $ws2 -Headers $h2
 Check "restore: publish key re-bound (DPAPI) and readable" ($k2.key -eq $key)
 $vw = New-Object Microsoft.PowerShell.Commands.WebRequestSession
@@ -108,3 +108,4 @@ Check "no mediamtx left running" (-not (Get-Process mediamtx -ErrorAction Silent
 
 $results | ConvertTo-Json | Set-Content (Join-Path (Split-Path $PSScriptRoot -Parent) "build\test-results\install-roundtrip.json")
 if ($results.Values -contains "FAIL") { exit 1 }
+
