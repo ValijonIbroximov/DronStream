@@ -92,6 +92,16 @@ Avvalgi xavfsizlik va info.html dizayniga oid zid talablar shu topshiriq bilan a
 - 3D qo'llanma: alohida worktree'da ishchi agent (guide/, info.html, webui/help, web/package.json — three). guide.md prosasiga tegmaydi; sahna xaritasi `guide/src/scenes.json`.
 - Asosiy oqim (shu sessiya): backend xavfsizlik, hujjatlar, testlar, guide.md matni, paket.
 
+### Holat (yangilangan)
+- [x] A. Audit + SECURITY_MODEL.md, SECURITY_ACCEPTANCE.md.
+- [x] B. Havola = so'rov; admin kod bilan aniq sessiyani tasdiqlaydi; sxema v3; eski havola sessiyalari pending (TestMigrationFromV2, 1.1.0 binary bilan).
+- [x] C. TOTP + tiklash kodlari + 10 daqiqalik qayta tasdiqlash (unit, web, CI).
+- [x] D. security.mode secure (paket sukuti): ochiq oddiy RTMP bilan ishga tushmaydi; TOTP gate; xavfsizlik holati paneli.
+- [x] CI run 43469801243 (commit 4449afa): Ubuntu paket sinovi 55/55 (secure, TOTP, RTMP rad), Windows->Linux 12/12, pcap: 45444 WebRTC UDP paketida ochiq H.264 0, oddiy RTMP'da kalit ochiq.
+- [x] Frontend: kutish sahifasida kod, so'rovlarni kod bilan tasdiqlash, TOTP yoqish, ReauthHost, xavfsizlik holati (brauzerda tekshirildi).
+- [ ] E. 3D qo'llanma — agent worktree'da; birlashtirilgach scenes.json ga yangi bo'limlar (kim-koradi, admin-mfa, secure-rejim) qo'shiladi.
+- [ ] F. Vizual qabul, 1.3.0 paket, TEST_REPORT v1.3, push.
+
 ### Reja
 - [ ] A. Audit + `SECURITY_MODEL.md` (kim videoni ochiq ko'radi, TLS qayerda tugaydi, E2EE blockerlari).
 - [ ] B. Havola = taklif: link sessiyasi admin tasdiqlamaguncha media/kontent olmaydi; tasdiqlash kodi; eski havolalar migratsiyasi (sxema v3).
