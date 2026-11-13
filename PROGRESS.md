@@ -79,3 +79,23 @@ Keyingi ish shu bo'lim + `git log` + `TEST_REPORT.md` (v1.2 bo'limi) dan boshlan
 3. Tashqi internet: public IP/domen, sertifikat, firewall, `webrtc_additional_hosts`; boshqa internetdan qabul testi.
 4. Haqiqiy DJI pulti: RTMP + VPN; RTMPS'ni alohida sinash (`DJI_SETUP_UZ.md`).
 5. Telefon(lar)da 1.2.0 interfeysini tekshirish (player joylari, "?" oynasi, `info.html`).
+
+## v1.3.0 — ISH JARAYONIDA (boshlandi 2026-11-13 kech)
+Topshiriq (ustuvorlik bo'yicha): 1) video maxfiyligi — xavfsizlik modeli, havola = faqat taklif (admin aniq sessiyani tasdiqlaydi), admin TOTP/recovery/qayta tasdiqlash, secure rejimda shifrlanmagan ingest cheklovi, pult→server→brauzer auditi, E2EE imkoniyati va blockerlari; 2) haqiqiy 3D interaktiv `info.html` (Three.js offline, 12 sahna, scroll timeline).
+Avvalgi xavfsizlik va info.html dizayniga oid zid talablar shu topshiriq bilan almashtirildi.
+
+### Boshlanish holati
+- `main` = `9b1e652` (remote bilan bir xil), ish daraxti toza. Foydalanuvchi serveri `runtime\` da 1.1.0 jarayonida ishlab turibdi — tegilmaydi.
+- Referens: `Downloads\index (1).html` (Three.js r170 CDN'dan, Google Fonts) — faqat mexanikasi olinadi, CDN/font ko'chirilmaydi. Rasmlar topshiriqqa biriktirilmagan.
+
+### Ish taqsimoti
+- 3D qo'llanma: alohida worktree'da ishchi agent (guide/, info.html, webui/help, web/package.json — three). guide.md prosasiga tegmaydi; sahna xaritasi `guide/src/scenes.json`.
+- Asosiy oqim (shu sessiya): backend xavfsizlik, hujjatlar, testlar, guide.md matni, paket.
+
+### Reja
+- [ ] A. Audit + `SECURITY_MODEL.md` (kim videoni ochiq ko'radi, TLS qayerda tugaydi, E2EE blockerlari).
+- [ ] B. Havola = taklif: link sessiyasi admin tasdiqlamaguncha media/kontent olmaydi; tasdiqlash kodi; eski havolalar migratsiyasi (sxema v3).
+- [ ] C. Admin TOTP (RFC 6238) + recovery kodlar + muhim amallarda qayta tasdiqlash.
+- [ ] D. `security.mode: secure`: ochiq interfeysdagi oddiy RTMP rad; RTMPS fallback yo'q; `check` hisobotida tasdiqlangan/tasdiqlanmagan himoyalar.
+- [ ] E. 3D qo'llanma birlashtirish (agent natijasi) + guide.md matni yangi siyosatga.
+- [ ] F. `SECURITY_ACCEPTANCE.md`, testlar, vizual qabul, 1.3.0 paket, push.
