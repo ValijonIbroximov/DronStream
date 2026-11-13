@@ -108,3 +108,17 @@ Manba kod; Windows build/skript; README_UZ.md; ADMIN_GUIDE_UZ.md; DJI_SETUP_UZ.m
 - R13.3 Tayyorla: platforma, mahkamlangan vositalar `.tools` ga checksum bilan, lock fayllar, build, papkalar, sirsiz shablon, migratsiyadan oldin izchil nusxa, idempotent, readiness exit code, offline rejim.
 - R13.4 pull: fast-forward-only, lokal o'zgarish/ajralgan tarixda to'xtash, kerak bo'lsa tayyorlash, server to'xtatilmaydi; yangi kompyuterda mustaqil clone.
 - R13.5 push: identifikatsiya (faqat lokal), GCM, sir/ma'lumot tekshiruvi (tarix bilan), commit xabari (parametr ham), force yo'q, push xatosida commit saqlanadi, SHA mosligi va havola.
+
+## R14. v1.2 — serverga tayyorlash, yordam, qo'llanma, Linux (2026-11-13 topshirig'i)
+- R14.1 Ish holati `PROGRESS.md` da saqlanadi; checkpoint commitlar; `reset --hard`, `git clean`, force push ishlatilmaydi.
+- R14.2 "Juda ko'p ulanish": sabab aniqlanadi va tuzatiladi (grid almashishi, ijara yangilanishi, offline joylar, tab yopilishi, poyga holati); chegara cheksiz oshirilmaydi; haqiqatan tugasa ishlatilgan/maksimal son va nima qilish ko'rsatiladi. Mobil playerda sarlavha, statistika va watermark ustma-ust tushmaydi.
+- R14.3 Admin panelida "?" (Parol → Chiqish → ?): tooltip va aria-label "Yordam va qo'llanma", klaviatura, mobil o'lcham; to'liq qo'llanmani ochadi, yangi tabda ochish mumkin; faol streamlar qayta yuklanmaydi; endpoint serverda admin avtorizatsiyasi bilan himoyalangan.
+- R14.4 Mustaqil `info.html`: `file://`, internetsiz, CSS/JS ichida, CDN/font/analytics/API/tracking yo'q, sir va operativ manzil yo'q, sozlamani o'qimaydi, buyruq bajarmaydi; nusxalash tugmasi va qo'lda belgilash fallback'i.
+- R14.5 Admin yordam va `info.html` bitta manbadan build paytida hosil qilinadi.
+- R14.6 3D scroll namoyish: pult, server, admin, tomoshabin; 6 bosqich; haqiqiy trafik deb ko'rsatilmaydi; CSS perspective/transform/SVG; matn va kod tekis; native scroll, mundarija, qidiruv, oldingi/keyingi, progress, animatsiyani o'chirish, oddiy rejim, chop etish; avto namoyish sukut bo'yicha o'chiq, foydalanuvchi aralashganda va tab yashirilganda pauza; `prefers-reduced-motion`.
+- R14.7 Qo'llanma mazmuni: A dastur, B tarmoq, C Windows, D R570 (Windows va Linux alohida), E tashqi internet, F kundalik boshqaruv, G xatolar. OS aniqlanmasdan universal buyruq berilmaydi; iDRAC aralashtirilmaydi; RTMP shifrlangan deb ko'rsatilmaydi; RTMPS real qurilmada tasdiqlanmaguncha tayyor deb yozilmaydi.
+- R14.8 Buyruq kartalari: qayerda, admin/root, nima qiladi, natija, xatoda, bekor qilish; diagnostika/sozlash/bekor qilish alohida; placeholder to'ldirilmasa xavfli amal bajarilmaydi; firewall'ni o'chirish, hamma portni ochish, `chmod 777`, boshqaruv API'sini ochish tavsiya etilmaydi; `curl -k` faqat diagnostika.
+- R14.9 Windows/Linux mosligi: DPAPI, jarayon/xizmat, yo'llar, MediaMTX, backup, SQLite. Linux: alohida kod, xavfsiz sir saqlash, systemd, build/paket, Windows → Linux parolli backup ko'chirish; bitta distributiv (Ubuntu Server 26.04 / 24.04 LTS) rasmiy manbalar bilan asoslangan; cross-compile runtime testi deb yozilmaydi.
+- R14.10 BAT/PS1 skriptlari yakunlangan; StrictMode keng doirada o'chirilmaydi.
+- R14.11 Testlar amalda bajarilgan holda yoziladi; lokal test tashqi internet yoki haqiqiy R570 bilan tenglashtirilmaydi.
+- R14.12 Yangi paket (oldingilar ustidan yozilmaydi), GitHub commit/push, masofadagi SHA tekshiruvi.

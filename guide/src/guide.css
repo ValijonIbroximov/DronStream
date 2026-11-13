@@ -26,6 +26,7 @@ button[aria-pressed="true"] { border-color: var(--accent); background: #12314d; 
 .ver { color: var(--muted); font-weight: 400; font-size: .82rem; }
 .bar-tools { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
 .bar-tools button, .bar-tools select { font-size: .86rem; }
+.tool-row { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
 .tool-group { display: inline-flex; gap: 4px; align-items: center; }
 .search input { width: 190px; }
 .narrow-only { display: none; }
@@ -108,7 +109,7 @@ pre.code .ph { color: var(--ph); background: #3a2f00; border-radius: 3px; }
 /* ---------- story: scroll-driven 3D scene (class "js-story" is set by the script) ---------- */
 .js-story .story { height: 520vh; }
 .js-story .pin { position: sticky; top: var(--bar-h); height: calc(100vh - var(--bar-h)); display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 8px; padding: 10px 0 14px; }
-.js-story .stage { display: grid; place-items: center; overflow: hidden; perspective: 1100px; border: 1px solid var(--line); border-radius: 14px; background: radial-gradient(120% 90% at 50% 0%, #13283a 0%, #0b1118 70%); }
+.js-story .stage { display: block; position: relative; overflow: hidden; perspective: 1100px; border: 1px solid var(--line); border-radius: 14px; background: radial-gradient(120% 90% at 50% 0%, #13283a 0%, #0b1118 70%); }
 .js-story .cap { display: none; }
 .js-story .stage[data-step="1"] ~ .caps-wrap .cap[data-step="1"], .js-story .stage[data-step="2"] ~ .caps-wrap .cap[data-step="2"],
 .js-story .stage[data-step="3"] ~ .caps-wrap .cap[data-step="3"], .js-story .stage[data-step="4"] ~ .caps-wrap .cap[data-step="4"],
@@ -117,7 +118,8 @@ pre.code .ph { color: var(--ph); background: #3a2f00; border-radius: 3px; }
 .js-story .story-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
 .js-story .disclaimer { display: block; text-align: center; }
 
-.world { --p: 0; --s: 1; position: relative; width: 640px; height: 420px; flex: none; transform-style: preserve-3d;
+/* centred by its own half-size so that scaling it down on small screens keeps it in the middle */
+.world { --p: 0; --s: 1; position: absolute; left: 50%; top: 50%; margin: -210px 0 0 -320px; width: 640px; height: 420px; transform-style: preserve-3d;
   transform: scale(var(--s)) rotateX(52deg) rotateZ(calc(-34deg + var(--p) * 16deg)) translateZ(0); transition: transform .25s linear; }
 .grid { position: absolute; inset: -160px; transform: translateZ(-46px); border-radius: 30px; opacity: .55;
   background-image: linear-gradient(#1c3147 1px, transparent 1px), linear-gradient(90deg, #1c3147 1px, transparent 1px); background-size: 40px 40px; }
@@ -208,8 +210,14 @@ html:not(.anim) .world, html:not(.anim) .card, html:not(.anim) .slab { transitio
 }
 @media (max-width: 760px) {
   .world { --s: .62; }
-  .bar { padding: 6px 10px; }
-  .bar-tools button, .bar-tools select { font-size: .8rem; padding: 5px 8px; }
+  .bar { padding: 6px 10px; gap: 6px; }
+  .bar-tools { width: 100%; gap: 6px; }
+  .bar-tools button, .bar-tools select { font-size: .8rem; padding: 5px 8px; white-space: nowrap; }
+  /* one row of tools that scrolls sideways instead of a tall, wrapped toolbar */
+  .tool-row { flex-wrap: nowrap; overflow-x: auto; width: 100%; padding-bottom: 2px; scrollbar-width: thin; }
+  .tool-row > * { flex: none; }
+  .search { flex: 1 1 100%; } .search input { width: 100%; }
+  .story-nav button { font-size: .82rem; padding: 6px 8px; white-space: nowrap; }
   .cmd-meta { grid-template-columns: 1fr; gap: 0; }
   .cmd-meta dt { margin-top: 6px; font-size: .8rem; }
   .js-story .caps { min-height: 8.4em; }
@@ -239,4 +247,16 @@ html:not(.anim) .world, html:not(.anim) .card, html:not(.anim) .slab { transitio
   .cmd, .cmd.k-setup, .cmd.k-undo { border-color: #999; }
   .part { break-before: page; }
   a { color: inherit; text-decoration: none; }
+}
+
+/* The scene is scaled down on small screens; its labels grow so the text on screen stays readable. */
+@media (max-width: 760px) {
+  .card { width: 200px; margin-left: -100px; }
+  .nm { font-size: 21px; }
+  .st { font-size: 17px; }
+}
+@media (max-width: 480px) {
+  .card { width: 230px; margin-left: -115px; }
+  .nm { font-size: 25px; }
+  .st { font-size: 20px; }
 }

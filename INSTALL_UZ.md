@@ -95,3 +95,6 @@ Paketni istalgan papkaga oching (bo'sh joy va o'zbekcha harfli papka ham bo'ladi
 Manba koddan ishlash (Git): `pull.bat` → `DronStreamTayyorla.bat` (Go 1.27.4, Node 22.23.5, MediaMTX v1.21.3 ni checksum bilan `.tools` ga — loyiha yo'li juda uzun bo'lsa `%LOCALAPPDATA%\DronStream\t-<id>` ga — yuklab, build qiladi; runtime `runtime\` papkasida) → `DronStreamStart.bat`. Batafsil: README_UZ.md.
 
 **Faqat x64 Windows 10/11.** ARM64 va 32-bit Windows aniq xabar bilan rad etiladi (sinalmagan). Tavsiya: loyihani qisqa yo'lda saqlang (masalan `D:\DronStream`).
+
+## 10. Serverga o'rnatish va Linux
+Doimiy serverga (masalan Dell PowerEdge R570) o'rnatish, Windows Server va Ubuntu Server yo'llari, xizmat, firewall va Windows'dan Linux'ga ko'chirish — [SERVER_INSTALL_UZ.md](SERVER_INSTALL_UZ.md). Bosqichma-bosqich, buyruq kartalari bilan qo'llanma — `info.html` (paket ildizida; ikki marta bosib ochiladi).

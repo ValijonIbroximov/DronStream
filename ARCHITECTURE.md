@@ -107,3 +107,26 @@ Ko'rish mumkin, agar hammasi to'g'ri bo'lsa: instance `active`; favqulodda to'xt
 | D32 | Sxema migratsiyasi versiyaga qarab; migratsiyadan oldin avtomatik `VACUUM INTO` nusxa; eski binary yangi sxemani rad etadi; rollback mos backup orqali | Eski binary yangi sxemaga ulanmaydi |
 | D33 | QR: serverda go-qrcode matritsasi, brauzer canvas'ida chiziladi (sarlavha + Toshkent vaqti) | Tokenli havola tashqi servisga yuborilmaydi |
 | D34 | `dronstream check` (faqat o'qish): config, papkalar, MediaMTX, portlar, TLS, baza sxemasi, setup holati | Start/Tayyorla skriptlari aniq tashxis beradi |
+
+## 9. v1.2 qo'shimchalari
+| # | Qaror | Sabab |
+|---|---|---|
+| D35 | Chegara birligi — **player joyi** (web-sessiya, stream, tab); joyda eng ko'pi 2 media sessiya (jonli + yangilanish); chipta faqat efirdagi stream uchun; MediaMTX rad etgan urinishning `pending` yozuvi darhol yopiladi; shu joyning ortiqcha eski ulanishi yangi so'rovda uziladi | "Juda ko'p ulanish" nuqsoni: offline joy har 5 s da 10 s yashaydigan `pending` qoldirardi; 9 player bir vaqtda yangilanganda chegara oshardi |
+| D36 | Ijara uzunligi server soatiga nisbatan (`serverNow`) hisoblanadi; `pagehide` da WHEP DELETE (keepalive); tab identifikatori BroadcastChannel orqali takrorlanishdan saqlanadi | Qurilma soati noto'g'ri bo'lsa yangilanish siljimasin; sahifa yangilanganda sessiya qolmasin; "Duplicate tab" joylarni bo'lishmasin |
+| D37 | PowerShell: `Set-StrictMode -Version 3.0` hamma joyda; statik tekshiruv `tests/ps-lint.ps1` | StrictMode'ni o'chirib xatoni yashirish o'rniga sabablar tuzatildi (skalyarda `.Count`, bo'sh natijada property) |
+| D38 | Platformaga xos kod build teglari bilan ajratilgan: `job_windows.go` (Job Object), `job_linux.go` (`Pdeathsig`), `dpapi_windows.go` / `dpapi_other.go`, `perm_unix.go` / `perm_windows.go`, `service_windows.go` / `service_other.go` | Bitta kod bazasi, CGO'siz, ikki platforma |
+| D39 | Linux joylashuvi Windows bilan bir xil: `<ROOT>/app/<ver>/`, `config/`, `data/`, `logs/` (+ `app/current` symlink — systemd `ExecStart` uchun); sukut bo'yicha `/opt/dronstream`; xizmat hisobi `dronstream` | Backup/update/rollback mantig'i ikki platformada bir xil |
+| D40 | Qo'llanmaning yagona manbasi `guide/src/guide.md` (yengil markdown + `:::cmd`, `:::note`, `:::story`); `guide/build.mjs` undan `info.html` (hammasi ichida, o'z CSP'si bilan) va `backend/internal/webui/help/*` (tashqi CSS/JS, `go:embed`) ni hosil qiladi; `--check` sinxronlikni tekshiradi | Bir matn ikki joyda qo'lda yuritilmaydi; admin sahifasi qat'iy CSP ostida ishlaydi |
+| D41 | Admin yordam ustki oynada (`iframe` + `inert`), sahifa almashtirilmaydi | O'ynayotgan videolar qayta ulanmasin |
+| D42 | Linux runtime sinovi GitHub Actions'da (Ubuntu 24.04, haqiqiy systemd); Windows → Linux backup ko'chirish ikki runner orasida artefakt orqali | Ishlab chiquvchi kompyuterida WSL/Docker yo'q; cross-compile runtime sinovi emas |
+| D43 | O'rnatish kodi faqat interaktiv terminalga chop etiladi (`os.ModeCharDevice`) | systemd ostida stdout journald'ga yoziladi |
+
+### Linux'dagi farqlar (qisqacha)
+| Mavzu | Windows | Linux |
+|---|---|---|
+| Master kalit | DPAPI LocalMachine (`DSK1`) | Fayl 0600 + alohida hisob (`DSK0`), har startda tekshiriladi |
+| MediaMTX fail-closed | Job Object KILL_ON_JOB_CLOSE | `PR_SET_PDEATHSIG` + systemd `KillMode=control-group` |
+| Xizmat | Windows service (`service-install.ps1`) | systemd unit (`install.sh`), cheklovlar bilan |
+| To'xtatish | `dronstream stop` / service stop | SIGTERM (`systemctl stop`) yoki `dronstream stop` |
+| Paket | `.zip`, PowerShell skriptlari, BAT | `.tar.gz`, bash skriptlari |
+| Firewall | `firewall-rules.ps1` (ko'rsatadi / `-Apply` / `-Remove`) | ufw buyruqlari qo'llanmada (skript o'zi ochmaydi) |

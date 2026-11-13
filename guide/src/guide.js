@@ -298,10 +298,12 @@
 
   // ---------- one scroll handler, throttled to animation frames ----------
   var ticking = false
+  // the toolbar can wrap on small screens: sticky offsets follow its real height
+  function syncBarHeight() { root.style.setProperty('--bar-h', barH() + 'px') }
   function frame() { ticking = false; updateProgress(); updateStory(); updateToc() }
   function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(frame) } }
   window.addEventListener('scroll', onScroll, { passive: true })
-  window.addEventListener('resize', onScroll)
+  window.addEventListener('resize', function () { syncBarHeight(); onScroll() })
 
   // ---------- inside the admin panel overlay: Escape asks the panel to close it ----------
   if (root.getAttribute('data-variant') === 'admin' && window.parent !== window) {
@@ -311,6 +313,7 @@
     })
   }
 
+  syncBarHeight()
   applyModes()
   frame()
 })()

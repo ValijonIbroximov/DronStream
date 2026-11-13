@@ -98,3 +98,31 @@ Loyiha egasiga yopiq kanal orqali xabar bering; publish kalitlari va parollarni 
 ### Backend qotib qolishi (v1.0 cheklovi, yangi media turlari uchun baho)
 - Jonli WebRTC: o'zgarmagan — eng yomon holatda ochiq video ≤ `lease_seconds` (default 120 s) davom etishi mumkin. Bu cheklov **bartaraf etilmagan**; qotishning o'zi sinalmagan (faqat lease mexanizmi).
 - Yuklangan video/rasm/matn: baytlarni backend o'zi yetkazadi, backend qotsa yangi bayt yuborilmaydi. Lekin brauzer buferlagan qism (qisqa videoda butun fayl) o'ynashda davom etadi va ochiq matn/rasm ekranda qoladi. Bu ssenariy alohida sinalmagan.
+
+## 13. v1.2: yordam sahifasi, Linux, player joylari
+
+### Admin yordam va info.html
+- Qo'llanma serverda faqat administratorga beriladi: `/api/admin/help/` va uning ikki fayli admin middleware ortida (anonim 401; oddiy foydalanuvchi, mehmon va havola sessiyasi 403). Tugmani yashirish emas — server tekshiruvi (`help_test.go`).
+- Bu sahifa uchun alohida, qat'iyroq siyosat: `default-src 'none'; script-src 'self'; style-src 'self'; frame-ancestors 'self'`. U hech qayerga ulana olmaydi (API'ga ham), inline skript/uslub yo'q. Faqat shu sahifa o'z saytimiz ichida ramkada ko'rsatilishi mumkin; qolgan barcha javoblar `X-Frame-Options: DENY` bilan qoladi.
+- Endpoint faqat uchta aniq faylni beradi (ro'yxat kodda); yo'l bilan boshqa faylga chiqib bo'lmaydi.
+- `info.html` mustaqil fayl: ichidagi `Content-Security-Policy` (`default-src 'none'`) brauzerning o'zida har qanday tarmoq so'rovini taqiqlaydi. U server sozlamalarini o'qimaydi, buyruq bajarmaydi; ichida haqiqiy manzil, parol, kalit yoki foydalanuvchi yo'q (test tekshiradi). Qo'llanma matni generatorda to'liq escape qilinadi; qidiruv natijalari DOM API orqali yoziladi (HTML sifatida emas).
+- Buyruq kartalarida diagnostika, sozlash va bekor qilish alohida bloklarda; to'ldirilmagan `<...>` qiymat bilan sozlash buyrug'i bajarilmaydi (PowerShell `throw`, bash `case`), skriptlar esa bunday qiymatni rad etadi.
+
+### Linux'da sirlar (DPAPI yo'q)
+- Windows: master kalit DPAPI (LocalMachine) bilan o'ralgan (`DSK1`). Linux: bunday mexanizm yo'q, kalit ochiq holda saqlanadi (`DSK0`) va **faqat fayl huquqi** bilan himoyalanadi: fayl 0600, papka 0700, egasi alohida `dronstream` tizim hisobi. Har ishga tushishda huquq tekshiriladi; guruh yoki boshqalar o'qiy olsa dastur ishga tushmaydi.
+- Chegara: serverda root huquqi bor odam kalitni o'qiy oladi. (Windows'da ham shu kompyuterdagi administrator DPAPI LocalMachine kalitini ocha oladi.) Disk o'g'irlanishidan himoya — diskni shifrlash; bu dastur doirasidan tashqarida.
+- Windows'dagi kalit faylini Linux'ga nusxalash ishlamaydi va kerak emas: ko'chirish faqat parolli `.dsbak` orqali (ichida kalit Argon2id + AES-GCM bilan shifrlangan), tiklashda yangi serverga qayta bog'lanadi.
+- systemd unit: alohida foydalanuvchi, `NoNewPrivileges`, `ProtectSystem=strict` (faqat `config/secrets`, `data`, `logs` yoziladi), `ProtectHome`, `PrivateTmp`, `PrivateDevices`, `UMask=0077`. Dastur fayllari root egaligida — xizmat o'z binary'sini o'zgartira olmaydi.
+- Fail-closed Linux'da: MediaMTX `PR_SET_PDEATHSIG(SIGKILL)` bilan ishga tushiriladi (backend qanday o'lmasin, yadro MediaMTX'ni o'ldiradi) va systemd `KillMode=control-group`. CI'da tekshirilgan: backend `kill -9` qilinganda MediaMTX 3 soniya ichida yo'q.
+- **CI'da topilgan va tuzatilgan**: systemd ostida bir martalik o'rnatish kodi stdout orqali journald'ga yozilib qolardi. Endi kod faqat interaktiv terminalda chop etiladi; boshqa hollarda faqat fayl manzili ko'rsatiladi.
+- Backup paroli Linux skriptlarida jarayon argumentlariga tushmaydi: vaqtinchalik 0600 fayl orqali uzatiladi va o'chiriladi.
+
+### Player joylari va chegaralar
+- Chegara (`max_media_sessions_per_subject`) endi sessiyalarni emas, **player joylarini** sanaydi: (brauzer sessiyasi, stream, tab). Bir joyda eng ko'pi bilan ikki media sessiya bo'ladi — jonli va ijara yangilanishidagi yangisi. Shu sababli bir subyekt uchun maksimal sessiyalar soni chegaraning ikki barobaridan oshmaydi va bu holat qisqa muddatli.
+- Shu joy uchun uchinchi so'rov kelsa (sahifa yangilangan, tarmoq almashgan), server **shu joyning** eski ulanishini uzadi; boshqa joylar va boshqa foydalanuvchilarga tegilmaydi.
+- Efirda bo'lmagan stream uchun chipta berilmaydi (avval ruxsat tekshiriladi — holat ruxsatsiz odamga oshkor bo'lmaydi).
+- Sahifa yopilganda ulanish serverda MediaMTX ICE timeout'i bilan tozalanadi (kuzatilgan: taxminan bir daqiqa ichida); sahifa yangilanganda brauzer o'zi darhol yopadi.
+
+### Skriptlar
+- `Set-StrictMode -Version 3.0` barcha PowerShell skriptlarida yoqilgan va o'chirilmaydi (istisno yo'q). `tests/ps-lint.ps1` buni, sintaksisni, ASCII'ni va qiymat berilmagan o'zgaruvchilarni tekshiradi; `push.bat` uni commit oldidan ishga tushiradi.
+- CI sirsiz ishlaydi (`permissions: contents: read`); tashqi yuklamalar mahkamlangan va tekshirilgan (MediaMTX SHA-256, `package-lock.json`, `go.sum`).

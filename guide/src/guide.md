@@ -870,8 +870,8 @@ Hozircha VPNsiz, amalda ishlaydigan variant: pult yonidagi kichik router yoki no
 | Ruxsatni olib tashlash (revoke) | Bitta odam, bitta kontent | O'sha videosi 1–2 soniyada uziladi, qayta ulanish rad etiladi. Boshqa ruxsatlari qoladi | Ruxsatni qayta berish |
 | Foydalanuvchini bloklash | Bitta odam, hamma narsa | Barcha sessiyalari tugaydi, kira olmaydi | Blokdan chiqarish |
 | Sessiyani yakunlash | Bitta brauzer sessiyasi | Chiqarib yuboriladi; ruxsati bo'lsa qayta kira oladi | — |
-| Ko'rishni yopish (stream) | Shu streamni ko'rayotgan hamma | Hech kim ko'ra olmaydi; pult yuborishda davom etadi | Ko'rishni ochish |
-| Publish'ni to'xtatish (stream) | Pult | Pult ulanishi uziladi va qayta ulana olmaydi | Publish'ni yoqish |
+| Tomoshani yopish (stream) | Shu streamni ko'rayotgan hamma | Hech kim ko'ra olmaydi; pult yuborishda davom etadi | Tomoshani ochish |
+| Publishni taqiqlash (stream) | Pult | Pult ulanishi uziladi va qayta ulana olmaydi | Publishga ruxsat |
 | Manbani uzish | Hozir ulangan pult | Ulanish uziladi; pult qayta ulanishi mumkin | — |
 | Favqulodda to'xtatish | Hamma tomoshabin | Barcha video darhol to'xtaydi | O'chirib qo'yish |
 

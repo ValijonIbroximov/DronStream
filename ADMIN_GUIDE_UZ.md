@@ -112,3 +112,8 @@ Bosh sahifa · **Kontent** · **To'plamlar** · **Doimiy foydalanuvchilar** · *
 
 ### Doimiy foydalanuvchilar
 - "Umumiy kirish havolasi / QR" — hamma uchun bitta manzil (login-parol bilan). Ruxsat chiplari (✕), **Nimani ko'radi?**, bloklash, hamma joydan chiqarish, parolni tiklash.
+
+## 13. Yordam tugmasi va ulanishlar chegarasi (v1.2)
+- **? tugmasi** (yon paneldagi Parol va Chiqish yonida, shuningdek admin uchun tomosha sahifasida): to'liq qo'llanmani panel ustida ochadi. Ochiq turganda videolar uzilmaydi. `Esc` yoki "Yopish" bilan yopiladi; "Yangi tabda ochish" alohida tabda ochadi. Qo'llanma faqat administratorga ko'rsatiladi. Shu qo'llanmaning mustaqil nusxasi — paketdagi `info.html` (internet kerak emas).
+- **"Juda ko'p ulanish"**: bitta odam bir vaqtda ochishi mumkin bo'lgan video oynalari soni cheklangan (`media.max_media_sessions_per_subject`, sukut bo'yicha 12; administratorlarga qo'llanmaydi). Xabarda ishlatilgan va maksimal son ko'rsatiladi. Efirda bo'lmagan stream joyi va ijara yangilanishi hisobga kirmaydi. Foydalanuvchi boshqa oyna yoki qurilmadagi videolarni yopib, "Qayta urinish"ni bosadi.
+- Sahifa yangilanganda eski video ulanishlari darhol yopiladi; tab yoki brauzer yopilganda server ularni taxminan bir daqiqa ichida o'zi tozalaydi. "Faol sessiyalar" bo'limida qisqa vaqt ko'rinib turishi — kutilgan holat.

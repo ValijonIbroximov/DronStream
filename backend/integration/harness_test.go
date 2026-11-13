@@ -42,6 +42,7 @@ type server struct {
 	logf      *os.File
 	cmd       *exec.Cmd
 	t         testing.TB
+	stopped   atomic.Bool
 }
 
 func repoRoot() string {
@@ -125,6 +126,9 @@ func startServer(t testing.TB, bin, root string) *server {
 	if err := s.cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
+	// A failed test must not leave its server on the shared test ports: the
+	// next test would talk to it and fail for an unrelated reason.
+	t.Cleanup(s.stop)
 	deadline := time.Now().Add(20 * time.Second)
 	for time.Now().Before(deadline) {
 		resp, err := insecure().Get("https://127.0.0.1:" + webPort + "/api/health")
@@ -142,6 +146,9 @@ func startServer(t testing.TB, bin, root string) *server {
 }
 
 func (s *server) stop() {
+	if !s.stopped.CompareAndSwap(false, true) {
+		return
+	}
 	exec.Command(s.bin, "stop", "--root", s.root).Run()
 	done := make(chan struct{})
 	go func() { s.cmd.Wait(); close(done) }()
@@ -303,6 +310,12 @@ func (c *client) watchWithTicket(streamID int64, ticket string) (*viewer, int, s
 func (c *client) watch(streamID int64, tab string) *viewer {
 	c.t.Helper()
 	tk, st, code := c.ticket(streamID, tab)
+	// Like the real player: a source that is not on air yet (server just
+	// started, demo still connecting) is retried instead of being an error.
+	for deadline := time.Now().Add(20 * time.Second); st == 403 && code == "stream_offline" && time.Now().Before(deadline); {
+		time.Sleep(500 * time.Millisecond)
+		tk, st, code = c.ticket(streamID, tab)
+	}
 	if st != 200 {
 		c.t.Fatalf("%s: ticket for stream %d => %d %s", c.name, streamID, st, code)
 	}
