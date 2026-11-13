@@ -3,6 +3,7 @@ import { get, type SessionInfo } from '../../api'
 import { useServerEvents } from '../../events'
 import { navigate } from '../../router'
 import { beep, toast, Toasts } from '../../components/ui'
+import { HelpButton } from '../../components/Help'
 import Dashboard from './Dashboard'
 import Content from './Content'
 import Collections from './Collections'
@@ -123,6 +124,7 @@ export default function AdminShell({ info, route, onLogout }: { info: SessionInf
           <div className="row gap">
             <button onClick={() => navigate('/settings')}>Parol</button>
             <button onClick={onLogout}>Chiqish</button>
+            <HelpButton />
           </div>
         </div>
       </aside>

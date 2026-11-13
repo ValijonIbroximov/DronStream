@@ -147,7 +147,7 @@ pre.code .ph { color: var(--ph); background: #3a2f00; border-radius: 3px; }
 .ring { position: absolute; inset: -8px; border-radius: 26px; border: 3px solid var(--ok); opacity: 0; }
 /* the card stands upright and faces the viewer, so its text stays flat and readable */
 .card { position: absolute; left: 50%; top: 50%; width: 150px; margin-left: -75px; transform-origin: 50% 100%;
-  transform: translateY(-100%) rotateZ(calc(34deg - var(--p) * 16deg)) rotateX(-52deg); display: grid; justify-items: center; gap: 2px; text-align: center; transition: transform .25s linear; }
+  transform: translateY(-100%) translateZ(40px) rotateZ(calc(34deg - var(--p) * 16deg)) rotateX(-52deg); display: grid; justify-items: center; gap: 2px; text-align: center; transition: transform .25s linear; }
 .card svg { filter: drop-shadow(0 6px 8px rgba(0,0,0,.5)); }
 .nm { font-size: 15px; font-weight: 650; text-shadow: 0 1px 3px #000; }
 .st { display: none; font-size: 12.5px; padding: 1px 9px; border-radius: 99px; background: #0d1b28; border: 1px solid var(--line); white-space: nowrap; }

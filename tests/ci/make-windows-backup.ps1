@@ -32,8 +32,16 @@ try {
   $r = Invoke-RestMethod -Method Post -Uri "$base/api/setup" -WebSession $ws -Headers $h -ContentType "application/json" -SkipCertificateCheck -Body (@{ setupToken = $tok; username = "boss"; password = $adminPass } | ConvertTo-Json)
   $h["X-CSRF-Token"] = $r.csrf
   function Api([string]$method, [string]$path, $body) {
-    if ($null -eq $body) { return Invoke-RestMethod -Method $method -Uri "$base$path" -WebSession $ws -Headers $h -SkipCertificateCheck }
-    return Invoke-RestMethod -Method $method -Uri "$base$path" -WebSession $ws -Headers $h -ContentType "application/json" -SkipCertificateCheck -Body ($body | ConvertTo-Json)
+    try {
+      if ($null -eq $body) { return Invoke-RestMethod -Method $method -Uri "$base$path" -WebSession $ws -Headers $h -SkipCertificateCheck }
+      $json = $body | ConvertTo-Json -Compress
+      return Invoke-RestMethod -Method $method -Uri "$base$path" -WebSession $ws -Headers $h -ContentType "application/json; charset=utf-8" -SkipCertificateCheck -Body ([Text.Encoding]::UTF8.GetBytes($json))
+    } catch {
+      # name the failing call and include the server's answer (code + message), so CI shows the reason
+      $detail = ""
+      if ($_.ErrorDetails -and $_.ErrorDetails.Message) { $detail = $_.ErrorDetails.Message }
+      throw ("{0} {1}: {2} {3}" -f $method, $path, $_.Exception.Message, $detail)
+    }
   }
   Api "Post" "/api/admin/users" @{ username = "viewer1"; password = "Viewer-Pass-12345"; role = "user" } | Out-Null
   $st = Api "Post" "/api/admin/streams" @{ name = "Pult X"; slug = "pultx" }

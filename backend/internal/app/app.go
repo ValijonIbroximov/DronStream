@@ -383,9 +383,23 @@ func newSetupToken(L config.Layout, svc *core.Service, log *slog.Logger, console
 	os.WriteFile(s.path, []byte(s.tok+"\r\n"), 0o600)
 	log.Warn("no administrator yet: open the web UI and use the one-time setup code from data/runtime/setup-token.txt")
 	if console {
-		fmt.Printf("\n=== Birinchi ishga tushirish ===\nBir martalik o'rnatish kodi: %s\n(fayl: %s)\n\n", s.tok, s.path)
+		// The code itself is shown only on an interactive terminal. When
+		// stdout is captured (systemd journal, a pipe, a file) it would be
+		// stored there, so only the file location is printed.
+		if stdoutIsTerminal() {
+			fmt.Printf("\n=== Birinchi ishga tushirish ===\nBir martalik o'rnatish kodi: %s\n(fayl: %s)\n\n", s.tok, s.path)
+		} else {
+			fmt.Printf("\n=== Birinchi ishga tushirish ===\nBir martalik o'rnatish kodi shu faylda: %s\n\n", s.path)
+		}
 	}
 	return s
+}
+
+// stdoutIsTerminal reports whether stdout is a character device (a console),
+// as opposed to a pipe, socket or file that keeps what is written to it.
+func stdoutIsTerminal() bool {
+	fi, err := os.Stdout.Stat()
+	return err == nil && fi.Mode()&os.ModeCharDevice != 0
 }
 
 func (s *setupToken) check(t string) bool {

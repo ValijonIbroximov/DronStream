@@ -4,6 +4,7 @@ import Materials from '../components/Materials'
 import { toast, Toasts } from '../components/ui'
 import { useServerEvents } from '../events'
 import Player from '../components/Player'
+import { HelpButton } from '../components/Help'
 import { navigate } from '../router'
 
 const LAYOUTS = [
@@ -162,6 +163,7 @@ export default function ViewerPage({ info, onLogout }: { info: SessionInfo; onLo
           {s.role === 'admin' && <button onClick={() => navigate('/')}>Admin panel</button>}
           {s.kind === 'user' && <button onClick={() => navigate('/password')}>Parol</button>}
           <button onClick={onLogout}>Chiqish</button>
+          {s.role === 'admin' && <HelpButton />}
         </div>
       </header>
       {err && <div className="alert error">{err}</div>}

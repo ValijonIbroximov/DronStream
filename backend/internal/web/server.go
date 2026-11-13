@@ -89,6 +89,8 @@ func (s *Server) Handler() http.Handler {
 	// admin
 	a := func(p string, h http.HandlerFunc) { mux.HandleFunc(p, s.admin(h)) }
 	a("GET /api/admin/overview", s.adminOverview)
+	a("GET /api/admin/help/{file...}", s.adminHelp)
+	a("GET /api/admin/help", func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, "/api/admin/help/", http.StatusPermanentRedirect) })
 	a("GET /api/admin/streams", s.adminStreams)
 	a("POST /api/admin/streams", s.adminCreateStream)
 	a("PUT /api/admin/streams/{id}", s.adminUpdateStream)
