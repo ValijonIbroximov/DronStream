@@ -1,0 +1,596 @@
+{
+  "_": "3D qo'llanma sahnalari. Har bir sahna: id, sarlavha, qisqa matn, bosqichlar (kamera, holat kalitlari, belgilar) va guide.md bo'limlari (Batafsil). Kalitlar ro'yxati: guide/src/keys.js. Har bir guide.md bo'limi aynan bitta sahnada bo'lishi shart (build tekshiradi). Belgi: [langar, sarlavha, izoh, ton (ok|warn|bad|plan), os (windows|linux)].",
+  "scenes": [
+    {
+      "id": "olam",
+      "title": "DronStream olami",
+      "text": "Pult videoni serverga yuboradi. Server uni faqat administrator ruxsat bergan tomoshabinlarga brauzer orqali ko‘rsatadi.",
+      "beats": [
+        {
+          "title": "To‘rt ishtirokchi",
+          "text": "Pult, server, administrator va tomoshabin — bitta tizimning qismlari. Hammasi bitta markaziy serverda boshqariladi.",
+          "cam": "overview",
+          "state": [],
+          "labels": [
+            ["remote", "Pult", "videoni serverga yuboradi"],
+            ["server", "DronStream serveri", "tekshiradi, ruxsatni qo‘llaydi, uzatadi"],
+            ["admin", "Administrator", "kim nimani ko‘rishini belgilaydi"],
+            ["laptop", "Tomoshabin", "faqat ruxsat berilganini ko‘radi"]
+          ]
+        },
+        {
+          "title": "Video yo‘li",
+          "text": "Video pultdan serverga, serverdan brauzerga boradi. Tomoshabinga alohida dastur, VPN yoki plagin kerak emas.",
+          "cam": "flow",
+          "state": ["flow", "ingest", "egress"],
+          "labels": [
+            ["ingestMid", "Pult → server", "RTMP"],
+            ["egressMid", "Server → brauzer", "HTTPS + WebRTC"],
+            ["phone", "Telefon yoki noutbuk", "oddiy brauzer yetadi"],
+            ["drone", "Dron", "stilizatsiya, aniq model emas"]
+          ]
+        }
+      ],
+      "sections": ["maqsad", "rollar"]
+    },
+    {
+      "id": "xavfsizlik",
+      "title": "Video va xavfsizlik",
+      "text": "Video qayerda shifrlanadi, qayerda ochiq ketadi va kalitlar kimda. Bugungi holat va reja alohida ko‘rsatiladi.",
+      "toggle": [
+        { "label": "Joriy ishlash", "beat": 0, "beats": [0, 1, 2] },
+        { "label": "Rejalashtirilgan arxitektura — amalga oshirilmagan", "beat": 3, "beats": [3] }
+      ],
+      "beats": [
+        {
+          "title": "Joriy: pult → server",
+          "text": "Oddiy RTMP shifrlanmagan: video va pult kaliti yo‘lda ochiq ketadi. Uni VPN yoki yopiq tarmoq bilan himoyalang. Serverda RTMPS bor, lekin DJI Pilot 2 bilan ishlashi tasdiqlanmagan.",
+          "cam": "sec_ingest",
+          "state": ["ingest", "vpn"],
+          "labels": [
+            ["ingestMid", "RTMP — shifrlanmagan", "video va kalit ochiq ketadi", "bad"],
+            ["vpnTag", "VPN yoki yopiq tarmoq", "tavsiya etilgan himoya", "ok"],
+            ["remote", "DJI Pilot 2", "RTMP yuboradi; RTMPS tasdiqlanmagan", "warn"]
+          ]
+        },
+        {
+          "title": "Joriy: server ichida",
+          "text": "Server (ichidagi MediaMTX) videoni ochiq holda qabul qiladi va qayta paketlaydi. Server operatori yoki root huquqi bor odam videoni ko‘ra oladi.",
+          "cam": "sec_server",
+          "state": ["ingest", "trust", "clear", "tlsKey"],
+          "labels": [
+            ["serverScreen", "Video serverda ochiq", "MediaMTX qayta paketlaydi", "warn"],
+            ["trust", "Ishonch chegarasi", "serverga ishoniladi"],
+            ["tlsKey", "TLS/DTLS kalitlari", "serverda saqlanadi"],
+            ["rackTop", "Operator yoki root", "videoni ko‘ra oladi", "warn"]
+          ]
+        },
+        {
+          "title": "Joriy: server → brauzer",
+          "text": "Sahifa HTTPS, video WebRTC (DTLS-SRTP) orqali shifrlangan, lekin shifrlash serverda tugaydi. Shifrlangan trafikda ham hajm, vaqt va IP manzillar tarmoqqa ko‘rinadi.",
+          "cam": "sec_egress",
+          "state": ["egress", "egressLock", "trust"],
+          "labels": [
+            ["egressMid", "HTTPS + WebRTC (DTLS-SRTP)", "yo‘lda shifrlangan", "ok"],
+            ["egressLock", "Shifrlash serverda tugaydi", "end-to-end emas", "warn"],
+            ["phone", "Metadata ko‘rinadi", "hajm, vaqt, IP manzillar", "warn"]
+          ]
+        },
+        {
+          "title": "Reja — amalga oshirilmagan",
+          "text": "Manbadan tasdiqlangan tomoshabingacha end-to-end shifrlash hozir YO‘Q. DJI Pilot 2 faqat RTMP/RTSP yuboradi, manba tomonda shifrlab bo‘lmaydi. Buning uchun SDK asosidagi yuboruvchi yoki ishonchli lokal shlyuz kerak bo‘ladi — shlyuz ham videoni ochiq ko‘radi.",
+          "cam": "sec_plan",
+          "state": ["planned", "dim"],
+          "labels": [
+            ["plannedMid", "End-to-end shifrlash", "REJA — amalga oshirilmagan", "plan"],
+            ["gateway", "Ishonchli lokal shlyuz (reja)", "u ham videoni ochiq ko‘radi", "plan"],
+            ["remote", "DJI Pilot 2", "faqat RTMP/RTSP — manbada E2EE yo‘q", "bad"]
+          ]
+        }
+      ],
+      "sections": ["ruxsat-shifr", "ingest"]
+    },
+    {
+      "id": "ornatish",
+      "title": "Noldan o‘rnatish",
+      "text": "Server bir necha qatlamdan iborat. Avval OS ni aniqlang, keyin o‘sha OS yo‘lini tanlang: Windows yoki Linux.",
+      "os": true,
+      "beats": [
+        {
+          "title": "Avval aniqlang",
+          "text": "Server modeli operatsion tizimni bildirmaydi. Avval faqat o‘qiydigan buyruqlar bilan holatni bilib oling, keyin o‘rnating.",
+          "cam": "inst_rack",
+          "state": [],
+          "labels": [
+            ["rackTop", "Server", "stilizatsiya — aniq Dell modeli emas"],
+            ["portPanel", "Portlar", "band emasligini tekshiring"]
+          ]
+        },
+        {
+          "title": "Qatlamlar",
+          "text": "Operatsion tizim, DronStream xizmati, sozlama, media server va ma’lumotlar bazasi — har biri alohida qatlam.",
+          "cam": "inst_layers",
+          "state": ["explode"],
+          "labels": [
+            ["L0", "Operatsion tizim", "Windows yoki Ubuntu LTS"],
+            ["L1", "DronStream xizmati", "administrator/root huquqisiz"],
+            ["L2", "Sozlama", "config/dronstream.yaml, secrets"],
+            ["L3", "Media server", "MediaMTX — dronstream boshqaradi"],
+            ["L4", "Ma’lumotlar bazasi", "SQLite, data/ papkasi"]
+          ]
+        },
+        {
+          "title": "Windows yoki Linux yo‘li",
+          "text": "Tanlangan OS yo‘li ajratib ko‘rsatiladi: Windows — BAT va PowerShell skriptlari, Linux — install.sh va systemd xizmati.",
+          "cam": "inst_os",
+          "state": ["explode", "osPick"],
+          "labels": [
+            ["osChip", "Windows yo‘li", "DronStreamStart.bat, PowerShell skriptlari", "ok", "windows"],
+            ["L1", "Windows xizmati", "service-install.ps1", "", "windows"],
+            ["osChip", "Linux yo‘li", "install.sh, bash skriptlari", "ok", "linux"],
+            ["L1", "systemd xizmati", "systemctl enable --now dronstream", "", "linux"],
+            ["L2", "Sozlama", "ikkala OS da bir xil fayl"]
+          ]
+        }
+      ],
+      "sections": ["win-olish", "win-start", "win-admin", "r570-aniqlash", "idrac", "r570-windows", "r570-linux", "xizmat-hisobi", "xizmat"]
+    },
+    {
+      "id": "tarmoq",
+      "title": "Tarmoq",
+      "text": "Sahifa va video ikki alohida yo‘ldan keladi: sahifa — HTTPS (TCP 8443), video — WebRTC (asosan UDP 8189). Ikkalasini alohida tekshiring.",
+      "beats": [
+        {
+          "title": "Lokal tarmoq",
+          "text": "Bitta router ortidagi qurilmalar serverni lokal manzil orqali ko‘radi. Bu manzil tashqaridan ochilmaydi.",
+          "cam": "net_lan",
+          "state": ["lan"],
+          "labels": [
+            ["lanTag", "Lokal tarmoq", "lokal IP faqat shu tarmoqdan ochiladi"],
+            ["laptop", "Lokal tomoshabin", "https://<SERVER_IP>:8443"],
+            ["server", "Server", "localhost — faqat serverning o‘zidan"]
+          ]
+        },
+        {
+          "title": "NAT va router",
+          "text": "Router ortidagi qurilmalar bitta tashqi manzildan foydalanadi. Tashqaridan kirish uchun routerda port yo‘naltirish kerak; CGNAT ortida bu ishlamaydi.",
+          "cam": "net_nat",
+          "state": ["lan", "nat", "globe", "phoneOut"],
+          "labels": [
+            ["router", "Router (NAT)", "port yo‘naltirish shu yerda"],
+            ["fw", "Firewall", "faqat kerakli portlar"],
+            ["globe", "Internet", "CGNAT bo‘lsa — kirib bo‘lmaydi", "warn"]
+          ]
+        },
+        {
+          "title": "Sahifa: HTTPS, TCP 8443",
+          "text": "Sahifa, login va boshqaruv HTTPS orqali keladi. Bu yo‘l ochiq bo‘lsa, sahifa ochiladi.",
+          "cam": "net_https",
+          "state": ["lan", "nat", "globe", "phoneOut", "https"],
+          "labels": [
+            ["httpsMid", "HTTPS · TCP 8443", "sahifa, login, boshqaruv", "ok"],
+            ["phone", "Tashqi tomoshabin", "masalan, mobil internetda"]
+          ]
+        },
+        {
+          "title": "Video: UDP 8189 yoki TURN",
+          "text": "Video WebRTC orqali, asosan UDP 8189 da keladi. UDP to‘silsa — TCP 8189 yoki serverning ichki TURN xizmati (3478) yordam beradi.",
+          "cam": "net_udp",
+          "state": ["lan", "nat", "globe", "phoneOut", "https", "udp", "turn"],
+          "labels": [
+            ["udpMid", "WebRTC · UDP 8189", "video shu yo‘ldan", "ok"],
+            ["turnMid", "TURN (ixtiyoriy)", "serverning o‘zida, 3478"],
+            ["httpsMid", "Sahifa ochildi ≠ video bor", "ikkalasini alohida tekshiring", "warn"]
+          ]
+        },
+        {
+          "title": "Domen — faqat nom",
+          "text": "Domen nomni IP manzilga aylantiradi, xolos. U port ochmaydi va shifrlamaydi: portni firewall va router, shifrlashni sertifikat va HTTPS beradi.",
+          "cam": "net_dns",
+          "state": ["lan", "nat", "globe", "phoneOut", "domain", "https"],
+          "labels": [
+            ["domain", "<DOMEN> — faqat nom", "DNS: nom → IP manzil"],
+            ["router", "Portni router va firewall ochadi", "domen emas", "warn"],
+            ["httpsMid", "Shifrlash: sertifikat + HTTPS", "domen emas", "warn"]
+          ]
+        }
+      ],
+      "sections": ["manzillar", "nat", "hotspot", "webrtc", "sahifa-video", "portlar", "base-url", "win-lokal", "sertifikat", "tashqi-talab", "dns-https", "firewall", "turn"]
+    },
+    {
+      "id": "pult",
+      "title": "Pult ulash",
+      "text": "Admin manba yaratadi, dastur pult uchun manzil va kalit beradi. Pult shu manzilga yuboradi, server kalitni tekshiradi va stream efirga chiqadi.",
+      "beats": [
+        {
+          "title": "Manba yaratish",
+          "text": "Admin panel: Kontent → Dron pultlari → yangi stream. Serverda shu pult uchun alohida yo‘l ochiladi.",
+          "cam": "pult_create",
+          "state": ["source"],
+          "labels": [
+            ["admin", "Admin panel", "yangi stream"],
+            ["slot", "Yangi yo‘l", "har pult uchun alohida"]
+          ]
+        },
+        {
+          "title": "Manzil va kalit",
+          "text": "Dastur manzil va maxfiy kalit beradi: rtmp://<SERVER_IP>:1935/live/<YOL>?key=<KALIT>. Uni DJI Pilot 2 da RTMP jonli efir sozlamasiga kiriting.",
+          "cam": "pult_key",
+          "state": ["source", "key", "keyTravel~"],
+          "labels": [
+            ["key", "Pult kaliti", "faqat yuborish uchun, ko‘rish uchun emas"],
+            ["remote", "DJI Pilot 2", "jonli efir turi: RTMP"]
+          ]
+        },
+        {
+          "title": "Tekshirish",
+          "text": "Server kalitni va yo‘l bo‘shligini tekshiradi. Kalit noto‘g‘ri bo‘lsa yoki yo‘lda boshqa manba bo‘lsa — rad etadi.",
+          "cam": "pult_check",
+          "state": ["source", "key", "keyTravel", "ingest", "scan"],
+          "labels": [
+            ["scan", "Kalit tekshirilmoqda", "bitta yo‘lga bitta manba"],
+            ["ingestMid", "RTMP", "VPN yoki yopiq tarmoq orqali", "warn"]
+          ]
+        },
+        {
+          "title": "Efirda",
+          "text": "Admin panelda stream “efirda” bo‘ladi va ruxsati bor tomoshabinlarda video ko‘rinadi.",
+          "cam": "pult_live",
+          "state": ["source", "keyTravel", "ingest", "live", "egress", "flow"],
+          "labels": [
+            ["rackTop", "Efirda", "stream faol", "ok"],
+            ["laptop", "Video ko‘rinadi", "faqat ruxsat berilganlarga", "ok"],
+            ["drone", "Demo ≠ haqiqiy pult", "pultni alohida sinab ko‘ring", "warn"]
+          ]
+        }
+      ],
+      "sections": ["pult", "demo", "f-pult"]
+    },
+    {
+      "id": "hisob",
+      "title": "Hisob va mehmon",
+      "text": "Tomoshabin login-parol bilan kiradi yoki mehmon so‘rovi yuboradi. Admin tasdiqlaydi, server har bir sessiya va huquqni tekshiradi.",
+      "beats": [
+        {
+          "title": "Kirish",
+          "text": "Doimiy foydalanuvchi login va parol bilan kiradi. Hisobni admin yaratadi va bloklashi mumkin.",
+          "cam": "acc_login",
+          "state": ["login"],
+          "labels": [
+            ["laptop", "Login + parol", "HTTPS orqali"],
+            ["server", "Server tekshiradi", "hisob, parol, blok holati"]
+          ]
+        },
+        {
+          "title": "Mehmon so‘rovi",
+          "text": "Hisobi yo‘q odam ismini yozib so‘rov yuboradi. Ism tasdiqlanmagan: admin u kimligiga boshqa yo‘l bilan ishonch hosil qiladi.",
+          "cam": "acc_approve",
+          "state": ["guestTravel~"],
+          "labels": [
+            ["req", "Mehmon so‘rovi", "ism shaxsni isbotlamaydi", "warn"],
+            ["admin", "Admin qaror qiladi", "qaysi kontent, qancha vaqtga"]
+          ]
+        },
+        {
+          "title": "Qurilma va sessiya",
+          "text": "Kirish bitta brauzer sessiyasiga bog‘lanadi. Admin “Faol sessiyalar”da kim, qaysi qurilmadan ko‘rayotganini ko‘radi va sessiyani yakunlay oladi.",
+          "cam": "acc_session",
+          "state": ["session", "approve"],
+          "labels": [
+            ["session", "Brauzer sessiyasi", "shu qurilmaga bog‘langan"],
+            ["laptopScreen", "Faol sessiyalar", "admin yakunlay oladi"]
+          ]
+        },
+        {
+          "title": "Huquqlar",
+          "text": "Tomoshabin faqat o‘ziga berilgan stream, matn, rasm va videoni ko‘radi. Ruxsat berilmagan narsa umuman ko‘rinmaydi.",
+          "cam": "acc_rights",
+          "state": ["session", "rights", "egress"],
+          "labels": [
+            ["rightsOk", "Ruxsat berilgan", "ko‘rinadi", "ok"],
+            ["rightsNo", "Ruxsat yo‘q", "umuman ko‘rinmaydi", "bad"]
+          ]
+        }
+      ],
+      "sections": ["foydalanuvchilar", "f-hisob", "f-sessiya", "f-audit"]
+    },
+    {
+      "id": "havola",
+      "title": "Havola va QR",
+      "text": "Havola yoki QR — faqat taklif. Uni ochish, skanerlash yoki “Kirish”ni bosish videoni bermaydi: admin aynan shu brauzer sessiyasini tasdiqlashi kerak.",
+      "beats": [
+        {
+          "title": "Taklif",
+          "text": "Havola va QR — kirish so‘rovini yuborish uchun taklif. Ular kalit emas va o‘zi hech narsa ochmaydi.",
+          "cam": "link_invite",
+          "state": ["invite"],
+          "labels": [
+            ["qr", "QR (namuna)", "faqat taklif"],
+            ["envelope", "Havola", "kalit emas", "warn"]
+          ]
+        },
+        {
+          "title": "“Kirish” = so‘rov",
+          "text": "“Kirish” tugmasi faqat kirish so‘rovini yuboradi. Tomoshabin kutadi — hali video yo‘q.",
+          "cam": "link_request",
+          "state": ["invite", "request~", "waiting"],
+          "labels": [
+            ["laptop", "Kutilmoqda", "hali video yo‘q", "warn"],
+            ["req", "Kirish so‘rovi", "admin ko‘radi"]
+          ]
+        },
+        {
+          "title": "Admin aynan shu sessiyani tasdiqlaydi",
+          "text": "Ikkala ekranda bir xil qisqa tasdiq kodi chiqadi. Admin kodni solishtirib, aynan shu brauzer sessiyasini tasdiqlaydi. Ism yoki xabar shaxsni isbotlamaydi.",
+          "cam": "link_approve",
+          "state": ["request", "code", "approve", "session", "egress"],
+          "labels": [
+            ["adminScreen", "Tasdiq kodi (namuna): 47-19", "admin ekranida"],
+            ["laptopScreen", "Tasdiq kodi (namuna): 47-19", "tomoshabin ekranida"],
+            ["admin", "Ism yoki xabar — dalil emas", "kodni solishtiring", "warn"]
+          ]
+        },
+        {
+          "title": "Nusxa havola — hech narsa",
+          "text": "Shu havolani boshqa brauzerda ochish hech narsa bermaydi: bu yangi so‘rov, admin tasdiqlamaguncha video yo‘q. Havola kalit emas.",
+          "cam": "link_copy",
+          "state": ["session", "egress", "browserB", "blockB~"],
+          "labels": [
+            ["tablet", "Boshqa brauzer", "nusxa havola — video yo‘q", "bad"],
+            ["shield", "Server rad etadi", "tasdiqlanmagan sessiya", "bad"],
+            ["session", "Tasdiqlangan sessiya", "faqat shu brauzer", "ok"]
+          ]
+        }
+      ],
+      "sections": ["f-havola", "x-havola"]
+    },
+    {
+      "id": "kontent",
+      "title": "Kontent va to‘plam",
+      "text": "Jonli stream, matn, rasm va video — alohida kontent. To‘plam ularni bitta nom ostida birlashtiradi; ruxsatni to‘plamga ham berish mumkin.",
+      "beats": [
+        {
+          "title": "To‘rt tur",
+          "text": "Stream — pultdan; matn — e’lon yoki ko‘rsatma; rasm — PNG, JPEG, GIF; video — MP4 (H.264) yoki WebM.",
+          "cam": "content_types",
+          "state": ["tiles"],
+          "labels": [
+            ["tStream", "Jonli stream", "har pult uchun bitta"],
+            ["tText", "Matn", "e’lon, ko‘rsatma"],
+            ["tImage", "Rasm", "PNG, JPEG, GIF"],
+            ["tVideo", "Video", "MP4 (H.264) yoki WebM"]
+          ]
+        },
+        {
+          "title": "To‘plam",
+          "text": "To‘plamga ruxsat berishda tanlanadi: “keyin qo‘shilganlar ham” yoki “faqat hozirgi elementlar”.",
+          "cam": "content_group",
+          "state": ["tiles", "group"],
+          "labels": [
+            ["group", "To‘plam", "bir nechta kontent, bitta nom"],
+            ["laptop", "Tomoshabin", "faqat ruxsat etilganini ko‘radi"]
+          ]
+        }
+      ],
+      "sections": ["kontent", "f-media"]
+    },
+    {
+      "id": "revoke",
+      "title": "Ruxsatni olib tashlash",
+      "text": "Admin ruxsatni olib tashlasa, server ochiq video ulanishini o‘zi uzadi va qayta ulanishni rad etadi. Bu tugmani yashirish emas.",
+      "beats": [
+        {
+          "title": "Video ko‘rsatilmoqda",
+          "text": "Tomoshabinning ruxsati bor, server videoni WebRTC orqali uzatyapti.",
+          "cam": "rev_play",
+          "state": ["egress", "session"],
+          "labels": [
+            ["egressMid", "Ruxsatli video", "WebRTC", "ok"],
+            ["session", "Sessiya", "ruxsat bor", "ok"]
+          ]
+        },
+        {
+          "title": "Admin ruxsatni oladi",
+          "text": "Ruxsat bitta odam va bitta kontent uchun olib tashlanadi. Boshqa ruxsatlari qoladi.",
+          "cam": "rev_admin",
+          "state": ["egress", "session", "revoke"],
+          "labels": [
+            ["admin", "Ruxsat olib tashlandi", "bitta odam, bitta kontent", "bad"]
+          ]
+        },
+        {
+          "title": "Server ulanishni uzadi",
+          "text": "Server shu media sessiyani o‘zi uzadi: video 1–2 soniyada to‘xtaydi.",
+          "cam": "rev_cut",
+          "state": ["revoke", "cut"],
+          "labels": [
+            ["cutMark", "Server media sessiyani uzdi", "1–2 soniyada", "bad"],
+            ["laptop", "Video to‘xtadi", "ulanish uzildi", "bad"]
+          ]
+        },
+        {
+          "title": "Qayta ulanish rad etiladi",
+          "text": "Qayta urinishlarni server rad etadi. Lekin allaqachon ko‘rilgan kadrlar yoki ekran yozuvini qaytarib olib bo‘lmaydi.",
+          "cam": "rev_reject",
+          "state": ["revoke", "cut", "reject"],
+          "labels": [
+            ["shield", "Qayta ulanish rad etildi", "server tekshiradi", "bad"],
+            ["laptop", "Ko‘rilgan narsa qaytmaydi", "ekran yozuvi tomoshabinda qoladi", "warn"]
+          ]
+        }
+      ],
+      "sections": ["f-farq", "chegaralar"]
+    },
+    {
+      "id": "backup",
+      "title": "Backup va ko‘chirish",
+      "text": "Backup — parol bilan shifrlangan bitta .dsbak fayl. Yangi serverda tiklanadi, kutish (standby) rejimida turadi va tekshiruvdan keyin faollashadi.",
+      "beats": [
+        {
+          "title": "Shifrlangan backup",
+          "text": "Baza, media, sozlama, master kalit va TLS sertifikati bitta faylda. Parol yo‘qolsa — backup ochilmaydi.",
+          "cam": "bak_file",
+          "state": ["bakMake"],
+          "labels": [
+            ["bak", ".dsbak fayli", "parol bilan shifrlangan"],
+            ["server", "Joriy server", "backup shu yerda olinadi"]
+          ]
+        },
+        {
+          "title": "Yangi server",
+          "text": "Yangi serverga dastur o‘rnatiladi (xizmatni ishga tushirmasdan). secrets papkasini nusxalash ishlamaydi — faqat backup orqali.",
+          "cam": "bak_new",
+          "state": ["bakMake", "n2", "bakTravel~"],
+          "labels": [
+            ["n2", "Yangi server", "toza o‘rnatish"],
+            ["bak", "Faqat backup orqali", "secrets papkasini nusxalamang", "warn"]
+          ]
+        },
+        {
+          "title": "Tiklash va standby",
+          "text": "Tiklangan server kutish (standby) rejimida ishga tushadi: eski server o‘chirilganini tasdiqlamaguningizcha video ko‘rsatmaydi.",
+          "cam": "bak_new",
+          "state": ["n2", "bakTravel", "restore", "standby"],
+          "labels": [
+            ["n2", "Standby", "eski server o‘chirilguncha video yo‘q", "warn"],
+            ["server", "Eski server", "ikki server bir vaqtda ishlamasin"]
+          ]
+        },
+        {
+          "title": "Tekshiruv",
+          "text": "Admin bo‘lib kiring va holatni faol qiling. So‘ng health-check, demo video va pult ulanishini tekshiring.",
+          "cam": "bak_verify",
+          "state": ["n2", "verified", "bakTravel"],
+          "labels": [
+            ["n2", "Faol", "health-check, demo, pult", "ok"],
+            ["server", "Eski server", "xizmat ko‘rsatmaydi"]
+          ]
+        }
+      ],
+      "sections": ["backup-update", "win-linux", "f-yangilash"]
+    },
+    {
+      "id": "diag",
+      "title": "Diagnostika",
+      "text": "Belgi qayerda bo‘lsa, kamera o‘sha joyga boradi va mos tekshiruv ochiladi. Taxmin qilmang — avval faqat o‘qiydigan tekshiruvlar.",
+      "beats": [
+        {
+          "title": "Sahifa bor, video yo‘q",
+          "text": "Sahifa (TCP 8443) ishlayapti, video yo‘li (UDP 8189) esa yopiq.",
+          "check": "Firewall va routerda UDP 8189 ochiqmi; media.webrtc_additional_hosts da tomoshabin ko‘radigan manzil bormi; UDP to‘silsa — webrtc_tcp_listen yoki TURN.",
+          "open": "x-video",
+          "cmds": ["Windows: qanday qoidalar qo'shilishini ko'rish (o'zgartirmaydi)", "Ubuntu: firewall holatini ko'rish"],
+          "cam": "diag_udp",
+          "state": ["dUdp"],
+          "labels": [
+            ["pageMid", "TCP 8443 ✓", "sahifa ochildi", "ok"],
+            ["videoCut", "UDP 8189 ✗", "video kanali ulanmadi", "bad"]
+          ]
+        },
+        {
+          "title": "Port band",
+          "text": "Start “Port band” deb to‘xtaydi va qaysi port, qaysi dastur ekanini ko‘rsatadi.",
+          "check": "Begona dasturni to‘xtatmang. config/dronstream.yaml da portni boshqasiga o‘zgartiring va firewall qoidasini moslang.",
+          "open": "x-port",
+          "cmds": ["Windows: DronStream portlari band emasmi va kim tinglayapti", "Linux: manzillar, yo'l va tinglayotgan portlar"],
+          "cam": "diag_port",
+          "state": ["dPort"],
+          "labels": [
+            ["portPanel", "Port band", "boshqa dastur tinglayapti", "bad"]
+          ]
+        },
+        {
+          "title": "Sertifikat ogohlantirishi",
+          "text": "Brauzer sertifikat haqida ogohlantiradi.",
+          "check": "O‘z-o‘zidan imzolangan sertifikatda bu kutilgan. “Manzil mos emas” bo‘lsa — manzilni web.public_hosts ga qo‘shing. Qurilma soatini ham tekshiring.",
+          "open": "x-sert",
+          "cmds": ["Linux/macOS: tashqaridan HTTPS javobini tekshirish"],
+          "cam": "diag_cert",
+          "state": ["dCert"],
+          "labels": [
+            ["certMark", "Sertifikat ogohlantirishi", "manzil va sertifikat mosmi", "warn"]
+          ]
+        },
+        {
+          "title": "Stream efirda emas",
+          "text": "Server ishlayapti, lekin pult video yubormayapti. Player o‘zi kutib turadi.",
+          "check": "Pultda efir yoqilganmi, manzil va kalit to‘g‘rimi, publish yoqilganmi, pult serverga yeta oladimi (VPN, 1935). Rad etish sababi Audit’da yoziladi.",
+          "open": "x-offline",
+          "cmds": ["Sog'liqni tekshirish (health-check)"],
+          "cam": "diag_offline",
+          "state": ["dOffline"],
+          "labels": [
+            ["remote", "Efirda emas", "pult ulanmagan", "bad"],
+            ["ingestMid", "1935 yoki VPN", "yo‘l ochiqmi", "warn"]
+          ]
+        },
+        {
+          "title": "“Juda ko‘p ulanish”",
+          "text": "Bir odam bir vaqtda ochadigan video oynalari soni cheklangan (sukut bo‘yicha 12).",
+          "check": "Boshqa tab yoki qurilmadagi videolarni yoping, keraksiz joylarni “— bo‘sh —” qiling, so‘ng “Qayta urinish”ni bosing.",
+          "open": "x-limit",
+          "cmds": [],
+          "cam": "diag_limit",
+          "state": ["dLimit"],
+          "labels": [
+            ["laptopScreen", "12/12", "chegara to‘ldi", "warn"]
+          ]
+        }
+      ],
+      "sectionBeats": { "x-video": 0, "x-android": 0, "x-port": 1, "x-sayt": 1, "x-xizmat": 1, "x-sert": 2, "x-offline": 3, "x-limit": 4 },
+      "sections": ["x-video", "x-port", "x-sert", "x-offline", "x-limit", "x-sayt", "x-xizmat", "x-android", "x-git"]
+    },
+    {
+      "id": "qabul",
+      "title": "Yakuniy qabul",
+      "text": "Ishga tushirishdan oldin nima tekshirilgan va nima hali tekshirilmaganini aniq ajrating. Qabul testini server tarmog‘idan tashqarida o‘tkazing.",
+      "beats": [
+        {
+          "title": "Tekshirilgan va tekshirilmagan",
+          "text": "Qo‘llanmada yozilgan holat: ba’zi yo‘llar hali haqiqiy uskunada sinalmagan. Ularni o‘zingiz sinab, natijani yozib qo‘ying.",
+          "cam": "final",
+          "state": ["checks"],
+          "labels": [
+            ["remote", "DJI pulti bilan ulanish", "hali sinalmagan", "warn"],
+            ["rackTop", "Haqiqiy R570 da", "hali ishga tushirilmagan", "warn"],
+            ["globe", "Tashqi internetdan kirish", "hali sinalmagan", "warn"],
+            ["phone", "Android 17 + Chrome 156", "lokal tarmoqda kuzatilgan", "ok"],
+            ["egressMid", "End-to-end shifrlash", "amalga oshirilmagan", "plan"]
+          ],
+          "done": [
+            "Linux yo‘li: GitHub’ning Ubuntu 24.04 virtual mashinasida avtomatik sinov (o‘rnatish, systemd, backup, yangilash)",
+            "Android 17 + Chrome 156: lokal tarmoqda ikki demo video (bitta qurilmada kuzatilgan)"
+          ],
+          "todo": [
+            "Haqiqiy DJI pulti bilan ulanish",
+            "RTMPS — DJI Pilot 2 bilan tasdiqlanmagan",
+            "Tashqi internetdan kirish",
+            "Haqiqiy R570 va Ubuntu 26.04",
+            "End-to-end shifrlash — amalga oshirilmagan (faqat reja)"
+          ]
+        },
+        {
+          "title": "Ishga tushirish ro‘yxati",
+          "text": "Hammasi bajarilgandagina tizimni ishga tushirilgan deb hisoblang.",
+          "cam": "final_go",
+          "state": ["checks", "ok", "flow", "ingest", "egress"],
+          "labels": [
+            ["server", "Health-check", "{\"ok\":true,…}", "ok"],
+            ["laptop", "Boshqa internetdan sinov", "sahifa + demo video", "ok"]
+          ],
+          "list": [
+            "Sahifa server tarmog‘idan tashqarida, sertifikat ogohlantirishisiz ochiladi",
+            "Login ishlaydi",
+            "Demo video kamida 2 daqiqa uzluksiz o‘ynaydi",
+            "Pult tanlangan himoyalangan yo‘l (VPN yoki sinalgan RTMPS) orqali ulanadi va stream “efirda”",
+            "Tomoshabinda haqiqiy pult videosi ko‘rinadi",
+            "Ruxsat olib tashlanganda video uziladi va qayta ulanmaydi",
+            "Parolli backup olingan, parol alohida saqlangan",
+            "Qayta yuklashdan keyin xizmat o‘zi ishga tushadi, server vaqti to‘g‘ri"
+          ]
+        }
+      ],
+      "sections": ["qabul-test", "reboot", "manbalar"]
+    }
+  ]
+}
