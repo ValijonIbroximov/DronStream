@@ -24,7 +24,7 @@ DJI pult --RTMPS yoki shifrlangan tunnel--> [ server: DronStream + MediaMTX ] --
 - **Administrator: TOTP** (autentifikator ilovasi) + 10 ta tiklash kodi; muhim amallarda parolni qayta tasdiqlash.
 - **Mehmon so'rovi ham kod bilan**: administrator mehmon ekranidagi kodni kiritadi; kodlar admin paneliga yuborilmaydi.
 - **secure rejim** (paketda sukut): shifrlanmagan RTMP faqat o'chiq yoki `127.0.0.1` da — xususiy IP ham rad etiladi, chunki u shifrlash emas; TOTP'siz admin ishlay olmaydi. `standard` — laboratoriya rejimi, admin panel buni har sahifada ko'rsatadi.
-- **Nima hal qilinmagan** ("video maxfiyligi tayyor" emas): server va uning root egasi videoni ochiq ko'radi; pultning RTMPS'ni qo'llashi va sertifikatni tekshirishi tasdiqlanmagan; pultdan tomoshabingacha shifrlash (E2EE) amalga oshirilmagan. Joriy DJI Pilot 2 → MediaMTX oqimida E2EE yo'q; mos publisher/SDK imkoniyati hali qurilmada tekshirilmagan. Standartlar (SFrame, HPKE) asosidagi alohida proof-of-concept ish jarayonida, hali repozitoriyda yo'q. Batafsil: [SECURITY_MODEL.md](SECURITY_MODEL.md), testlar: [SECURITY_ACCEPTANCE.md](SECURITY_ACCEPTANCE.md).
+- **Nima hal qilinmagan** ("video maxfiyligi tayyor" emas): server va uning root egasi videoni ochiq ko'radi; pultning RTMPS'ni qo'llashi va sertifikatni tekshirishi tasdiqlanmagan; pultdan tomoshabingacha shifrlash (E2EE) amalga oshirilmagan. Joriy DJI Pilot 2 → MediaMTX oqimida E2EE yo'q; mos publisher/SDK imkoniyati hali qurilmada tekshirilmagan. Standartlar (SFrame, HPKE) asosidagi alohida tajriba (proof-of-concept) faqat `experiment/e2ee-poc` branch'ida; u mahsulotga va paketga kirmaydi. Batafsil: [SECURITY_MODEL.md](SECURITY_MODEL.md), testlar: [SECURITY_ACCEPTANCE.md](SECURITY_ACCEPTANCE.md).
 
 ## Hujjatlar
 | Fayl | Mazmuni |

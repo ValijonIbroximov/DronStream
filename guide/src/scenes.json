@@ -333,13 +333,13 @@
         },
         {
           "title": "Admin aynan shu sessiyani tasdiqlaydi",
-          "text": "Ikkala ekranda bir xil qisqa tasdiq kodi chiqadi. Admin kodni solishtirib, aynan shu brauzer sessiyasini tasdiqlaydi. Ism yoki xabar shaxsni isbotlamaydi.",
+          "text": "Tomoshabin ekranida qisqa tekshirish kodi chiqadi. Admin uni tomoshabindan ishonchli yo‘l bilan so‘rab kiritadi: kod mos kelsagina aynan shu brauzer sessiyasi tasdiqlanadi. Ism yoki xabar shaxsni isbotlamaydi.",
           "cam": "link_approve",
           "state": ["request", "code", "approve", "session", "egress"],
           "labels": [
-            ["adminScreen", "Tasdiq kodi (namuna): 47-19", "admin ekranida"],
-            ["laptopScreen", "Tasdiq kodi (namuna): 47-19", "tomoshabin ekranida"],
-            ["admin", "Ism yoki xabar — dalil emas", "kodni solishtiring", "warn"]
+            ["adminScreen", "Admin kodni kiritadi", "kod admin panelda ko‘rsatilmaydi"],
+            ["laptopScreen", "Tekshirish kodi (namuna): K7Q‑4MX", "faqat tomoshabin ekranida"],
+            ["admin", "Ism yoki xabar — dalil emas", "kodni tomoshabindan so‘rang", "warn"]
           ]
         },
         {

@@ -66,12 +66,28 @@ cp "$MTX_DIR/mediamtx" "$STAGE/app/$VERSION/mediamtx/mediamtx"
 cp "$MTX_DIR/LICENSE" "$STAGE/app/$VERSION/mediamtx/LICENSE-mediamtx.txt"
 cp "$REPO/config/dronstream.example.yaml" "$STAGE/config/"
 if [ -f "$REPO/info.html" ]; then cp "$REPO/info.html" "$STAGE/"; fi
-for d in README_UZ.md SERVER_INSTALL_UZ.md REQUIREMENTS.md PROGRESS.md ADMIN_GUIDE_UZ.md DJI_SETUP_UZ.md SECURITY.md BACKUP_RESTORE_UZ.md INSTALL_UZ.md TEST_REPORT.md ARCHITECTURE.md; do
+for d in README_UZ.md SERVER_INSTALL_UZ.md REQUIREMENTS.md PROGRESS.md ADMIN_GUIDE_UZ.md DJI_SETUP_UZ.md SECURITY.md SECURITY_MODEL.md SECURITY_ACCEPTANCE.md BACKUP_RESTORE_UZ.md INSTALL_UZ.md TEST_REPORT.md ARCHITECTURE.md; do
   if [ -f "$REPO/$d" ]; then cp "$REPO/$d" "$STAGE/docs/"; fi
 done
 # Scripts must have LF line endings whatever the checkout produced.
 for f in "$REPO"/packaging/linux/scripts/*; do tr -d '\r' < "$f" > "$STAGE/scripts/$(basename "$f")"; done
 printf '%s\n' "$VERSION" > "$STAGE/VERSION"
+# BUILD_INFO.txt: which source commit this package was built from, and what kind of release it is.
+SRC_COMMIT="$(git -C "$REPO" rev-parse HEAD 2>/dev/null || echo unknown)"
+if [ "$SRC_COMMIT" = "unknown" ]; then SRC_DIRTY="unknown"; elif [ -n "$(git -C "$REPO" status --porcelain 2>/dev/null)" ]; then SRC_DIRTY="yes"; else SRC_DIRTY="no"; fi
+{
+  printf 'DronStream %s (linux-amd64)\n' "$VERSION"
+  printf 'source_commit: %s\n' "$SRC_COMMIT"
+  printf 'source_tree_dirty: %s\n' "$SRC_DIRTY"
+  printf 'built_utc: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  printf 'mediamtx: %s\n' "$MTX_VERSION"
+  printf 'release_type: sinov relizi (test release)\n\n'
+  printf "Bu paket to'liq maxfiy production tizim EMAS:\n"
+  printf -- "- server videoni ochiq ko'radi (TLS/DTLS serverda tugaydi);\n"
+  printf -- "- pultdan tomoshabingacha shifrlash (E2EE) yo'q;\n"
+  printf -- "- haqiqiy DJI pulti bilan ingest (RTMPS va sertifikat tekshiruvi) tasdiqlanmagan.\n"
+  printf 'Batafsil: docs/SECURITY_MODEL.md, docs/SECURITY_ACCEPTANCE.md\n'
+} > "$STAGE/BUILD_INFO.txt"
 ( cd "$STAGE" && find . -type f ! -name SHA256SUMS.txt | LC_ALL=C sort | while IFS= read -r f; do printf '%s  %s\n' "$(sha_of "$f")" "${f#./}"; done > SHA256SUMS.txt )
 
 # --- tar.gz with explicit Unix modes (a Windows build host has no meaningful modes) ---

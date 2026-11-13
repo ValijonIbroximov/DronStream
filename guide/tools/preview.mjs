@@ -3,15 +3,17 @@
 //   node guide/tools/preview.mjs                 skrinshotlar -> docs/guide-preview/*.png
 //   node guide/tools/preview.mjs --only mobile   faqat nomida "mobile" bo'lganlari
 //   node guide/tools/preview.mjs --perf          + skriptli aylantirishda kadr vaqtlari (#perf rejimi)
+//   node guide/tools/preview.mjs --perf-only --gpu   kadr vaqtlari shu kompyuterning haqiqiy GPU'sida (D3D11), dasturiy render o'rniga
 //   node guide/tools/preview.mjs --checks        o'zaro ta'sir tekshiruvlari (deterministik holat, bo'sh turganda kadr yo'q,
 //                                                mundarija/qidiruv, avto namoyish pauzasi, nusxalash, oddiy rejim,
 //                                                reduced-motion, chop etish, WebGL'siz)
+//   node guide/tools/preview.mjs --record --gpu  scroll namoyishining qisqa ekran yozuvi -> docs/guide-preview/guide-scroll-demo.mp4
 //   Qo'shimcha: --chrome <yo'l> --out <papka> --port <raqam>
 //
 // Chrome DevTools protokoli Node'ning o'z WebSocket'i orqali ishlatiladi (Puppeteer yo'q). Sahifa file:// dan ochiladi,
 // DNS butunlay o'chiriladi (--host-resolver-rules), sahifaning har bir tarmoq so'rovi yozib boriladi; file:// dan
 // boshqa so'rov bo'lsa chiqish kodi 2. SwiftShader — dasturiy renderer: o'lchangan vaqtlar haqiqiy GPU emas.
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { mkdirSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
@@ -66,7 +68,7 @@ const SHOTS = [
 async function launch(extraFlags) {
   const profile = mkdtempSync(join(tmpdir(), 'ds-guide-'))
   const chrome = spawn(CHROME, [
-    '--headless=new', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--host-resolver-rules=MAP * ~NOTFOUND',
+    '--headless=new', ...(has('--gpu') ? ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist'] : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']), '--host-resolver-rules=MAP * ~NOTFOUND',
     `--user-data-dir=${profile}`, `--remote-debugging-port=${PORT}`, '--no-first-run', '--no-default-browser-check',
     '--hide-scrollbars', '--disable-extensions', '--disable-background-networking', '--disable-component-update', ...extraFlags, 'about:blank',
   ], { stdio: 'ignore' })
@@ -153,7 +155,36 @@ async function perf(c) {
       await sleep(500)
       out = await c.evaluate('(document.getElementById("perf-out") && !document.getElementById("perf-out").hidden) ? document.getElementById("perf-out").textContent : ""')
     }
-    console.log('PERF', label, out)
+    const env = await c.evaluate('(() => { const g = document.createElement("canvas").getContext("webgl2"); const e = g && g.getExtension("WEBGL_debug_renderer_info"); return JSON.stringify({ renderer: e ? g.getParameter(e.UNMASKED_RENDERER_WEBGL) : "n/a", cores: navigator.hardwareConcurrency, chrome: (navigator.userAgent.split("Chrome/")[1] || "").split(" ")[0] }) })()')
+    console.log('PERF', label, out, env)
+  }
+}
+
+// --record: a short screen recording of a scripted scroll through the whole guide. Frames are taken through
+// DevTools and encoded with ffmpeg (developer tool from .tools, or --ffmpeg <path>). Not a real-time capture:
+// each frame is the scene as drawn about 60 ms after the scroll step, so motion speed is not a performance figure.
+async function record(c) {
+  const ff = arg('--ffmpeg', join(REPO, '.tools', 'ffmpeg-master-latest-win64-gpl', 'bin', 'ffmpeg.exe'))
+  const dir = mkdtempSync(join(tmpdir(), 'ds-guide-rec-'))
+  const N = Number(arg('--frames', '720'))
+  const FPS = 16
+  try {
+    await c.open({ width: 1280, height: 720, mobile: false }, 'quality=high', 4000)
+    const max = await c.evaluate('document.documentElement.scrollHeight - innerHeight')
+    for (let i = 0; i < N; i++) {
+      await c.evaluate('scrollTo(0, ' + Math.round((i / (N - 1)) * max) + ')')
+      await sleep(60)
+      const r = await c.send('Page.captureScreenshot', { format: 'jpeg', quality: 82 })
+      writeFileSync(join(dir, 'f' + String(i).padStart(4, '0') + '.jpg'), Buffer.from(r.result.data, 'base64'))
+    }
+    const outFile = join(OUT, 'guide-scroll-demo.mp4')
+    const res = spawnSync(ff, ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', join(dir, 'f%04d.jpg'), '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '31', '-preset', 'slow', '-movflags', '+faststart', outFile])
+    if (res.error || res.status !== 0) {
+      console.log('FAIL ekran yozuvi: ffmpeg ishlamadi (' + (res.error ? res.error.message : String(res.stderr).slice(0, 200)) + ')')
+      process.exitCode = 1
+    } else console.log('OK   ekran yozuvi: ' + outFile + ' (' + N + ' kadr, ' + FPS + ' kadr/s, ' + Math.round(N / FPS) + ' s)')
+  } finally {
+    try { rmSync(dir, { recursive: true, force: true }) } catch { /* ignore */ }
   }
 }
 
@@ -295,6 +326,7 @@ async function main() {
       const f = await checks(c)
       if (f) process.exitCode = 1
     } else if (has('--perf-only')) await perf(c)
+    else if (has('--record')) await record(c)
     else {
       await shots(c)
       if (has('--perf')) await perf(c)

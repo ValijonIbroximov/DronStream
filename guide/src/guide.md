@@ -120,7 +120,7 @@ Bu "DJI bilan umuman mumkin emas" degani emas — mos yo'l hujjatlarda bor, leki
 | B. Pult yonidagi ishonchli gateway | Gateway'da; pult ↔ gateway ochiq | Ha, qo'shimcha shartlar bilan | Qo'shimcha qurilma va dastur |
 | C. RTMPS → serverimiz → WebRTC (hozirgi yo'l) | Uchdan-uchga shifrlash yo'q | **Yo'q** | Qo'shimcha narsa kerak emas; pult RTMPS'ni qo'llashi kerak |
 
-A va B "ortiqcha dastursiz ishlash" talabiga zid: ikkalasi ham qo'shimcha dastur yoki qurilma talab qiladi. C esa E2EE emas. Bundan tashqari A va B uchun shifrlangan yukni ochmasdan uzatadigan relay, tomoshabin qurilmalariga kalit tarqatish va frontend'ni serverdan alohida ishonchli manbadan yetkazish kerak. Bu zanjirning alohida sinov namunasi (proof-of-concept) tayyorlanmoqda; u mahsulotga ulanmagan va DJI qurilmasida sinalmagan. To'liq solishtiruv: `SECURITY_MODEL.md`, 6-bo'lim.
+A va B "ortiqcha dastursiz ishlash" talabiga zid: ikkalasi ham qo'shimcha dastur yoki qurilma talab qiladi. C esa E2EE emas. Bundan tashqari A va B uchun shifrlangan yukni ochmasdan uzatadigan relay, tomoshabin qurilmalariga kalit tarqatish va frontend'ni serverdan alohida ishonchli manbadan yetkazish kerak. Bu zanjirning alohida tajriba namunasi (proof-of-concept) mahsulotdan tashqarida, alohida tajriba branch'ida turadi; u mahsulotga va paketga kirmaydi, DJI qurilmasida sinalmagan. To'liq solishtiruv: `SECURITY_MODEL.md`, 6-bo'lim.
 
 ## Nimani kafolatlab bo'lmaydi {#chegaralar}
 

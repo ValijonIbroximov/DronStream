@@ -9,7 +9,7 @@ Bog'liq hujjatlar: [SECURITY.md](SECURITY.md) (batafsil mexanizmlar), [SECURITY_
 - **Kirish nazorati kuchaytirilgan.** Havola va QR faqat taklif; administrator har bir brauzer sessiyasini (havola ham, mehmon ham) tomoshabin aytgan tekshirish kodi bilan tasdiqlaydi; administrator uchun TOTP va muhim amallarda qayta tasdiqlash bor.
 - **Server videoni ochiq ko'radi.** TLS/DTLS serverda tugaydi. Server egasi, root huquqi bor odam, hosting provayderi yoki serverni egallagan hujumchi videoni ko'ra oladi.
 - **Pult → server yo'li tasdiqlanmagan.** Pultning RTMPS'ni qo'llashi va server sertifikatini tekshirishi haqiqiy qurilmada sinalmagan. Oddiy RTMP shifrlanmagan va production (secure) rejimida tarmoqdan qabul qilinmaydi.
-- **Pultdan tomoshabingacha E2EE amalga oshirilmagan.** Alohida proof-of-concept (`poc/e2ee/`) **ish jarayonida**: hali ko'rib chiqilmagan, sinovlari tasdiqlanmagan va repozitoriyga kiritilmagan.
+- **Pultdan tomoshabingacha E2EE amalga oshirilmagan.** Alohida proof-of-concept faqat tajriba branch'ida (`experiment/e2ee-poc`, `poc/e2ee/`) turadi: u `main`ga va tarqatish paketiga kirmaydi, mahsulotga ulanmagan va DJI qurilmasida sinalmagan.
 
 Shuning uchun bu versiya haqida "video maxfiyligi ta'minlangan" deb aytib bo'lmaydi. To'g'ri ifoda: **ruxsatsiz tomoshabinlardan himoya kuchaytirilgan; server tomoni va pult → server yo'li bo'yicha ochiq masalalar qolgan.** Admin paneldagi "Xavfsizlik holati" bo'limi ham aynan shu to'rt xulosa bilan boshlanadi va ular sozlamaga bog'liq emas.
 
@@ -224,9 +224,9 @@ Qo'shimcha publisher yoki gateway mahsulotga **yashirin kiritilmagan**: paketda 
 
 ### 6.4 Proof-of-concept: `poc/e2ee/`
 
-**Holat: ish jarayonida — kod hali ko'rib chiqilmagan, sinov natijalari tasdiqlanmagan, repozitoriyga kiritilmagan.** Reja bo'yicha mahsulotdan alohida, unga ulanmagan sinov zanjiri: **manba simulyatori → kalitsiz relay → qabul qiluvchi (Go) va brauzer sahifasi**. O'zimiz kriptografik protokol yaratmaganmiz: kadr shifrlash — SFrame (RFC 9605), kalitni har bir tasdiqlangan qabul qiluvchiga yetkazish — HPKE (RFC 9180). Bu standart primitivlar kompozitsiyasi, auditdan o'tgan protokol emas.
+**Holat: tajriba.** Kod faqat `experiment/e2ee-poc` branch'ida; `main`da va tarqatish paketida yo'q. Mahsulotdan alohida, unga ulanmagan sinov zanjiri: **manba simulyatori → kalitsiz relay → qabul qiluvchi (Go) va brauzer sahifasi**. O'zimiz kriptografik protokol yaratmaganmiz: kadr shifrlash — SFrame (RFC 9605), kalitni har bir tasdiqlangan qabul qiluvchiga yetkazish — HPKE (RFC 9180). Bu standart primitivlar kompozitsiyasi, auditdan o'tgan protokol emas.
 
-Natijalar tekshirilgach shu yerga va TEST_REPORT.md ga yoziladi. Kutilayotgan chegaralari: DJI qurilmasida sinalmagan; transport WebRTC emas; SFrame implementatsiyasi o'zimizniki va faqat rasmiy test vektorlari bilan tekshirilgan; barmoq izini solishtirish qo'lda; mustaqil audit yo'q.
+Uning README'si, bajarilgan sinovlari va kamchiliklari o'sha branch'da (`poc/e2ee/README_UZ.md`). Chegaralari: DJI qurilmasida sinalmagan; transport WebRTC emas; SFrame implementatsiyasi o'zimizniki va faqat rasmiy test vektorlari bilan tekshirilgan; barmoq izini solishtirish qo'lda; mustaqil audit yo'q.
 
 ### 6.5 Qaror uchun kerak bo'lgan qurilma ma'lumotlari
 

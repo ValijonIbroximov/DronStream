@@ -125,11 +125,34 @@ Copy-Item (Join-Path $Root "packaging\scripts\*") (Join-Path $pkg "scripts")
 foreach ($s in "ds-common.ps1", "ds-start.ps1", "ds-prepare.ps1") { Copy-Item (Join-Path $Root "scripts\$s") (Join-Path $pkg "scripts") }
 foreach ($s in "DronStreamStart.bat", "DronStreamTayyorla.bat", "info.html") { Copy-Item (Join-Path $Root $s) $pkg }
 Copy-Item (Join-Path $Root "config\dronstream.example.yaml") (Join-Path $pkg "config")
-foreach ($d in "README_UZ.md","SERVER_INSTALL_UZ.md","REQUIREMENTS.md","PROGRESS.md","ADMIN_GUIDE_UZ.md","DJI_SETUP_UZ.md","SECURITY.md","BACKUP_RESTORE_UZ.md","INSTALL_UZ.md","TEST_REPORT.md","ARCHITECTURE.md") {
+foreach ($d in "README_UZ.md","SERVER_INSTALL_UZ.md","REQUIREMENTS.md","PROGRESS.md","ADMIN_GUIDE_UZ.md","DJI_SETUP_UZ.md","SECURITY.md","SECURITY_MODEL.md","SECURITY_ACCEPTANCE.md","BACKUP_RESTORE_UZ.md","INSTALL_UZ.md","TEST_REPORT.md","ARCHITECTURE.md") {
   $p = Join-Path $Root $d
   if (Test-Path $p) { Copy-Item $p (Join-Path $pkg "docs") }
 }
 Set-Content -Path (Join-Path $pkg "VERSION") -Value $Version -Encoding ascii
+# BUILD_INFO.txt: which source commit this package was built from, and what kind of release it is.
+$srcCommit = "unknown"; $srcDirty = "unknown"
+if ((Test-Path (Join-Path $Root ".git")) -and (Get-Command git -ErrorAction SilentlyContinue)) {
+  try {
+    $srcCommit = ("" + (& git -C $Root rev-parse HEAD)).Trim()
+    $srcDirty = if (@(& git -C $Root status --porcelain).Count -gt 0) { "yes" } else { "no" }
+  } catch { $srcCommit = "unknown"; $srcDirty = "unknown" }
+}
+$buildInfo = @(
+  "DronStream $Version (win64)",
+  "source_commit: $srcCommit",
+  "source_tree_dirty: $srcDirty",
+  "built_utc: " + [DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+  "mediamtx: $MediaMTXVersion",
+  "release_type: sinov relizi (test release)",
+  "",
+  "Bu paket to'liq maxfiy production tizim EMAS:",
+  "- server videoni ochiq ko'radi (TLS/DTLS serverda tugaydi);",
+  "- pultdan tomoshabingacha shifrlash (E2EE) yo'q;",
+  "- haqiqiy DJI pulti bilan ingest (RTMPS va sertifikat tekshiruvi) tasdiqlanmagan.",
+  "Batafsil: docs\SECURITY_MODEL.md, docs\SECURITY_ACCEPTANCE.md"
+)
+Set-Content -Path (Join-Path $pkg "BUILD_INFO.txt") -Value $buildInfo -Encoding ascii
 # checksums of every file in the package
 $sums = Get-ChildItem $pkg -Recurse -File | Where-Object { $_.Name -ne "SHA256SUMS.txt" } | ForEach-Object {
   $rel = $_.FullName.Substring($pkg.Length + 1)
