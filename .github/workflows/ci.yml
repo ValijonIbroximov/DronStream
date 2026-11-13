@@ -75,7 +75,7 @@ jobs:
           rm -rf ../backend/internal/webui/dist/assets
           cp -R dist/. ../backend/internal/webui/dist/
       - name: Qo'llanma manbasi va hosil qilingan fayllar sinxron
-        run: if [ -f guide/build.mjs ]; then node guide/build.mjs --check; fi
+        run: if [ -f guide/src/guide.md ]; then node guide/build.mjs --check; fi
       - name: go vet va unit testlar (linux)
         working-directory: backend
         run: |

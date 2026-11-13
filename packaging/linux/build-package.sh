@@ -39,7 +39,7 @@ command -v go >/dev/null 2>&1 || { echo "XATO: Go topilmadi (.tools/go yoki PATH
 export CGO_ENABLED=0 GOTELEMETRY=off
 
 [ -f "$REPO/backend/internal/webui/dist/index.html" ] || { echo "XATO: frontend yig'ilmagan (backend/internal/webui/dist/index.html yo'q). Avval DronStreamTayyorla yoki build.ps1." >&2; exit 1; }
-if [ -f "$REPO/guide/build.mjs" ] && [ ! -f "$REPO/info.html" ]; then echo "XATO: info.html yo'q. Avval: node guide/build.mjs" >&2; exit 1; fi
+if [ -f "$REPO/guide/src/guide.md" ] && [ ! -f "$REPO/info.html" ]; then echo "XATO: info.html yo'q. Avval: node guide/build.mjs" >&2; exit 1; fi
 
 # --- MediaMTX for Linux: download once, verify the pinned checksum ---
 MTX_DIR="$TOOLS/mediamtx-linux"
