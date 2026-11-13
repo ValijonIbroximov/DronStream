@@ -93,7 +93,7 @@ powershell -ExecutionPolicy Bypass -File C:\DronStream\scripts\start.ps1
 powershell -ExecutionPolicy Bypass -File C:\DronStream\scripts\status.ps1
 ```
 
-3. Brauzerda `https://localhost:8443`. Birinchi administrator uchun bir martalik kod: `C:\DronStream\data\runtime\setup-token.txt`.
+3. Brauzerda `https://localhost:8443`. Birinchi administrator uchun bir martalik kod: `C:\DronStream\data\runtime\setup-token.txt`. Paket **secure** rejimda: administrator yaratilgach panel ikkinchi bosqichni (TOTP) yoqishni talab qiladi — telefondagi autentifikator ilovasi kerak; berilgan 10 ta tiklash kodini xavfsiz joyga yozing (11-bo'lim).
 4. Xizmat sifatida (administrator PowerShell) — kompyuter yonganda o'zi ishga tushadi:
 
 ```powershell
@@ -129,6 +129,8 @@ sudo systemctl enable --now dronstream               # ishga tushirish + avtomat
 systemctl status dronstream --no-pager
 sudo cat /opt/dronstream/data/runtime/setup-token.txt   # birinchi administrator kodi (jurnalga yozilmaydi)
 ```
+
+Birinchi kirishdan keyin panel TOTP'ni yoqishni so'raydi (secure rejim) — 11-bo'lim.
 
 Jurnal: `sudo journalctl -u dronstream -n 50 --no-pager`.
 
@@ -235,7 +237,30 @@ Bu yo'l CI'da tekshiriladi: Windows virtual mashinasida olingan backup Ubuntu'da
 
 `pull.bat` / `push.bat` faqat **manba kodni** kompyuterlar orasida ko'chiradi. Ular serverdagi baza, media va kalitlarga tegmaydi va ishlab turgan server dasturini almashtirmaydi. Ishlab turgan serverni yangilash — har doim yangi paket va `update` skripti orqali.
 
-## 10. Hali tekshirilmagan
+## 10. Secure rejim — nimani majburiy qiladi
+
+Paketdagi `config/dronstream.yaml` da `security.mode: "secure"`:
+
+| Talab | Natija |
+|---|---|
+| Oddiy (shifrlanmagan) RTMP faqat VPN/lokal interfeysda | `media.rtmp_listen` bo'sh (sukut) yoki xususiy IP (masalan `<VPN_IP>:1935`). `":1935"` yoki ommaviy IP bo'lsa dastur **ishga tushmaydi** va sababini logga yozadi |
+| RTMPS | `media.rtmps_listen` (masalan `":1936"`) + ishonchli sertifikat. RTMPS ishlamasa avtomatik RTMP'ga o'tilmaydi. DJI pulti bilan sinash tartibi: SECURITY_MODEL.md 4-bo'lim |
+| Administrator ikkinchi bosqichi | TOTP yoqilmaguncha admin amallari bloklangan |
+
+Mavjud o'rnatishdagi (1.0–1.2 dan yangilangan) sozlama faylida `security.mode` bo'lmasa — `standard`. Production uchun uni `secure` ga o'zgartiring va xizmatni qayta ishga tushiring; avval `rtmp_listen` ni tekshiring.
+
+Admin panel → **Audit va sozlamalar → Sozlamalar → Xavfsizlik holati** qaysi himoya amalda tekshirilgani va qaysi biri tasdiqlanmaganini ko'rsatadi.
+
+## 11. Administrator: TOTP va tiklash
+
+1. Panel so'raganda (yoki **Sozlamalar → Ikkinchi bosqich (TOTP)**) QR kodni autentifikator ilovasi bilan skanerlang va 6 xonali kodni kiriting.
+2. 10 ta tiklash kodini qog'ozga yoki parol menejeriga yozing — boshqa ko'rsatilmaydi.
+3. Telefon yo'qolsa: tiklash kodi bilan kiring va yangi TOTP yarating.
+4. Tiklash kodlari ham yo'q bo'lsa: serverda `dronstream reset-admin --username <LOGIN>` (Windows: `C:\DronStream\app\<VERSIYA>\dronstream.exe`, Linux: `sudo -u dronstream /opt/dronstream/app/current/dronstream reset-admin --root /opt/dronstream --username <LOGIN>`). U vaqtinchalik parol beradi va TOTP'ni o'chiradi.
+
+Havola va QR endi faqat taklif: tomoshabin so'rov yuboradi, siz uni **Kirish so'rovlari** sahifasida tomoshabin aytgan tekshirish kodi bilan tasdiqlaysiz.
+
+## 12. Hali tekshirilmagan
 
 - Haqiqiy Dell PowerEdge R570 (har qanday OS bilan).
 - Windows Server 2022/2025; Ubuntu Server 26.04 LTS.
