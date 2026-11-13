@@ -188,7 +188,8 @@ function parse(md) {
     if (stop) fail('blok yopilmagan: ' + stop)
     return out
   }
-  html += blocks(null)
+  const rest = blocks(null) // blocks() appends finished sections to html itself; read html only afterwards
+  html += rest
   closeSec()
   if (story.length !== 6) throw new Error('guide.md: :::story blokida aynan 6 bosqich bo‘lishi kerak')
   return { html, toc, story }

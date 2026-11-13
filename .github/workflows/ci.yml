@@ -13,7 +13,7 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 env:
-  GOTOOLCHAIN: go1.27.4      # go.mod bilan bir xil; Go o'zi yuklab, checksum bazasi orqali tekshiradi
+  GOTOOLCHAIN: go1.27.4
   GOTELEMETRY: "off"
   CGO_ENABLED: "0"
 
@@ -48,25 +48,18 @@ jobs:
           if-no-files-found: error
 
   linux:
-    name: Linux (${{ matrix.os }}) - build, testlar, paket, systemd
-    runs-on: ${{ matrix.os }}
+    name: Linux - build, testlar, paket, systemd
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: "22.23.5"
       - name: Muhit
-        run: |
-          . /etc/os-release; echo "$PRETTY_NAME $(uname -m)"; go version; node --version; systemctl --version | head -n1
+        run: bash tests/ci/env-info.sh
       - name: Skript sintaksisi
-        run: |
-          for f in packaging/linux/build-package.sh packaging/linux/scripts/*.sh tests/ci/*.sh; do bash -n "$f"; done
-          if grep -rlI $'\r' packaging/linux tests/ci/*.sh; then echo "CRLF topildi"; exit 1; fi
+        run: bash tests/ci/check-scripts.sh
       - name: Frontend
         working-directory: web
         run: |
@@ -75,14 +68,9 @@ jobs:
           rm -rf ../backend/internal/webui/dist/assets
           cp -R dist/. ../backend/internal/webui/dist/
       - name: Qo'llanma manbasi va hosil qilingan fayllar sinxron
-        run: if [ -f guide/src/guide.md ]; then node guide/build.mjs --check; fi
+        run: bash tests/ci/check-guide.sh
       - name: go vet va unit testlar (linux)
-        working-directory: backend
-        run: |
-          set -o pipefail
-          go vet ./...
-          go test ./internal/... -count=1 2>&1 | tee "$RUNNER_TEMP/unit.log"
-          echo "::notice title=unit testlar (linux)::$(grep -c '^ok' "$RUNNER_TEMP/unit.log") paket o'tdi"
+        run: bash tests/ci/run-unit.sh
       - name: ffmpeg (integratsiya testlaridagi RTMP manba uchun)
         run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - name: Linux paketlari (ikki versiya - update/rollback sinovi uchun)
@@ -90,19 +78,11 @@ jobs:
           bash packaging/linux/build-package.sh 9.9.1
           bash packaging/linux/build-package.sh 9.9.2
       - name: Integratsiya testlari (haqiqiy MediaMTX, WebRTC, RTMP)
-        working-directory: backend
         env:
           DS_MEDIAMTX: ${{ github.workspace }}/.tools/mediamtx-linux/mediamtx
-        run: |
-          set -o pipefail
-          go test -tags integration ./integration -run 'TestAcceptance|TestLinksAndMedia|TestPlayerSlots|TestTURNRelay' -count=1 -timeout 25m -v 2>&1 | tee "$RUNNER_TEMP/integration.log" | grep -E '^(=== RUN|--- |PASS|FAIL|ok|panic)' || { grep -E '^s*(--- FAIL|.*_test.go:[0-9]+:)' "$RUNNER_TEMP/integration.log" | head -n 8 | while IFS= read -r l; do echo "::error title=integratsiya::$l"; done; exit 1; }
-          echo "::notice title=integratsiya (linux)::$(grep -c '^--- PASS' "$RUNNER_TEMP/integration.log") test o'tdi: $(grep '^--- PASS' "$RUNNER_TEMP/integration.log" | awk '{print $3}' | tr '
-' ' ')"
+        run: bash tests/ci/run-integration.sh
       - name: Paket sinovi - o'rnatish, systemd, backup/restore, update/rollback
         run: bash tests/ci/linux-package-test.sh dist/DronStream-9.9.1-linux-amd64.tar.gz dist/DronStream-9.9.2-linux-amd64.tar.gz
-      - name: Integratsiya natijalari
-        if: always()
-        run: cat build/test-results/integration.json 2>/dev/null || true
       - uses: actions/upload-artifact@v7
         with:
           name: linux-package

@@ -1,0 +1,837 @@
+<!doctype html>
+<html lang="uz" data-variant="admin">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark light">
+<title>DronStream — yordam va qo‘llanma</title>
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<a class="skip" href="#content">Asosiy matnga o‘tish</a>
+<div class="progress" aria-hidden="true"><div class="progress-bar" id="progress"></div></div>
+
+<header class="bar" id="bar">
+  <div class="bar-title">
+    <svg class="logo" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="7" fill="#12283d" stroke="#3aa0ff"/><path d="M11 9.5v13l11-6.5z" fill="#3aa0ff"/></svg>
+    <span>DronStream qo‘llanmasi</span>
+    <span class="ver">v1.2.0 · 2026-11-13</span>
+  </div>
+  <div class="bar-tools">
+    <label class="search"><span class="sr">Qo‘llanmadan qidirish</span><input id="q" type="search" placeholder="Qidiruv…" autocomplete="off" spellcheck="false"></label>
+    <button type="button" id="btn-toc" class="narrow-only" aria-expanded="false" aria-controls="toc">Mundarija</button>
+    <span class="tool-group" role="group" aria-label="Avto namoyish">
+      <button type="button" id="btn-auto" aria-pressed="false" title="Namoyishni o‘zi aylantiradi. Istalgan tugma, g‘ildirak yoki teginish uni to‘xtatadi.">▶ Avto namoyish</button>
+      <label class="sr" for="auto-speed">Avto namoyish tezligi</label>
+      <select id="auto-speed" title="Tezlik"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
+    </span>
+    <button type="button" id="btn-anim" aria-pressed="true">Animatsiya: yoqilgan</button>
+    <button type="button" id="btn-plain" aria-pressed="false" title="Sahnasiz, oddiy matnli ko‘rinish">Oddiy rejim</button>
+    <button type="button" id="btn-print">Chop etish / PDF</button>
+  </div>
+</header>
+
+<div id="results" class="results" hidden>
+  <div class="results-head"><strong id="results-count"></strong><button type="button" id="results-close">Yopish</button></div>
+  <ol id="results-list"></ol>
+</div>
+
+<div class="layout">
+  <nav id="toc" class="toc" aria-label="Mundarija">
+    <div class="toc-part"><a href="#namoyish">Qisqa namoyish</a></div>
+    <div class="toc-part"><a href="#a">A. Dastur haqida</a></div>
+<ol>
+<li><a href="#maqsad">Dastur nima qiladi</a></li>
+<li><a href="#rollar">Kim nima qiladi: pult, server, administrator, tomoshabin</a></li>
+<li><a href="#foydalanuvchilar">Foydalanuvchi turlari</a></li>
+<li><a href="#kontent">Kontent: jonli stream, matn, rasm, video, to'plam</a></li>
+<li><a href="#ruxsat-shifr">Ruxsat va shifrlash — ikki xil narsa</a></li>
+<li><a href="#chegaralar">Nimani kafolatlab bo'lmaydi</a></li>
+</ol>
+<div class="toc-part"><a href="#b">B. Tarmoq asoslari</a></div>
+<ol>
+<li><a href="#manzillar">Manzillar: localhost, lokal IP, public IP, domen</a></li>
+<li><a href="#nat">NAT va CGNAT</a></li>
+<li><a href="#hotspot">Telefon hotspot va USB modem</a></li>
+<li><a href="#webrtc">HTTPS, WebRTC, ICE, TURN</a></li>
+<li><a href="#sahifa-video">Sahifa ochildi — video ham ishlaydi degani emas</a></li>
+<li><a href="#portlar">Portlar jadvali</a></li>
+<li><a href="#base-url">Tashqi manzil (Public base URL)</a></li>
+</ol>
+<div class="toc-part"><a href="#c">C. Windows kompyuterda noldan ishga tushirish</a></div>
+<ol>
+<li><a href="#win-olish">1-qadam: paket yoki kodni olish</a></li>
+<li><a href="#win-start">2-qadam: Tayyorla va Start</a></li>
+<li><a href="#win-admin">3-qadam: birinchi administrator</a></li>
+<li><a href="#win-lokal">4-qadam: lokal tarmoqdan ulanish</a></li>
+<li><a href="#sertifikat">Sertifikat</a></li>
+<li><a href="#demo">Demo sinov</a></li>
+<li><a href="#pult">Haqiqiy pultni ulash — alohida tekshiruv</a></li>
+</ol>
+<div class="toc-part"><a href="#d">D. Dell PowerEdge R570 serveri</a></div>
+<ol>
+<li><a href="#r570-aniqlash">Avval aniqlang: bu serverda nima bor</a></li>
+<li><a href="#idrac">iDRAC — alohida narsa</a></li>
+<li><a href="#r570-windows">Windows Server yo'li</a></li>
+<li><a href="#r570-linux">Linux yo'li: Ubuntu Server 26.04 / 24.04 LTS</a></li>
+<li><a href="#xizmat-hisobi">Xizmat hisobi va papkalar</a></li>
+<li><a href="#xizmat">Avtomatik ishga tushish, health-check, loglar</a></li>
+<li><a href="#backup-update">Backup, yangilash, rollback</a></li>
+<li><a href="#win-linux">Windows'dan Linux'ga ko'chirish</a></li>
+<li><a href="#reboot">Qayta yuklashdan keyingi tekshiruv</a></li>
+</ol>
+<div class="toc-part"><a href="#e">E. Tashqi internet</a></div>
+<ol>
+<li><a href="#tashqi-talab">Tashqaridan kirish uchun nima kerak</a></li>
+<li><a href="#dns-https">DNS va HTTPS</a></li>
+<li><a href="#firewall">Firewall va router</a></li>
+<li><a href="#turn">WebRTC va TURN</a></li>
+<li><a href="#qabul-test">Qabul testi: boshqa internetdan</a></li>
+<li><a href="#ingest">Pult → server yo'li va uning himoyasi</a></li>
+</ol>
+<div class="toc-part"><a href="#f">F. Kundalik boshqaruv</a></div>
+<ol>
+<li><a href="#f-pult">Pultlar va sarlavhalar</a></li>
+<li><a href="#f-media">Media va to'plamlar</a></li>
+<li><a href="#f-hisob">Hisoblar va mehmon so'rovlari</a></li>
+<li><a href="#f-havola">Maxsus havolalar va QR</a></li>
+<li><a href="#f-sessiya">Faol sessiyalar</a></li>
+<li><a href="#f-farq">Revoke, bloklash, publish'ni to'xtatish — farqi</a></li>
+<li><a href="#f-audit">Audit, parol, chiqish, favqulodda to'xtatish</a></li>
+<li><a href="#f-yangilash">Kodni yangilash va serverni yangilash — ikki alohida ish</a></li>
+</ol>
+<div class="toc-part"><a href="#g">G. Xatolar</a></div>
+<ol>
+<li><a href="#x-sayt">Sayt ochilmaydi</a></li>
+<li><a href="#x-sert">Sertifikat ogohlantirishi</a></li>
+<li><a href="#x-video">Sahifa bor, video yo'q</a></li>
+<li><a href="#x-offline">Stream efirda emas</a></li>
+<li><a href="#x-limit">&quot;Juda ko'p ulanish&quot;</a></li>
+<li><a href="#x-havola">Havola tugagan yoki ishlatilgan</a></li>
+<li><a href="#x-port">Port band</a></li>
+<li><a href="#x-xizmat">Xizmat ishga tushmaydi</a></li>
+<li><a href="#x-git">Git: kirish va konflikt</a></li>
+<li><a href="#x-android">Android: lokal tarmoq ruxsati</a></li>
+</ol>
+<div class="toc-part"><a href="#manbalar-qism">Manbalar</a></div>
+<ol>
+<li><a href="#manbalar">Tekshirilgan rasmiy manbalar</a></li>
+</ol>
+
+  </nav>
+
+  <main id="content">
+    <section class="hero sec" id="namoyish" data-title="Qisqa namoyish: video qanday yetib boradi">
+      <h2>Qisqa namoyish: video qanday yetib boradi</h2>
+      <p class="lead">Pastga aylantiring: olti bosqichda pult, server, administrator va tomoshabin o‘rtasida nima sodir bo‘lishi ko‘rsatiladi. Bu <strong>sxematik tushuntirish</strong> — haqiqiy trafik, telemetriya yoki serveringizning joriy holati emas. Sahifa hech qayerga ulanmaydi.</p>
+
+      <div class="story" id="story">
+        <div class="pin">
+          <div class="stage" id="stage" data-step="1" aria-hidden="true">
+            <div class="world">
+              <div class="grid"></div>
+              <svg class="links" viewBox="0 0 640 420" width="640" height="420">
+                <path class="link l-pult" d="M165 210 L265 210"/>
+                <path class="link l-admin" d="M490 122 L372 186"/>
+                <path class="link l-view" d="M372 234 L490 298"/>
+                <path class="flow f-pult" d="M165 210 L265 210"/>
+                <path class="flow f-admin" d="M490 122 L372 186"/>
+                <path class="flow f-login" d="M490 298 L372 234"/>
+                <path class="flow f-media" d="M372 234 L490 298"/>
+                <g class="cut"><circle cx="431" cy="266" r="15"/><path d="M423 258 l16 16 M439 258 l-16 16"/></g>
+              </svg>
+              <div class="node n-pult"><div class="slab"></div><div class="card">
+                <svg viewBox="0 0 64 48" width="64" height="48"><path d="M18 14 L12 3" class="ic-line"/><path d="M46 14 L52 3" class="ic-line"/><rect x="4" y="12" width="56" height="30" rx="9" class="ic-body"/><rect x="22" y="18" width="20" height="13" rx="2" class="ic-screen"/><circle cx="13" cy="27" r="5" class="ic-knob"/><circle cx="51" cy="27" r="5" class="ic-knob"/></svg>
+                <span class="nm">DJI pulti</span><span class="st st-pult">RTMP video</span>
+              </div></div>
+              <div class="node n-server"><div class="slab"></div><div class="ring"></div><div class="card">
+                <svg viewBox="0 0 64 48" width="64" height="48"><rect x="8" y="3" width="48" height="12" rx="3" class="ic-body"/><rect x="8" y="18" width="48" height="12" rx="3" class="ic-body"/><rect x="8" y="33" width="48" height="12" rx="3" class="ic-body"/><circle cx="16" cy="9" r="2.2" class="ic-led"/><circle cx="16" cy="24" r="2.2" class="ic-led"/><circle cx="16" cy="39" r="2.2" class="ic-led"/><path d="M26 9h22M26 24h22M26 39h22" class="ic-line"/></svg>
+                <span class="nm">DronStream serveri</span><span class="st st-server">kalit tekshirildi ✓</span>
+              </div></div>
+              <div class="node n-admin"><div class="slab"></div><div class="card">
+                <svg viewBox="0 0 64 48" width="64" height="48"><circle cx="24" cy="14" r="9" class="ic-body"/><path d="M6 46c0-12 8-18 18-18s18 6 18 18z" class="ic-body"/><path d="M48 16l10 4v8c0 7-4 11-10 14-6-3-10-7-10-14v-8z" class="ic-shield"/><path d="M43 28l4 4 7-8" class="ic-check"/></svg>
+                <span class="nm">Administrator</span><span class="st st-grant">ruxsat berildi</span><span class="st st-revoke">ruxsat olib tashlandi</span>
+              </div></div>
+              <div class="node n-view"><div class="slab"></div><div class="card">
+                <svg viewBox="0 0 64 48" width="64" height="48"><rect x="6" y="4" width="52" height="32" rx="4" class="ic-body"/><rect x="10" y="8" width="44" height="24" rx="2" class="ic-screen scr"/><path d="M28 14v12l11-6z" class="ic-play"/><path d="M25 14l14 12M39 14l-14 12" class="ic-x"/><path d="M24 44h16M32 36v8" class="ic-line"/></svg>
+                <span class="nm">Tomoshabin</span><span class="st st-login">kirish / havola</span><span class="st st-play">video ko‘rsatilmoqda</span><span class="st st-cut">ulanish uzildi</span>
+              </div></div>
+            </div>
+          </div>
+          <div class="caps-wrap">
+            <ol class="caps" id="caps">
+<li class="cap" data-step="1"><span class="cap-n">1</span><div><strong>Pult video yuboradi</strong><p>DJI pulti jonli videoni server manziliga RTMP orqali yuboradi. Har bir pult uchun alohida manzil va maxfiy kalit bor.</p></div></li>
+<li class="cap" data-step="2"><span class="cap-n">2</span><div><strong>Server manbani tekshiradi</strong><p>Server kalit to'g'riligini va shu yo'l band emasligini tekshiradi. Kalit noto'g'ri bo'lsa yoki boshqa manba ulanib turgan bo'lsa — rad etadi.</p></div></li>
+<li class="cap" data-step="3"><span class="cap-n">3</span><div><strong>Foydalanuvchi kiradi yoki havolani faollashtiradi</strong><p>Tomoshabin brauzerda login-parol bilan kiradi, mehmon so'rovi yuboradi yoki maxsus havolani ochib &quot;Kirish&quot;ni bosadi. Alohida dastur o'rnatilmaydi.</p></div></li>
+<li class="cap" data-step="4"><span class="cap-n">4</span><div><strong>Administrator ruxsatni boshqaradi</strong><p>Admin kim nimani va qachongacha ko'rishini belgilaydi. Ruxsat berilmagan narsa umuman ko'rinmaydi.</p></div></li>
+<li class="cap" data-step="5"><span class="cap-n">5</span><div><strong>Ruxsatli kontent ko'rsatiladi</strong><p>Server har bir video ulanishini alohida tekshiradi va faqat ruxsat etilgan streamni WebRTC orqali uzatadi.</p></div></li>
+<li class="cap" data-step="6"><span class="cap-n">6</span><div><strong>Revoke'dan keyin ulanish uziladi</strong><p>Admin ruxsatni olib tashlasa, server ochiq video ulanishini o'zi uzadi va qayta ulanishni rad etadi. Bu faqat tugmani yashirish emas.</p></div></li>
+            </ol>
+            <div class="story-nav" id="story-nav">
+              <button type="button" id="step-prev">← Oldingi bosqich</button>
+              <span id="step-pos" aria-live="polite">1 / 6</span>
+              <button type="button" id="step-next">Keyingi bosqich →</button>
+            </div>
+            <p class="disclaimer">Sxematik namoyish. Haqiqiy trafik yoki telemetriya emas.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+<div class="part" id="a"><h1>A. Dastur haqida</h1></div>
+<section class="sec" id="maqsad" data-title="Dastur nima qiladi">
+<h2>Dastur nima qiladi</h2>
+<p>DronStream — DJI pultidan kelayotgan jonli videoni bitta markaziy serverga qabul qilib, uni faqat administrator ruxsat bergan odamlarga brauzer orqali ko'rsatadigan dastur. Tomoshabinga alohida dastur, VPN klienti yoki plagin kerak emas: oddiy Chrome, Edge, Firefox yoki Safari yetadi.</p>
+<p>Dastur ikki qismdan iborat va ikkalasi bitta paketda keladi:</p>
+<ul><li><strong>dronstream</strong> — veb-sahifa, foydalanuvchilar, ruxsatlar, havolalar va audit bilan shug'ullanadigan asosiy dastur.</li><li><strong>MediaMTX v1.21.3</strong> — videoni qabul qilib, brauzerlarga uzatadigan media server. Uni dronstream o'zi ishga tushiradi va nazorat qiladi; siz uni alohida sozlamaysiz.</li></ul>
+<p>Ma'lumotlar bitta SQLite faylida saqlanadi. Tashqi baza, bulut xizmati yoki uchinchi tomon hisobi talab qilinmaydi.</p>
+<div class="note info">
+<p>Bu markaziy serverga ishonadigan tizim. Server videoni ochiq holda qabul qiladi va qayta uzatadi. Server o'chsa, translatsiya ham to'xtaydi.</p>
+</div>
+</section>
+<section class="sec" id="rollar" data-title="Kim nima qiladi: pult, server, administrator, tomoshabin">
+<h2>Kim nima qiladi: pult, server, administrator, tomoshabin</h2>
+<div class="tbl"><table><thead><tr><th>Ishtirokchi</th><th>Vazifasi</th><th>Nimaga kirishi bor</th></tr></thead><tbody>
+<tr><td>DJI pulti</td><td>Videoni serverga yuboradi</td><td>Faqat o'z yo'liga yozish (kalit bilan). Hech narsani ko'ra olmaydi</td></tr>
+<tr><td>Server</td><td>Manbani tekshiradi, ruxsatlarni qo'llaydi, videoni uzatadi</td><td>Hamma narsa shu yerda saqlanadi</td></tr>
+<tr><td>Administrator</td><td>Pultlar, kontent, hisoblar, havolalar, ruxsatlarni boshqaradi</td><td>Hamma narsani ko'radi va boshqaradi</td></tr>
+<tr><td>Tomoshabin</td><td>Faqat ruxsat berilgan kontentni ko'radi</td><td>O'ziga berilgan stream, matn, rasm, video</td></tr>
+</tbody></table></div>
+<p>Pult kaliti faqat video <strong>yuborish</strong> uchun. U bilan videoni ko'rib bo'lmaydi va saytga kirib bo'lmaydi.</p>
+</section>
+<section class="sec" id="foydalanuvchilar" data-title="Foydalanuvchi turlari">
+<h2>Foydalanuvchi turlari</h2>
+<div class="tbl"><table><thead><tr><th>Tur</th><th>Qanday kiradi</th><th>Qachon ishlatiladi</th></tr></thead><tbody>
+<tr><td>Doimiy foydalanuvchi</td><td>Login va parol</td><td>Doimiy xodimlar. Admin yaratadi, bloklashi mumkin</td></tr>
+<tr><td>Mehmon (so'rov bilan)</td><td>Ismini yozib so'rov yuboradi, admin tasdiqlaydi</td><td>Oldindan hisob ochilmagan odam. Ism tasdiqlanmagan hisoblanadi</td></tr>
+<tr><td>Maxsus havola</td><td>Havolani ochib &quot;Kirish&quot;ni bosadi, login yo'q</td><td>Bir martalik, N martalik yoki vaqtinchalik kirish; QR orqali ulashish</td></tr>
+<tr><td>Administrator</td><td>Login va parol</td><td>Tizimni boshqarish</td></tr>
+</tbody></table></div>
+<p>Maxsus havolaning uch turi bor:</p>
+<ul><li><strong>Bir martalik</strong> — bir marta faollashtiriladi. Boshqa brauzerda qayta ochilmaydi.</li><li><strong>N martalik</strong> — belgilangan marta faollashtiriladi; bir vaqtdagi sessiyalar soni ham cheklanadi.</li><li><strong>Vaqtinchalik</strong> — belgilangan vaqt oralig'ida ishlaydi (boshlanishidan oldin ham, tugaganidan keyin ham rad etiladi).</li></ul>
+<p>Havolani shunchaki ochish, oldindan ko'rish yoki QR kodni skanerlash foydalanishni <strong>sarflamaydi</strong>. Faqat &quot;Kirish&quot; tugmasi bosilganda sarflanadi. Sahifani yangilash, boshqa tab ochish yoki video qayta ulanishi yangi kirish hisoblanmaydi.</p>
+</section>
+<section class="sec" id="kontent" data-title="Kontent: jonli stream, matn, rasm, video, to'plam">
+<h2>Kontent: jonli stream, matn, rasm, video, to'plam</h2>
+<ul><li><strong>Jonli stream</strong> — pultdan kelayotgan video. Har bir pult uchun bitta.</li><li><strong>Matn</strong> — e'lon yoki ko'rsatma.</li><li><strong>Rasm</strong> — PNG, JPEG yoki GIF.</li><li><strong>Video</strong> — yuklangan fayl: MP4 (H.264) yoki WebM (VP8/VP9). H.265 qabul qilinmaydi, chunki ko'p brauzerlar uni ko'rsatmaydi.</li><li><strong>To'plam</strong> — bir nechta kontentni bitta nom ostida birlashtiradi.</li></ul>
+<p>Har bir kontentning sarlavhasi va izohi bor. To'plamga ruxsat berishda ikki siyosatdan biri tanlanadi: <strong>&quot;keyin qo'shilganlar ham&quot;</strong> (to'plamga yangi narsa qo'shilsa, u ham ochiladi) yoki <strong>&quot;faqat hozirgi elementlar&quot;</strong> (keyin qo'shilganlar ochilmaydi).</p>
+</section>
+<section class="sec" id="ruxsat-shifr" data-title="Ruxsat va shifrlash — ikki xil narsa">
+<h2>Ruxsat va shifrlash — ikki xil narsa</h2>
+<p>Bu ikki tushunchani aralashtirmaslik muhim.</p>
+<ul><li><strong>Shifrlash</strong> yo'ldagi begona odam trafikni o'qiy olmasligini ta'minlaydi. Brauzer bilan server orasida HTTPS va WebRTC (DTLS-SRTP) shifrlangan.</li><li><strong>Ruxsat</strong> kim nimani ko'rishi mumkinligini belgilaydi. Uni server tekshiradi: har bir video ulanishi, har bir fayl va har bir Range so'rovi uchun alohida.</li></ul>
+<p>Shifrlash bor degani ruxsat bor degani emas, va aksincha. Oddiy <strong>RTMP shifrlanmagan</strong>: pultdan serverga boradigan video yo'lda ochiq ketadi. Buning yechimlari <a href="#ingest">&quot;Pult → server yo'li&quot;</a> bo'limida.</p>
+<p>Bu end-to-end shifrlash emas: server videoni ochiq holda ko'radi.</p>
+</section>
+<section class="sec" id="chegaralar" data-title="Nimani kafolatlab bo'lmaydi">
+<h2>Nimani kafolatlab bo'lmaydi</h2>
+<div class="note warn">
+<p>Tomoshabin qurilmasiga yetib borgan narsani qaytarib olib bo'lmaydi. Ruxsat olib tashlanganda server ulanishni uzadi va keyingi so'rovlarni rad etadi, lekin allaqachon ko'rilgan kadrlar, yuklab olingan rasm yoki ekrandan olingan yozuv tomoshabinda qoladi.</p>
+</div>
+<ul><li>Ekran yozib olishni yoki telefon bilan ekranni suratga olishni brauzer orqali mutlaq taqiqlab bo'lmaydi.</li><li>Video ustidagi ism va vaqt belgisi (watermark) nusxalashni to'xtatmaydi; u faqat sizib chiqqan yozuv kimdan ekanini aniqlashga yordam beradi.</li><li>Dastur qotib qolsa (jarayon tirik, lekin javob bermayapti), ochiq jonli video eng ko'pi bilan 120 soniya davom etishi mumkin (ijara muddati). Dastur butunlay o'chsa, media server ham darhol to'xtaydi.</li></ul>
+</section>
+<div class="part" id="b"><h1>B. Tarmoq asoslari</h1></div>
+<section class="sec" id="manzillar" data-title="Manzillar: localhost, lokal IP, public IP, domen">
+<h2>Manzillar: localhost, lokal IP, public IP, domen</h2>
+<div class="tbl"><table><thead><tr><th>Manzil</th><th>Namuna</th><th>Qayerdan ochiladi</th></tr></thead><tbody>
+<tr><td>localhost</td><td><code>https://localhost:8443</code></td><td>Faqat serverning o'zidan</td></tr>
+<tr><td>Lokal (xususiy) IP</td><td><code>https://&lt;SERVER_IP&gt;:8443</code>, masalan 192.168.x.x yoki 10.x.x.x</td><td>Faqat shu lokal tarmoqdagi qurilmalardan</td></tr>
+<tr><td>Public IP</td><td>Internet provayder bergan tashqi manzil</td><td>Internetdan, agar firewall va router ruxsat bersa</td></tr>
+<tr><td>Domen</td><td><code>https://&lt;DOMEN&gt;</code></td><td>Domen public IP ga yo'naltirilgan bo'lsa</td></tr>
+</tbody></table></div>
+<div class="note warn">
+<p>Domenning o'zi hech qanday portni ochmaydi. Domen faqat nomni IP manzilga aylantiradi. Port ochiq bo'lishi uchun serverda firewall qoidasi, routerda esa port yo'naltirish (yoki serverning o'zida public IP) kerak.</p>
+</div>
+</section>
+<section class="sec" id="nat" data-title="NAT va CGNAT">
+<h2>NAT va CGNAT</h2>
+<p><strong>NAT</strong> — router ortidagi qurilmalar bitta tashqi manzildan foydalanadi. Tashqaridan serverga yetish uchun routerda port yo'naltirish sozlanadi.</p>
+<p><strong>CGNAT</strong> — provayderning o'zi sizni yana bir NAT ortiga qo'yadi. Bu holda routeringizdagi &quot;tashqi&quot; manzil ham aslida xususiy bo'ladi va port yo'naltirish internetdan ishlamaydi. Belgisi: routerdagi WAN manzil bilan internetda ko'rinadigan manzil boshqa-boshqa.</p>
+<p>CGNAT ortida server joylashtirish uchun provayderdan haqiqiy (statik) public IP olish yoki serverni public IP bor joyga ko'chirish kerak.</p>
+</section>
+<section class="sec" id="hotspot" data-title="Telefon hotspot va USB modem">
+<h2>Telefon hotspot va USB modem</h2>
+<ul><li>Telefon hotspoti yoki USB modem orqali ulangan kompyuter deyarli har doim CGNAT ortida bo'ladi: unga internetdan kirib bo'lmaydi.</li><li>Bu usul faqat <strong>lokal</strong> sinov uchun yaroqli: telefon va kompyuter bir-birini lokal manzil orqali ko'radi.</li><li>Ba'zi hotspotlar ulangan qurilmalarni bir-biridan ajratadi (client isolation) — bu holda lokal manzil ham ochilmaydi.</li></ul>
+</section>
+<section class="sec" id="webrtc" data-title="HTTPS, WebRTC, ICE, TURN">
+<h2>HTTPS, WebRTC, ICE, TURN</h2>
+<ul><li><strong>HTTPS</strong> (TCP, standart port 8443) — sahifa, login va boshqaruv shu orqali ishlaydi.</li><li><strong>WebRTC</strong> — video shu orqali uzatiladi. U HTTPS dan <strong>alohida</strong> yo'l: asosan UDP (standart port 8189).</li><li><strong>ICE</strong> — brauzer va server bir-biriga qaysi manzil va port orqali yeta olishini aniqlaydigan jarayon.</li><li><strong>STUN</strong> — qurilma NAT ortidan qaysi tashqi manzil bilan ko'rinishini bilib oladi. DronStream sukut bo'yicha tashqi STUN ishlatmaydi.</li><li><strong>TURN</strong> — to'g'ridan-to'g'ri ulanish imkoni bo'lmaganda videoni vositachi (relay) orqali o'tkazadi. Serverda ochiq manzil va ochiq UDP port bo'lsa, odatda TURN kerak bo'lmaydi.</li></ul>
+<p>Tomoshabin faqat video <strong>qabul qiladi</strong>, shuning uchun brauzer kamera yoki mikrofon ruxsatini so'ramaydi.</p>
+</section>
+<section class="sec" id="sahifa-video" data-title="Sahifa ochildi — video ham ishlaydi degani emas">
+<h2>Sahifa ochildi — video ham ishlaydi degani emas</h2>
+<p>Bu eng ko'p uchraydigan chalkashlik. Sahifa TCP 8443 orqali keladi, video esa UDP 8189 orqali. Birinchisi ochiq, ikkinchisi yopiq bo'lishi mumkin. Shunda sahifa to'liq ishlaydi, login qilinadi, lekin player &quot;Ulanmoqda…&quot; holatida qoladi.</p>
+<p>Shuning uchun har bir yangi tarmoqda <strong>ikkalasini alohida</strong> tekshiring: sahifa ochilishini va demo video o'ynashini.</p>
+</section>
+<section class="sec" id="portlar" data-title="Portlar jadvali">
+<h2>Portlar jadvali</h2>
+<p>Standart konfiguratsiya (<code>config/dronstream.yaml</code>) bo'yicha. Portlarni shu faylda o'zgartirsangiz, firewall qoidalarini ham moslang.</p>
+<div class="tbl"><table><thead><tr><th>Port</th><th>Protokol</th><th>Yo'nalish</th><th>Maqsad</th><th>Kimga ochiladi</th><th>Holati</th></tr></thead><tbody>
+<tr><td>8443</td><td>TCP</td><td>brauzer → server</td><td>HTTPS: sahifa, login, boshqaruv</td><td>Tomoshabinlar</td><td>Majburiy</td></tr>
+<tr><td>8189</td><td>UDP</td><td>brauzer ↔ server</td><td>WebRTC video</td><td>Tomoshabinlar</td><td>Majburiy</td></tr>
+<tr><td>8189</td><td>TCP</td><td>brauzer ↔ server</td><td>UDP yopiq tarmoqlar uchun WebRTC</td><td>Tomoshabinlar</td><td>Ixtiyoriy (<code>webrtc_tcp_listen</code>)</td></tr>
+<tr><td>1935</td><td>TCP</td><td>pult → server</td><td>RTMP ingest (shifrlanmagan)</td><td>Faqat pult tarmog'i yoki VPN</td><td>Pult ishlatilsa</td></tr>
+<tr><td>1936</td><td>TCP</td><td>pult → server</td><td>RTMPS ingest (<code>rtmps_listen</code> yoqilsa)</td><td>Pultlar</td><td>Ixtiyoriy</td></tr>
+<tr><td>3478</td><td>UDP va TCP</td><td>brauzer ↔ server</td><td>TURN (<code>turn.mode: builtin</code>)</td><td>Tomoshabinlar</td><td>Ixtiyoriy</td></tr>
+<tr><td>50000–50100</td><td>UDP</td><td>brauzer ↔ server</td><td>TURN relay portlari</td><td>Tomoshabinlar</td><td>TURN bilan birga</td></tr>
+<tr><td>80</td><td>TCP</td><td>internet → server</td><td>ACME (Let's Encrypt) va http → https</td><td>Internet</td><td>Faqat ACME ishlatilsa</td></tr>
+<tr><td>9180</td><td>TCP</td><td>server ichida</td><td>Ichki tekshiruv (hook)</td><td>Hech kimga (127.0.0.1)</td><td>Ichki</td></tr>
+<tr><td>9997</td><td>TCP</td><td>server ichida</td><td>MediaMTX boshqaruv API</td><td>Hech kimga (127.0.0.1)</td><td>Ichki</td></tr>
+<tr><td>8889</td><td>TCP</td><td>server ichida</td><td>MediaMTX WebRTC signalizatsiya</td><td>Hech kimga (127.0.0.1)</td><td>Ichki</td></tr>
+</tbody></table></div>
+<div class="note warn">
+<p>9180, 9997 va 8889 portlarini hech qachon tashqariga ochmang. Ular faqat 127.0.0.1 da tinglaydi va shunday qolishi kerak. Server boshqaruv porti (iDRAC) ham bu jadvalga kirmaydi.</p>
+</div>
+</section>
+<section class="sec" id="base-url" data-title="Tashqi manzil (Public base URL)">
+<h2>Tashqi manzil (Public base URL)</h2>
+<p>Maxsus havola va QR kodlar ichiga yoziladigan manzil. Admin panel: <strong>Audit va sozlamalar → Sozlamalar → Tashqi manzil (Public base URL)</strong>.</p>
+<ul><li>Tomoshabin brauzerga yozadigan manzilni kiriting, masalan <code>https://&lt;DOMEN&gt;</code> yoki <code>https://&lt;SERVER_IP&gt;:8443</code>.</li><li><code>localhost</code> qabul qilinmaydi: boshqa qurilmada u ochilmaydi.</li><li>Bu sozlama kiritilmaguncha havola va QR yaratilmaydi.</li><li>Manzil o'zgarsa, eski havolalar eski manzilni ko'rsatib qoladi — ularni qaytadan ulashing.</li></ul>
+</section>
+<div class="part" id="c"><h1>C. Windows kompyuterda noldan ishga tushirish</h1></div>
+<section class="sec" id="win-olish" data-title="1-qadam: paket yoki kodni olish">
+<h2>1-qadam: paket yoki kodni olish</h2>
+<p>Ikki yo'l bor. Oddiy foydalanish uchun birinchisi yetarli.</p>
+<p><strong>Tayyor paket</strong> (<code>DronStream-&lt;versiya&gt;-win64.zip</code>): ichida yig'ilgan dastur bor, kompilyator kerak emas. Zip'ni oching — tamom.</p>
+<p><strong>Manba kod</strong> (Git orqali): dasturni o'zgartiradigan yoki ikki kompyuter orasida kod ko'chiradigan ishlab chiquvchi uchun. Yangi kompyuterda faqat <code>pull.bat</code> faylining o'zi yetadi: u kodni yuklab oladi va tayyorlashni boshlaydi.</p>
+<div class="note info">
+<p>Git faqat <strong>kodni</strong> ko'chiradi. Foydalanuvchilar bazasi, yuklangan media, kalitlar va sozlamalar Git'ga kirmaydi. Ular faqat shifrlangan backup orqali ko'chiriladi.</p>
+</div>
+</section>
+<section class="sec" id="win-start" data-title="2-qadam: Tayyorla va Start">
+<h2>2-qadam: Tayyorla va Start</h2>
+<p>Papkadagi <code>DronStreamStart.bat</code> faylini ikki marta bosing. U:</p>
+<ol><li>sozlama, fayllar va portlarni tekshiradi;</li><li>biror narsa yetishmasa <code>DronStreamTayyorla.bat</code> ni <strong>bir marta</strong> o'zi chaqiradi;</li><li>serverni ishga tushiradi va sog'lomligini kutadi;</li><li>brauzerni ochadi.</li></ol>
+<p>Server allaqachon ishlab turgan bo'lsa, ikkinchi nusxa ochilmaydi — faqat brauzer ochiladi.</p>
+<p>Start quyidagilarni <strong>qilmaydi</strong>: band portni bo'shatish uchun begona dasturni to'xtatmaydi, buzilgan bazani o'chirmaydi, parolni almashtirmaydi. Bunday holatda sababini va log manzilini ko'rsatib to'xtaydi.</p>
+<div class="tbl"><table><thead><tr><th>Chiqish kodi</th><th>Ma'nosi</th></tr></thead><tbody>
+<tr><td>0</td><td>Tayyor / ishlayapti</td></tr>
+<tr><td>1</td><td>Xato (log'ga qarang)</td></tr>
+<tr><td>2</td><td>Port band</td></tr>
+<tr><td>3</td><td>Boshqa oynada allaqachon ishlayapti</td></tr>
+<tr><td>4</td><td>Qo'lda tuzatish kerak</td></tr>
+<tr><td>5</td><td>Platforma mos emas</td></tr>
+<tr><td>6</td><td>Internet kerak, lekin yo'q</td></tr>
+<tr><td>7</td><td>Server ishlab turibdi — dastur fayli almashtirilmadi</td></tr>
+</tbody></table></div>
+</section>
+<section class="sec" id="win-admin" data-title="3-qadam: birinchi administrator">
+<h2>3-qadam: birinchi administrator</h2>
+<p>Sukut bo'yicha tayyor administrator yo'q — bu ataylab qilingan. Birinchi ishga tushirishda Start oynasida <strong>bir martalik kod</strong> chiqadi (u log'ga yozilmaydi). Brauzerda shu kodni, o'zingiz tanlagan login va parolni kiriting. Kod bir marta ishlatiladi.</p>
+<p>Parol unutilsa, server kompyuterida <code>dronstream reset-admin --username &lt;LOGIN&gt;</code> buyrug'i yangi vaqtinchalik parol beradi.</p>
+</section>
+<section class="sec" id="win-lokal" data-title="4-qadam: lokal tarmoqdan ulanish">
+<h2>4-qadam: lokal tarmoqdan ulanish</h2>
+<div class="cmd k-diag" data-os="windows">
+<div class="cmd-h"><span class="cmd-t">Kompyuterning lokal manzili va shlyuzini ko'rish</span><span class="chip">PowerShell</span><span class="chip ">Oddiy foydalanuvchi</span><span class="chip k-diag">Diagnostika — faqat o‘qiydi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Server kompyuterida, oddiy PowerShell oynasida</dd><dt>Nima qiladi</dt><dd>Tarmoq adapterlarining IPv4 manzili va shlyuzini ko'rsatadi. Hech narsani o'zgartirmaydi</dd><dt>Kutiladigan natija</dt><dd>Faol adapter qatorida 192.168.x.x, 10.x.x.x yoki 172.16–31.x.x ko'rinishidagi manzil</dd><dt>Xato bo‘lsa</dt><dd>Manzil ko'rinmasa — kabel yoki Wi-Fi ulanmagan</dd></dl>
+<pre class="code" data-lang="powershell"><code>Get-NetIPConfiguration | Select-Object InterfaceAlias, IPv4Address, IPv4DefaultGateway</code></pre>
+</div>
+<p>Topilgan manzilni <code>config\dronstream.yaml</code> dagi <code>web.public_hosts</code> ro'yxatiga qo'shing (o'z-o'zidan imzolangan sertifikatga kiradi) va serverni qayta ishga tushiring. Keyin boshqa qurilmada <code>https://&lt;SERVER_IP&gt;:8443</code> ni oching.</p>
+<p>Boshqa qurilmadan ochilmasa, Windows Firewall kiruvchi ulanishni to'sayotgan bo'lishi mumkin — <a href="#firewall">&quot;Firewall va router&quot;</a> bo'limiga qarang.</p>
+</section>
+<section class="sec" id="sertifikat" data-title="Sertifikat">
+<h2>Sertifikat</h2>
+<div class="tbl"><table><thead><tr><th>Variant</th><th>Qachon</th><th>Brauzer</th></tr></thead><tbody>
+<tr><td>O'z-o'zidan imzolangan (avtomatik)</td><td>Sinov, lokal tarmoq</td><td>Ogohlantiradi; &quot;Davom etish&quot;ni bosish kerak</td></tr>
+<tr><td>O'zingizning sertifikatingiz</td><td>Ichki CA yoki sotib olingan</td><td>Ogohlantirmaydi (CA ishonchli bo'lsa)</td></tr>
+<tr><td>Let's Encrypt (ACME)</td><td>Haqiqiy domen, internetdan 80 va 443 ochiq</td><td>Ogohlantirmaydi</td></tr>
+</tbody></table></div>
+<p>O'z sertifikatingizni ishlatish uchun <code>tls.crt</code> va <code>tls.key</code> fayllarini <code>config\secrets\</code> papkasiga qo'ying va serverni qayta ishga tushiring. ACME uchun <code>web.acme_domain</code> va <code>web.acme_email</code> ni to'ldiring, <code>web.listen</code> ni <code>:443</code>, <code>web.redirect_http</code> ni <code>:80</code> qiling.</p>
+<div class="note warn">
+<p>Sertifikat ogohlantirishini &quot;o'chirib qo'yadigan&quot; brauzer sozlamalarini ishlatmang. O'z-o'zidan imzolangan sertifikat faqat sinov uchun; doimiy foydalanishda ishonchli sertifikat o'rnating.</p>
+</div>
+</section>
+<section class="sec" id="demo" data-title="Demo sinov">
+<h2>Demo sinov</h2>
+<p>Haqiqiy pult ulanmaguncha dasturda ikki <strong>DEMO</strong> manba ishlaydi (sinov tasviri, ustida &quot;DEMO&quot; yozuvi bor). Ular butun zanjirni pultsiz tekshirishga yordam beradi.</p>
+<ol><li>Admin bo'lib kiring, menyudan <strong>▶ Tomosha qilish</strong>ni oching.</li><li>Ikki demo video o'ynashi kerak. O'ynasa — sahifa ham, video kanali ham ishlayapti.</li><li>Shu sinovni boshqa qurilmadan (telefon, noutbuk) takrorlang.</li></ol>
+<p>Demo ishlashi haqiqiy pult ishlashini <strong>isbotlamaydi</strong>: u faqat server → brauzer yo'lini tekshiradi.</p>
+</section>
+<section class="sec" id="pult" data-title="Haqiqiy pultni ulash — alohida tekshiruv">
+<h2>Haqiqiy pultni ulash — alohida tekshiruv</h2>
+<ol><li>Admin panel: <strong>Kontent → Dron pultlari → yangi stream</strong>. Dastur pult uchun manzil va kalit beradi.</li><li>Manzil ko'rinishi: <code>rtmp://&lt;SERVER_IP&gt;:1935/live/&lt;YOL&gt;?key=&lt;KALIT&gt;</code>. Pult <code>?</code> belgisini qabul qilmasa: <code>rtmp://&lt;SERVER_IP&gt;:1935/live/&lt;YOL&gt;/&lt;KALIT&gt;</code>.</li><li>DJI Pilot 2 da jonli efir turini RTMP qilib, shu manzilni kiriting.</li><li>Admin panelda stream &quot;efirda&quot; bo'lishi va tomosha sahifasida video ko'rinishi kerak.</li></ol>
+<div class="note warn">
+<p>Haqiqiy DJI pulti bilan ishlash bu loyihada hali sinalmagan. DJI hujjatlarida DJI Pilot 2 uchun RTMP ko'rsatilgan; RTMPS rasman tasdiqlanmagan. Pult bilan birinchi ulanishni alohida sinov sifatida o'tkazing va natijani yozib qo'ying.</p>
+</div>
+</section>
+<div class="part" id="d"><h1>D. Dell PowerEdge R570 serveri</h1></div>
+<section class="sec" id="r570-aniqlash" data-title="Avval aniqlang: bu serverda nima bor">
+<h2>Avval aniqlang: bu serverda nima bor</h2>
+<p>Server modeli operatsion tizimni bildirmaydi. R570 da Windows Server ham, Linux ham, virtualizatsiya ham bo'lishi mumkin. <strong>OS aniqlanmaguncha hech narsa o'rnatmang.</strong> Avval faqat o'qiydigan buyruqlar bilan holatni bilib oling.</p>
+<div class="note warn">
+<p>Bu qo'llanma disk/RAID/BIOS sozlamalarini o'zgartirishni yoki operatsion tizimni qayta o'rnatishni o'z ichiga olmaydi. Serverda ishlab turgan boshqa xizmatlarga tegilmaydi. Dastur haqiqiy R570 da hali ishga tushirilmagan.</p>
+</div>
+<p>Dell R570 uchun rasman qo'llab-quvvatlaydigan tizimlar orasida Windows Server 2022 va 2025, Ubuntu Server 24.04 va 26.04 LTS bor. DronStream uchun ikki yo'l tayyorlangan: <strong>Windows Server</strong> va <strong>Ubuntu Server 26.04 LTS (yoki 24.04 LTS), amd64</strong>.</p>
+<div class="cmd k-diag" data-os="windows">
+<div class="cmd-h"><span class="cmd-t">Windows: tizim, arxitektura, resurslar, disk</span><span class="chip">PowerShell</span><span class="chip ">Oddiy foydalanuvchi</span><span class="chip k-diag">Diagnostika — faqat o‘qiydi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda (masofaviy ish stoli yoki konsol), oddiy PowerShell</dd><dt>Nima qiladi</dt><dd>OS nomi va versiyasi, arxitektura, protsessor yadrolari, RAM va disklardagi bo'sh joyni ko'rsatadi. Hech narsani o'zgartirmaydi</dd><dt>Kutiladigan natija</dt><dd>&quot;Microsoft Windows Server …&quot;, &quot;64-bit&quot;, yadro soni, RAM (GB) va har bir disk uchun bo'sh joy</dd><dt>Xato bo‘lsa</dt><dd>Buyruq topilmasa — bu Windows emas; Linux kartasiga o'ting</dd></dl>
+<pre class="code" data-lang="powershell"><code>Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, OSArchitecture
+Get-CimInstance Win32_ComputerSystem | Select-Object Manufacturer, Model, NumberOfLogicalProcessors, @{n='RAM_GB';e={[math]::Round($_.TotalPhysicalMemory/1GB)}}
+Get-Volume | Where-Object DriveLetter | Select-Object DriveLetter, @{n='Free_GB';e={[math]::Round($_.SizeRemaining/1GB)}}, @{n='Size_GB';e={[math]::Round($_.Size/1GB)}}</code></pre>
+</div>
+<div class="cmd k-diag" data-os="windows">
+<div class="cmd-h"><span class="cmd-t">Windows: DronStream portlari band emasmi va kim tinglayapti</span><span class="chip">PowerShell</span><span class="chip ">Oddiy foydalanuvchi</span><span class="chip k-diag">Diagnostika — faqat o‘qiydi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda, oddiy PowerShell</dd><dt>Nima qiladi</dt><dd>8443, 1935, 9180, 9997, 8889 (TCP) va 8189 (UDP) portlarini kim tinglayotganini ko'rsatadi. Hech narsani to'xtatmaydi</dd><dt>Kutiladigan natija</dt><dd>Hech narsa chiqmasa — portlar bo'sh. Qator chiqsa — o'sha port band va jarayon nomi ko'rinadi</dd><dt>Xato bo‘lsa</dt><dd>Port band bo'lsa begona dasturni to'xtatmang: <code>config\dronstream.yaml</code> da boshqa port tanlang</dd></dl>
+<pre class="code" data-lang="powershell"><code>Get-NetTCPConnection -State Listen -LocalPort 8443,1935,9180,9997,8889 -ErrorAction SilentlyContinue | Select-Object LocalAddress, LocalPort, @{n='Jarayon';e={(Get-Process -Id $_.OwningProcess).ProcessName}}
+Get-NetUDPEndpoint -LocalPort 8189 -ErrorAction SilentlyContinue | Select-Object LocalAddress, LocalPort, @{n='Jarayon';e={(Get-Process -Id $_.OwningProcess).ProcessName}}</code></pre>
+</div>
+<div class="cmd k-diag" data-os="linux">
+<div class="cmd-h"><span class="cmd-t">Linux: tizim, arxitektura, resurslar, disk</span><span class="chip">bash</span><span class="chip ">Oddiy foydalanuvchi</span><span class="chip k-diag">Diagnostika — faqat o‘qiydi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda (SSH yoki konsol), oddiy foydalanuvchi</dd><dt>Nima qiladi</dt><dd>Distributiv va versiya, arxitektura, yadrolar, RAM va disklardagi bo'sh joyni ko'rsatadi. Hech narsani o'zgartirmaydi</dd><dt>Kutiladigan natija</dt><dd>Masalan &quot;Ubuntu 26.04 LTS&quot; va &quot;x86_64&quot;</dd><dt>Xato bo‘lsa</dt><dd><code>/etc/os-release</code> yo'q bo'lsa — bu odatiy Linux emas; tizim administratoridan so'rang</dd></dl>
+<pre class="code" data-lang="bash"><code>cat /etc/os-release
+uname -m
+nproc
+free -h
+df -h</code></pre>
+</div>
+<div class="cmd k-diag" data-os="linux">
+<div class="cmd-h"><span class="cmd-t">Linux: manzillar, yo'l va tinglayotgan portlar</span><span class="chip">bash</span><span class="chip ">Oddiy foydalanuvchi</span><span class="chip k-diag">Diagnostika — faqat o‘qiydi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda, oddiy foydalanuvchi (jarayon nomlarini to'liq ko'rish uchun sudo bilan)</dd><dt>Nima qiladi</dt><dd>IP manzillar, standart yo'l va tinglayotgan TCP/UDP portlarni ko'rsatadi. Hech narsani o'zgartirmaydi</dd><dt>Kutiladigan natija</dt><dd>Ro'yxatda 8443, 8189, 1935, 9180, 9997, 8889 bo'lmasa — DronStream portlari bo'sh</dd><dt>Xato bo‘lsa</dt><dd><code>ss</code> yoki <code>ip</code> topilmasa — <code>iproute2</code> paketi o'rnatilmagan</dd></dl>
+<pre class="code" data-lang="bash"><code>ip -brief addr
+ip route show default
+ss -tulpn</code></pre>
+</div>
+<p>Linux paketida bularning hammasini bir yo'la bajaradigan, hech narsani o'zgartirmaydigan skript bor:</p>
+<div class="cmd k-diag" data-os="linux">
+<div class="cmd-h"><span class="cmd-t">Linux: DronStream preflight tekshiruvi</span><span class="chip">bash</span><span class="chip ">Oddiy foydalanuvchi</span><span class="chip k-diag">Diagnostika — faqat o‘qiydi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda, paket ochilgan papkada</dd><dt>Nima qiladi</dt><dd>OS, arxitektura, systemd, resurslar, portlar, firewall holati va vaqt sinxronligini tekshirib hisobot beradi. Hech narsani o'rnatmaydi va o'zgartirmaydi</dd><dt>Kutiladigan natija</dt><dd>Oxirida &quot;To'siq topilmadi&quot; va keyingi qadam buyrug'i (chiqish kodi 0)</dd><dt>Xato bo‘lsa</dt><dd>&quot;TO'SIQLAR&quot; ro'yxati chiqsa (kod 4) — avval ularni hal qiling; begona xizmatni to'xtatmang</dd></dl>
+<pre class="code" data-lang="bash"><code>bash scripts/preflight.sh --root /opt/dronstream</code></pre>
+</div>
+</section>
+<section class="sec" id="idrac" data-title="iDRAC — alohida narsa">
+<h2>iDRAC — alohida narsa</h2>
+<p>R570 da <strong>iDRAC</strong> (BMC) degan alohida boshqaruv kontrolleri bor: uning o'z tarmoq porti va o'z manzili bo'ladi, u operatsion tizimga bog'liq emas.</p>
+<ul><li>iDRAC manzili DronStream manzili <strong>emas</strong>. Ularni aralashtirmang.</li><li>DronStream portlarini iDRAC ga yo'naltirmang va iDRAC portlarini DronStream uchun ochmang.</li><li>iDRAC ni internetga chiqarmang. Dell uni to'g'ridan-to'g'ri internetga ulash uchun mo'ljallanmaganini yozadi va alohida, himoyalangan boshqaruv tarmog'ini tavsiya qiladi.</li></ul>
+<p>DronStream'ni o'rnatish uchun iDRAC ga kirish shart emas.</p>
+</section>
+<section class="sec" id="r570-windows" data-title="Windows Server yo'li">
+<h2>Windows Server yo'li</h2>
+<p>Windows paketi (<code>DronStream-&lt;versiya&gt;-win64.zip</code>) ishlatiladi. Paketni serverga ko'chirib oching, so'ng ichidan:</p>
+<div class="cmd k-setup" data-os="windows">
+<div class="cmd-h"><span class="cmd-t">Windows: dasturni doimiy papkaga o'rnatish</span><span class="chip">PowerShell</span><span class="chip ">Oddiy foydalanuvchi</span><span class="chip k-setup">Sozlash — tizimni o‘zgartiradi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda, ochilgan paket papkasida</dd><dt>Nima qiladi</dt><dd>Dastur fayllarini <code>C:\DronStream</code> ga nusxalaydi, papkalarni yaratadi. Sozlama fayli yo'q bo'lsa namunadan yaratadi; mavjud sozlama va ma'lumotlarga tegmaydi</dd><dt>Kutiladigan natija</dt><dd><code>C:\DronStream\app</code>, <code>config</code>, <code>data</code>, <code>logs</code>, <code>scripts</code> papkalari paydo bo'ladi</dd><dt>Xato bo‘lsa</dt><dd>&quot;Ruxsat yo'q&quot; chiqsa — boshqa papka tanlang yoki PowerShell'ni administrator sifatida oching</dd><dt>Bekor qilish</dt><dd>O'rnatilgan papkani o'chirish yetarli (avval xizmatni olib tashlang va backup oling)</dd></dl>
+<pre class="code" data-lang="powershell"><code>powershell -ExecutionPolicy Bypass -File scripts\install.ps1 -Root C:\DronStream</code></pre>
+</div>
+<div class="cmd k-setup" data-os="windows">
+<div class="cmd-h"><span class="cmd-t">Windows: ishga tushirish va holatni tekshirish</span><span class="chip">PowerShell</span><span class="chip ">Oddiy foydalanuvchi</span><span class="chip k-setup">Sozlash — tizimni o‘zgartiradi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda, <code>C:\DronStream</code> papkasida</dd><dt>Nima qiladi</dt><dd>Serverni fon jarayoni sifatida ishga tushiradi (xizmat o'rnatilgan bo'lsa — xizmat orqali), so'ng holatni ko'rsatadi</dd><dt>Kutiladigan natija</dt><dd>status.ps1 chiqish kodi 0 va &quot;sog'lom&quot; holati</dd><dt>Xato bo‘lsa</dt><dd><code>C:\DronStream\logs\dronstream.log</code> ning oxirgi qatorlarini o'qing</dd></dl>
+<pre class="code" data-lang="powershell"><code>powershell -ExecutionPolicy Bypass -File C:\DronStream\scripts\start.ps1
+powershell -ExecutionPolicy Bypass -File C:\DronStream\scripts\status.ps1</code></pre>
+</div>
+<div class="cmd k-setup" data-os="windows">
+<div class="cmd-h"><span class="cmd-t">Windows: to'xtatish</span><span class="chip">PowerShell</span><span class="chip ">Oddiy foydalanuvchi</span><span class="chip k-setup">Sozlash — tizimni o‘zgartiradi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda</dd><dt>Nima qiladi</dt><dd>Serverni tartibli to'xtatadi. Barcha tomoshabinlarning videosi uziladi</dd><dt>Kutiladigan natija</dt><dd>Jarayon tugaydi; status.ps1 chiqish kodi 1</dd><dt>Xato bo‘lsa</dt><dd>To'xtamasa log'ni tekshiring; jarayonni majburan o'ldirmang</dd></dl>
+<pre class="code" data-lang="powershell"><code>powershell -ExecutionPolicy Bypass -File C:\DronStream\scripts\stop.ps1</code></pre>
+</div>
+</section>
+<section class="sec" id="r570-linux" data-title="Linux yo'li: Ubuntu Server 26.04 / 24.04 LTS">
+<h2>Linux yo'li: Ubuntu Server 26.04 / 24.04 LTS</h2>
+<p>Linux paketi (<code>DronStream-&lt;versiya&gt;-linux-amd64.tar.gz</code>) ishlatiladi. Tanlangan distributiv: <strong>Ubuntu Server 26.04 LTS</strong> (standart qo'llab-quvvatlash 2031-yil mayigacha) yoki <strong>24.04 LTS</strong> (2029-yil mayigacha). Ikkalasi ham R570 uchun Dell va Canonical ro'yxatida bor. Boshqa distributivlarda dastur sinalmagan.</p>
+<div class="note warn">
+<p>Linux yo'li avtomatik sinovdan GitHub'ning Ubuntu 24.04 virtual mashinasida o'tgan (o'rnatish, systemd, backup, yangilash). Haqiqiy R570 da va Ubuntu 26.04 da hali ishga tushirilmagan.</p>
+</div>
+<div class="cmd k-setup" data-os="linux">
+<div class="cmd-h"><span class="cmd-t">Linux: paketni ochish va yaxlitligini tekshirish</span><span class="chip">bash</span><span class="chip ">Oddiy foydalanuvchi</span><span class="chip k-setup">Sozlash — tizimni o‘zgartiradi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda, paket ko'chirilgan papkada</dd><dt>Nima qiladi</dt><dd>Arxiv SHA-256 qiymatini <code>.sha256</code> fayli bilan solishtiradi va arxivni ochadi</dd><dt>Kutiladigan natija</dt><dd>&quot;OK&quot; va <code>DronStream-&lt;versiya&gt;-linux-amd64</code> papkasi</dd><dt>Xato bo‘lsa</dt><dd>&quot;FAILED&quot; chiqsa arxivni ishlatmang — qayta yuklab oling</dd></dl>
+<pre class="code" data-lang="bash"><code>sha256sum -c DronStream-*-linux-amd64.tar.gz.sha256
+tar -xzf DronStream-*-linux-amd64.tar.gz
+cd DronStream-*-linux-amd64</code></pre>
+</div>
+<div class="cmd k-setup" data-os="linux">
+<div class="cmd-h"><span class="cmd-t">Linux: o'rnatish</span><span class="chip">bash</span><span class="chip c-admin">root (sudo) kerak</span><span class="chip k-setup">Sozlash — tizimni o‘zgartiradi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda, ochilgan paket papkasida</dd><dt>Nima qiladi</dt><dd>Paketni tekshiradi, alohida <code>dronstream</code> hisobini yaratadi, fayllarni <code>/opt/dronstream</code> ga joylaydi, systemd unit yozadi. Xizmatni yoqmaydi va ishga tushirmaydi; firewall'ga tegmaydi; mavjud sozlamani almashtirmaydi</dd><dt>Kutiladigan natija</dt><dd>Oxirida &quot;O'rnatildi&quot; va keyingi qadamlar ro'yxati</dd><dt>Xato bo‘lsa</dt><dd>Xabar sababni aytadi. Boshqa versiya o'rnatilgan bo'lsa install.sh emas, update.sh ishlatiladi</dd><dt>Bekor qilish</dt><dd>Xizmat: <code>sudo bash /opt/dronstream/scripts/uninstall-service.sh</code>. Ma'lumotlar o'chirilmaydi</dd></dl>
+<pre class="code" data-lang="bash"><code>sudo bash scripts/install.sh --root /opt/dronstream</code></pre>
+</div>
+<p>So'ng sozlamani tekshiring (kamida <code>public_hosts</code> va <code>publish_host</code>):</p>
+<div class="cmd k-setup" data-os="linux">
+<div class="cmd-h"><span class="cmd-t">Linux: sozlamani tahrirlash</span><span class="chip">bash</span><span class="chip c-admin">root (sudo) kerak</span><span class="chip k-setup">Sozlash — tizimni o‘zgartiradi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda</dd><dt>Nima qiladi</dt><dd>Sozlama faylini xavfsiz tahrirlash uchun ochadi. Bu faylda sir yo'q; sirlar <code>config/secrets/</code> da</dd><dt>Kutiladigan natija</dt><dd>Fayl saqlangach o'zgarish xizmat qayta ishga tushganda kuchga kiradi</dd><dt>Xato bo‘lsa</dt><dd>YAML xatosi bo'lsa xizmat ishga tushmaydi va sababini jurnalga yozadi</dd></dl>
+<pre class="code" data-lang="bash"><code>sudoedit /opt/dronstream/config/dronstream.yaml</code></pre>
+</div>
+</section>
+<section class="sec" id="xizmat-hisobi" data-title="Xizmat hisobi va papkalar">
+<h2>Xizmat hisobi va papkalar</h2>
+<p>Dastur administrator yoki root huquqi bilan ishlamasligi kerak.</p>
+<div class="tbl"><table><thead><tr><th>Papka</th><th>Ichida nima bor</th><th>Linux'da egasi va huquqi</th></tr></thead><tbody>
+<tr><td><code>app/&lt;versiya&gt;/</code></td><td>Dastur va MediaMTX</td><td>root, faqat o'qish</td></tr>
+<tr><td><code>config/dronstream.yaml</code></td><td>Sirsiz sozlama</td><td>root:dronstream, 640</td></tr>
+<tr><td><code>config/secrets/</code></td><td>Master kalit, TLS kaliti</td><td>dronstream, 700 (fayllar 600)</td></tr>
+<tr><td><code>data/</code></td><td>Baza, media, backuplar</td><td>dronstream, 700</td></tr>
+<tr><td><code>logs/</code></td><td>Dastur va MediaMTX loglari</td><td>dronstream, 750</td></tr>
+</tbody></table></div>
+<ul><li><strong>Linux</strong>: install.sh <code>dronstream</code> nomli tizim hisobini yaratadi (login qila olmaydi). Xizmat faqat <code>config/secrets</code>, <code>data</code> va <code>logs</code> ga yoza oladi.</li><li><strong>Windows</strong>: master kalit Windows DPAPI bilan shu kompyuterga bog'langan. Xizmatni administrator bo'lmagan alohida hisobda ishlatish tavsiya etiladi.</li><li><strong>Linux'da DPAPI yo'q</strong>: master kalit fayl huquqi (600) va alohida hisob bilan himoyalanadi. Huquq kengroq bo'lsa dastur ishga tushmaydi. Serverda root huquqi bor odam kalitni o'qiy oladi — bu Linux'ning odatiy chegarasi.</li></ul>
+<div class="note warn">
+<p>Papkalarga <code>chmod 777</code> bermang va xizmatni root sifatida ishga tushirmang. Huquq muammosi chiqsa, egalikni jadvaldagidek tiklang.</p>
+</div>
+</section>
+<section class="sec" id="xizmat" data-title="Avtomatik ishga tushish, health-check, loglar">
+<h2>Avtomatik ishga tushish, health-check, loglar</h2>
+<div class="cmd k-setup" data-os="windows">
+<div class="cmd-h"><span class="cmd-t">Windows: xizmat sifatida o'rnatish</span><span class="chip">PowerShell</span><span class="chip c-admin">Administrator kerak</span><span class="chip k-setup">Sozlash — tizimni o‘zgartiradi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda, administrator PowerShell</dd><dt>Nima qiladi</dt><dd>DronStream'ni Windows xizmati qiladi: kompyuter yonganda o'zi ishga tushadi, qulasa qayta ishga tushadi</dd><dt>Kutiladigan natija</dt><dd><code>Get-Service DronStream</code> holati Running</dd><dt>Xato bo‘lsa</dt><dd>&quot;Administrator sifatida ishga tushiring&quot; chiqsa — PowerShell'ni administrator qilib oching</dd><dt>Bekor qilish</dt><dd>Keyingi kartadagi service-uninstall.ps1</dd></dl>
+<pre class="code" data-lang="powershell"><code>powershell -ExecutionPolicy Bypass -File C:\DronStream\scripts\service-install.ps1
+Get-Service DronStream</code></pre>
+</div>
+<div class="cmd k-undo" data-os="windows">
+<div class="cmd-h"><span class="cmd-t">Windows: xizmatni olib tashlash</span><span class="chip">PowerShell</span><span class="chip c-admin">Administrator kerak</span><span class="chip k-undo">Bekor qilish</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda, administrator PowerShell</dd><dt>Nima qiladi</dt><dd>Windows xizmatini olib tashlaydi. Dastur fayllari va ma'lumotlar o'chirilmaydi</dd><dt>Kutiladigan natija</dt><dd><code>Get-Service DronStream</code> xizmat topilmadi deydi</dd><dt>Xato bo‘lsa</dt><dd>Xizmat band bo'lsa avval stop.ps1 ni bajaring</dd></dl>
+<pre class="code" data-lang="powershell"><code>powershell -ExecutionPolicy Bypass -File C:\DronStream\scripts\service-uninstall.ps1</code></pre>
+</div>
+<div class="cmd k-setup" data-os="linux">
+<div class="cmd-h"><span class="cmd-t">Linux: xizmatni yoqish va ishga tushirish</span><span class="chip">bash</span><span class="chip c-admin">root (sudo) kerak</span><span class="chip k-setup">Sozlash — tizimni o‘zgartiradi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda</dd><dt>Nima qiladi</dt><dd>Xizmatni hozir ishga tushiradi va server qayta yuklanganda avtomatik ishga tushadigan qiladi</dd><dt>Kutiladigan natija</dt><dd><code>active (running)</code>; ichida dronstream va mediamtx jarayonlari</dd><dt>Xato bo‘lsa</dt><dd><code>sudo journalctl -u dronstream -n 50 --no-pager</code> — sabab shu yerda yoziladi</dd><dt>Bekor qilish</dt><dd><code>sudo systemctl disable --now dronstream</code></dd></dl>
+<pre class="code" data-lang="bash"><code>sudo systemctl enable --now dronstream
+systemctl status dronstream --no-pager</code></pre>
+</div>
+<div class="cmd k-diag" data-os="linux">
+<div class="cmd-h"><span class="cmd-t">Linux: jurnal va birinchi administrator kodi</span><span class="chip">bash</span><span class="chip c-admin">root (sudo) kerak</span><span class="chip k-diag">Diagnostika — faqat o‘qiydi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda</dd><dt>Nima qiladi</dt><dd>Xizmat jurnalining oxirgi qatorlarini va bir martalik o'rnatish kodini ko'rsatadi. Kod jurnalga yozilmaydi — faqat shu faylda</dd><dt>Kutiladigan natija</dt><dd>Jurnalda xatosiz ishga tushish; faylda bir qatorli kod (birinchi administrator yaratilgach fayl yo'qoladi)</dd><dt>Xato bo‘lsa</dt><dd>Fayl yo'q bo'lsa — administrator allaqachon yaratilgan</dd></dl>
+<pre class="code" data-lang="bash"><code>sudo journalctl -u dronstream -n 50 --no-pager
+sudo cat /opt/dronstream/data/runtime/setup-token.txt</code></pre>
+</div>
+<div class="cmd k-diag" data-os="any">
+<div class="cmd-h"><span class="cmd-t">Sog'liqni tekshirish (health-check)</span><span class="chip">PowerShell/bash</span><span class="chip ">Oddiy foydalanuvchi</span><span class="chip k-diag">Diagnostika — faqat o‘qiydi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverning o'zida</dd><dt>Nima qiladi</dt><dd>Dasturdan holatini so'raydi. <code>-k</code> sertifikatni tekshirmaydi — bu faqat diagnostika uchun, doimiy foydalanishga emas</dd><dt>Kutiladigan natija</dt><dd><code>{&quot;ok&quot;:true,&quot;auth&quot;:true,&quot;media&quot;:true}</code></dd><dt>Xato bo‘lsa</dt><dd>Javob yo'q — xizmat ishlamayapti. <code>&quot;media&quot;:false</code> — MediaMTX ishga tushmagan (mediamtx.log ga qarang)</dd></dl>
+<pre class="code" data-lang="bash"><code>curl -k https://localhost:8443/api/health</code></pre>
+</div>
+<p>Windows PowerShell'da <code>curl</code> o'rniga <code>curl.exe</code> deb yozing.</p>
+<p>Loglar: <code>logs/dronstream.log</code> va <code>logs/mediamtx.log</code> (Windows'da <code>C:\DronStream\logs\</code>, Linux'da <code>/opt/dronstream/logs/</code>). Loglarga parol, kalit va havola tokeni yozilmaydi.</p>
+</section>
+<section class="sec" id="backup-update" data-title="Backup, yangilash, rollback">
+<h2>Backup, yangilash, rollback</h2>
+<p>Backup — bitta shifrlangan <code>.dsbak</code> fayli: baza, yuklangan media, sozlama, master kalit va TLS sertifikati. U parol bilan shifrlanadi (kamida 12 belgi). <strong>Parol yo'qolsa backup ochilmaydi.</strong></p>
+<div class="cmd k-setup" data-os="windows">
+<div class="cmd-h"><span class="cmd-t">Windows: backup olish</span><span class="chip">PowerShell</span><span class="chip ">Oddiy foydalanuvchi</span><span class="chip k-setup">Sozlash — tizimni o‘zgartiradi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda. Server ishlab turganda ham bo'ladi</dd><dt>Nima qiladi</dt><dd>Izchil shifrlangan nusxa oladi. Parolni ikki marta so'raydi</dd><dt>Kutiladigan natija</dt><dd><code>C:\DronStream\data\backups\</code> ichida yangi <code>.dsbak</code> fayli</dd><dt>Xato bo‘lsa</dt><dd>Parol 12 belgidan qisqa bo'lsa rad etiladi</dd></dl>
+<pre class="code" data-lang="powershell"><code>powershell -ExecutionPolicy Bypass -File C:\DronStream\scripts\backup.ps1</code></pre>
+</div>
+<div class="cmd k-setup" data-os="linux">
+<div class="cmd-h"><span class="cmd-t">Linux: backup olish</span><span class="chip">bash</span><span class="chip c-admin">root (sudo) kerak</span><span class="chip k-setup">Sozlash — tizimni o‘zgartiradi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda. Server ishlab turganda ham bo'ladi</dd><dt>Nima qiladi</dt><dd>Izchil shifrlangan nusxa oladi. Parol ekranda ko'rinmaydi va jarayon argumentlariga tushmaydi</dd><dt>Kutiladigan natija</dt><dd><code>/opt/dronstream/data/backups/</code> ichida yangi <code>.dsbak</code> fayli</dd><dt>Xato bo‘lsa</dt><dd>Parol 12 belgidan qisqa bo'lsa rad etiladi</dd></dl>
+<pre class="code" data-lang="bash"><code>sudo bash /opt/dronstream/scripts/backup.sh --root /opt/dronstream</code></pre>
+</div>
+<p>Backup faylini serverdan tashqariga — boshqa diskka yoki boshqa kompyuterga ko'chirib qo'ying. Parolni fayl bilan birga saqlamang.</p>
+<p><strong>Tiklash</strong> to'xtatilgan serverda bajariladi. Tiklangan server <strong>kutish (standby)</strong> rejimida ishga tushadi: eski server o'chirilganini tasdiqlamaguningizcha video ko'rsatmaydi. Bu ikki server bir vaqtda xizmat qilib qolmasligi uchun.</p>
+<div class="cmd k-setup" data-os="windows">
+<div class="cmd-h"><span class="cmd-t">Windows: backupni tiklash</span><span class="chip">PowerShell</span><span class="chip ">Oddiy foydalanuvchi</span><span class="chip k-setup">Sozlash — tizimni o‘zgartiradi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda, server to'xtatilgan holda</dd><dt>Nima qiladi</dt><dd>Baza, media va kalitlarni backupdan tiklaydi. Mavjud baza bo'lsa <code>-Force</code> kerak (eski fayl <code>.pre-restore-*</code> nomi bilan saqlanadi)</dd><dt>Kutiladigan natija</dt><dd>&quot;Tiklandi&quot;; ishga tushgach admin panelda kutish rejimi haqida ogohlantirish</dd><dt>Xato bo‘lsa</dt><dd>Parol noto'g'ri bo'lsa hech narsa o'zgarmaydi</dd></dl>
+<pre class="code" data-lang="powershell"><code>$Backup = '&lt;BACKUP_FAYLI&gt;'
+if ($Backup -match '[&lt;&gt;]') { throw &quot;Avval &lt;BACKUP_FAYLI&gt; o'rniga .dsbak fayl yo'lini yozing&quot; }
+powershell -ExecutionPolicy Bypass -File C:\DronStream\scripts\stop.ps1
+powershell -ExecutionPolicy Bypass -File C:\DronStream\scripts\restore.ps1 -In $Backup</code></pre>
+</div>
+<div class="cmd k-setup" data-os="linux">
+<div class="cmd-h"><span class="cmd-t">Linux: backupni tiklash</span><span class="chip">bash</span><span class="chip c-admin">root (sudo) kerak</span><span class="chip k-setup">Sozlash — tizimni o‘zgartiradi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda, xizmat to'xtatilgan holda</dd><dt>Nima qiladi</dt><dd>Baza, media va kalitlarni backupdan tiklaydi. Mavjud baza bo'lsa <code>--force</code> qo'shing</dd><dt>Kutiladigan natija</dt><dd>&quot;Tiklandi&quot;; ishga tushgach admin panelda kutish rejimi haqida ogohlantirish</dd><dt>Xato bo‘lsa</dt><dd>Xizmat ishlab turgan bo'lsa skript rad etadi — avval to'xtating</dd></dl>
+<pre class="code" data-lang="bash"><code>BACKUP='&lt;BACKUP_FAYLI&gt;'
+case &quot;$BACKUP&quot; in
+  *'&lt;'*) echo &quot;Avval BACKUP ga .dsbak fayl yo'lini yozing&quot; ;;
+  *) sudo systemctl stop dronstream &amp;&amp; sudo bash /opt/dronstream/scripts/restore.sh --root /opt/dronstream --in &quot;$BACKUP&quot; ;;
+esac</code></pre>
+</div>
+<p><strong>Yangilash</strong> yangi paket ichidagi skript bilan qilinadi. U avval shifrlangan backup oladi, yangi versiyani o'rnatadi, sog'lomligini tekshiradi va muvaffaqiyatsiz bo'lsa o'zi orqaga qaytaradi. Eski versiya fayllari saqlanib qoladi.</p>
+<div class="cmd k-setup" data-os="windows">
+<div class="cmd-h"><span class="cmd-t">Windows: yangi versiyaga yangilash</span><span class="chip">PowerShell</span><span class="chip ">Oddiy foydalanuvchi</span><span class="chip k-setup">Sozlash — tizimni o‘zgartiradi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda. Yangi paket ochilgan papka yo'lini ko'rsating</dd><dt>Nima qiladi</dt><dd>Paketni tekshiradi, backup oladi, serverni to'xtatib yangi versiyani o'rnatadi va ishga tushiradi. Yangilash paytida video uziladi</dd><dt>Kutiladigan natija</dt><dd>&quot;Tayyor: &lt;versiya&gt; ishlayapti&quot;</dd><dt>Xato bo‘lsa</dt><dd>Sog'lom bo'lmasa avtomatik eski versiyaga qaytadi</dd><dt>Bekor qilish</dt><dd>Keyingi kartadagi rollback.ps1</dd></dl>
+<pre class="code" data-lang="powershell"><code>$Paket = '&lt;YANGI_PAKET_PAPKASI&gt;'
+if ($Paket -match '[&lt;&gt;]') { throw &quot;Avval &lt;YANGI_PAKET_PAPKASI&gt; o'rniga ochilgan paket papkasini yozing&quot; }
+powershell -ExecutionPolicy Bypass -File C:\DronStream\scripts\update.ps1 -Package $Paket</code></pre>
+</div>
+<div class="cmd k-undo" data-os="windows">
+<div class="cmd-h"><span class="cmd-t">Windows: oldingi versiyaga qaytish (rollback)</span><span class="chip">PowerShell</span><span class="chip ">Oddiy foydalanuvchi</span><span class="chip k-undo">Bekor qilish</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda</dd><dt>Nima qiladi</dt><dd>Oldingi versiyani faollashtiradi. Baza sxemasi o'zgargan bo'lsa yangilashdan oldingi backupni tiklaydi — undan keyingi o'zgarishlar yo'qoladi</dd><dt>Kutiladigan natija</dt><dd>&quot;Rollback tayyor&quot;</dd><dt>Xato bo‘lsa</dt><dd>Backup paroli noto'g'ri bo'lsa faol versiya o'zgarmaydi</dd></dl>
+<pre class="code" data-lang="powershell"><code>$Versiya = '&lt;OLDINGI_VERSIYA&gt;'
+if ($Versiya -match '[&lt;&gt;]') { throw &quot;Avval &lt;OLDINGI_VERSIYA&gt; o'rniga versiyani yozing, masalan 1.1.0&quot; }
+powershell -ExecutionPolicy Bypass -File C:\DronStream\scripts\rollback.ps1 -ToVersion $Versiya</code></pre>
+</div>
+<div class="cmd k-setup" data-os="linux">
+<div class="cmd-h"><span class="cmd-t">Linux: yangi versiyaga yangilash</span><span class="chip">bash</span><span class="chip c-admin">root (sudo) kerak</span><span class="chip k-setup">Sozlash — tizimni o‘zgartiradi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda, YANGI paket ochilgan papkada</dd><dt>Nima qiladi</dt><dd>Paketni tekshiradi, backup oladi, xizmatni to'xtatib yangi versiyani o'rnatadi va ishga tushiradi</dd><dt>Kutiladigan natija</dt><dd>&quot;Tayyor: &lt;versiya&gt; ishlayapti&quot;</dd><dt>Xato bo‘lsa</dt><dd>Sog'lom bo'lmasa avtomatik eski versiyaga qaytadi</dd><dt>Bekor qilish</dt><dd><code>sudo bash /opt/dronstream/scripts/rollback.sh --root /opt/dronstream --to-version &lt;OLDINGI_VERSIYA&gt;</code></dd></dl>
+<pre class="code" data-lang="bash"><code>sudo bash scripts/update.sh --root /opt/dronstream</code></pre>
+</div>
+</section>
+<section class="sec" id="win-linux" data-title="Windows'dan Linux'ga ko'chirish">
+<h2>Windows'dan Linux'ga ko'chirish</h2>
+<p>Windows'dagi master kalit DPAPI bilan o'sha kompyuterga bog'langan — uni Linux'da to'g'ridan-to'g'ri ochib bo'lmaydi. Shuning uchun <code>config\secrets</code> papkasini nusxalash <strong>ishlamaydi</strong>. Ko'chirish faqat parolli backup orqali qilinadi: backup ichida kalit parol bilan shifrlangan holda bo'ladi va tiklashda yangi serverga qayta bog'lanadi.</p>
+<ol><li>Windows'da: <code>scripts\backup.ps1 -Out &lt;FAYL&gt; -MigrateOut</code>. <code>-MigrateOut</code> eski serverni &quot;ko'chirilgan&quot; holatga o'tkazadi — u xizmat ko'rsatishni to'xtatadi.</li><li><code>.dsbak</code> faylini Linux serverga ko'chiring.</li><li>Linux'da install.sh ni bajaring (xizmatni ishga tushirmasdan), so'ng restore.sh bilan tiklang.</li><li>Xizmatni ishga tushiring, admin bo'lib kiring va server holatini <strong>faol</strong> qiling.</li><li>Linux'da sozlamani tekshiring: <code>public_hosts</code>, <code>publish_host</code>, portlar va sertifikat.</li></ol>
+<p>Ko'chadi: hisoblar, ruxsatlar, havolalar (ishlatilgan bir martalik havola ishlatilganicha qoladi), kontent va media, pult kalitlari, audit. Ko'chmaydi: ochiq sessiyalar (hamma qayta kiradi).</p>
+</section>
+<section class="sec" id="reboot" data-title="Qayta yuklashdan keyingi tekshiruv">
+<h2>Qayta yuklashdan keyingi tekshiruv</h2>
+<p>Serverni rejali qayta yuklagandan so'ng:</p>
+<ol><li>Xizmat o'zi ishga tushdimi: Windows — <code>Get-Service DronStream</code>; Linux — <code>systemctl is-active dronstream</code>.</li><li>Health-check <code>{&quot;ok&quot;:true,…}</code> qaytaradimi.</li><li>Boshqa qurilmadan sahifa ochiladimi va demo video o'ynaydimi.</li><li>Pult qayta ulana oladimi (stream &quot;efirda&quot; bo'ladimi).</li><li>Vaqt to'g'rimi (havola muddatlari server vaqtiga bog'liq).</li></ol>
+</section>
+<div class="part" id="e"><h1>E. Tashqi internet</h1></div>
+<section class="sec" id="tashqi-talab" data-title="Tashqaridan kirish uchun nima kerak">
+<h2>Tashqaridan kirish uchun nima kerak</h2>
+<p>Tomoshabin internetdan brauzer orqali kirishi uchun to'rtta narsa birga kerak:</p>
+<ol><li><strong>Yetib boriladigan manzil</strong> — serverda yoki routerda haqiqiy public IP (CGNAT emas).</li><li><strong>Ochiq portlar</strong> — kamida TCP 8443 (yoki 443) va UDP 8189.</li><li><strong>Ishonchli sertifikat</strong> — domen va unga berilgan sertifikat.</li><li><strong>To'g'ri e'lon qilingan manzil</strong> — server brauzerga video uchun tashqi manzilini aytishi kerak: <code>media.webrtc_additional_hosts</code> ro'yxatiga public IP yoki domenni yozing.</li></ol>
+<p>Tomoshabinga VPN yoki alohida klient dasturi <strong>kerak emas</strong> — hammasi brauzerda ishlaydi.</p>
+<div class="note warn">
+<p>Tashqi internetdan kirish bu loyihada hali sinalmagan. Quyidagi qadamlar dastur sozlamalariga mos, lekin har bir tarmoq o'ziga xos — <a href="#qabul-test">qabul testini</a> albatta o'tkazing.</p>
+</div>
+</section>
+<section class="sec" id="dns-https" data-title="DNS va HTTPS">
+<h2>DNS va HTTPS</h2>
+<ul><li>Domen uchun DNS'da A yozuvini serverning public IP manziliga yo'naltiring.</li><li><code>web.public_hosts</code> ga domenni qo'shing.</li><li>Sertifikat: Let's Encrypt (ACME) uchun <code>web.acme_domain</code>, <code>web.acme_email</code>, <code>web.listen: &quot;:443&quot;</code>, <code>web.redirect_http: &quot;:80&quot;</code>. Internetdan 80 va 443 portlar serverga yetib borishi shart.</li><li>Linux'da 443 va 80 portlar uchun systemd unit ichidagi <code>AmbientCapabilities=CAP_NET_BIND_SERVICE</code> qatorlarini izohdan chiqaring, so'ng <code>sudo systemctl daemon-reload</code>.</li><li>Sozlamadan keyin admin panelda <strong>Tashqi manzil</strong> ni <code>https://&lt;DOMEN&gt;</code> qilib kiriting.</li></ul>
+</section>
+<section class="sec" id="firewall" data-title="Firewall va router">
+<h2>Firewall va router</h2>
+<p>Faqat kerakli portlarni, faqat kerakli manbalarga oching. Firewall'ni butunlay o'chirmang va &quot;hamma portlar&quot; qoidasini qo'shmang.</p>
+<h3>Windows Firewall</h3>
+<div class="cmd k-diag" data-os="windows">
+<div class="cmd-h"><span class="cmd-t">Windows: qanday qoidalar qo'shilishini ko'rish (o'zgartirmaydi)</span><span class="chip">PowerShell</span><span class="chip ">Oddiy foydalanuvchi</span><span class="chip k-diag">Diagnostika — faqat o‘qiydi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda</dd><dt>Nima qiladi</dt><dd>Qo'shilishi rejalashtirilgan qoidalarni faqat ko'rsatadi. <code>-Apply</code> bo'lmagani uchun hech narsa o'zgarmaydi</dd><dt>Kutiladigan natija</dt><dd>HTTPS (TCP 8443) va WebRTC (UDP 8189) qoidalari ro'yxati; RTMP uchun ogohlantirish</dd><dt>Xato bo‘lsa</dt><dd>Skript topilmasa — yo'lni tekshiring</dd></dl>
+<pre class="code" data-lang="powershell"><code>powershell -ExecutionPolicy Bypass -File C:\DronStream\scripts\firewall-rules.ps1</code></pre>
+</div>
+<div class="cmd k-setup" data-os="windows">
+<div class="cmd-h"><span class="cmd-t">Windows: qoidalarni qo'shish</span><span class="chip">PowerShell</span><span class="chip c-admin">Administrator kerak</span><span class="chip k-setup">Sozlash — tizimni o‘zgartiradi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda, administrator PowerShell</dd><dt>Nima qiladi</dt><dd>HTTPS va WebRTC uchun kiruvchi qoidalarni qo'shadi. RTMP (1935) faqat siz ko'rsatgan pult tarmog'idan ochiladi</dd><dt>Kutiladigan natija</dt><dd>&quot;DronStream …&quot; nomli qoidalar paydo bo'ladi</dd><dt>Xato bo‘lsa</dt><dd>Administrator huquqi kerak</dd><dt>Bekor qilish</dt><dd>Alohida kartada (quyida)</dd></dl>
+<pre class="code" data-lang="powershell"><code>$PultTarmogi = '&lt;PULT_TARMOGI&gt;'   # masalan 10.8.0.0/24
+if ($PultTarmogi -match '[&lt;&gt;]') { throw &quot;Avval &lt;PULT_TARMOGI&gt; o'rniga pult tarmog'ini yozing&quot; }
+powershell -ExecutionPolicy Bypass -File C:\DronStream\scripts\firewall-rules.ps1 -RtmpRemote $PultTarmogi -Apply</code></pre>
+</div>
+<div class="cmd k-undo" data-os="windows">
+<div class="cmd-h"><span class="cmd-t">Windows: DronStream qoidalarini olib tashlash</span><span class="chip">PowerShell</span><span class="chip c-admin">Administrator kerak</span><span class="chip k-undo">Bekor qilish</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda, administrator PowerShell</dd><dt>Nima qiladi</dt><dd>Faqat &quot;DronStream&quot; nomi bilan boshlanadigan qoidalarni o'chiradi. Boshqa qoidalarga tegmaydi</dd><dt>Kutiladigan natija</dt><dd>&quot;DronStream qoidalari olib tashlandi&quot;</dd><dt>Xato bo‘lsa</dt><dd>Administrator huquqi kerak</dd></dl>
+<pre class="code" data-lang="powershell"><code>powershell -ExecutionPolicy Bypass -File C:\DronStream\scripts\firewall-rules.ps1 -Remove</code></pre>
+</div>
+<h3>Ubuntu (ufw)</h3>
+<p>ufw Ubuntu'da sukut bo'yicha o'chiq bo'ladi. Yoqilgan bo'lsa, kiruvchi ulanishlar sukut bo'yicha rad etiladi.</p>
+<div class="cmd k-diag" data-os="linux">
+<div class="cmd-h"><span class="cmd-t">Ubuntu: firewall holatini ko'rish</span><span class="chip">bash</span><span class="chip c-admin">root (sudo) kerak</span><span class="chip k-diag">Diagnostika — faqat o‘qiydi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda</dd><dt>Nima qiladi</dt><dd>ufw yoqilganmi va qanday qoidalar borligini ko'rsatadi. Hech narsani o'zgartirmaydi</dd><dt>Kutiladigan natija</dt><dd>&quot;Status: active&quot; va qoidalar ro'yxati, yoki &quot;Status: inactive&quot;</dd><dt>Xato bo‘lsa</dt><dd>ufw topilmasa — serverda boshqa firewall ishlatilmoqda; tizim administratoridan so'rang</dd></dl>
+<pre class="code" data-lang="bash"><code>sudo ufw status verbose</code></pre>
+</div>
+<div class="note warn">
+<p>ufw o'chiq bo'lsa, uni yoqishdan <strong>oldin</strong> SSH uchun qoida borligiga ishonch hosil qiling (<code>sudo ufw allow OpenSSH</code> yoki SSH portingiz). Aks holda masofaviy ulanishingiz uzilib qolishi mumkin. DronStream skriptlari ufw'ni o'zi yoqmaydi.</p>
+</div>
+<div class="cmd k-setup" data-os="linux">
+<div class="cmd-h"><span class="cmd-t">Ubuntu: tomoshabinlar uchun portlarni ochish</span><span class="chip">bash</span><span class="chip c-admin">root (sudo) kerak</span><span class="chip k-setup">Sozlash — tizimni o‘zgartiradi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda</dd><dt>Nima qiladi</dt><dd>HTTPS (TCP 8443) va WebRTC (UDP 8189) uchun kiruvchi qoida qo'shadi. ufw'ni yoqmaydi</dd><dt>Kutiladigan natija</dt><dd>&quot;Rule added&quot; (yoki ufw o'chiq bo'lsa &quot;Rules updated&quot;)</dd><dt>Xato bo‘lsa</dt><dd>Portlarni sozlamada o'zgartirgan bo'lsangiz, shu raqamlarni yozing</dd><dt>Bekor qilish</dt><dd>Alohida kartada (quyida)</dd></dl>
+<pre class="code" data-lang="bash"><code>sudo ufw allow 8443/tcp comment 'DronStream HTTPS'
+sudo ufw allow 8189/udp comment 'DronStream WebRTC'</code></pre>
+</div>
+<div class="cmd k-setup" data-os="linux">
+<div class="cmd-h"><span class="cmd-t">Ubuntu: RTMP ni faqat pult tarmog'idan ochish</span><span class="chip">bash</span><span class="chip c-admin">root (sudo) kerak</span><span class="chip k-setup">Sozlash — tizimni o‘zgartiradi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda</dd><dt>Nima qiladi</dt><dd>TCP 1935 ni faqat ko'rsatilgan tarmoqdan ochadi. RTMP shifrlanmagan — uni butun internetga ochmang</dd><dt>Kutiladigan natija</dt><dd>&quot;Rule added&quot;</dd><dt>Xato bo‘lsa</dt><dd>Tarmoq noto'g'ri yozilsa ufw xato beradi va hech narsa qo'shilmaydi</dd><dt>Bekor qilish</dt><dd>Alohida kartada (quyida)</dd></dl>
+<pre class="code" data-lang="bash"><code>NET='&lt;PULT_TARMOGI&gt;'   # masalan 10.8.0.0/24
+case &quot;$NET&quot; in
+  *'&lt;'*) echo &quot;Avval NET ga pult tarmog'ini yozing&quot; ;;
+  *) sudo ufw allow from &quot;$NET&quot; to any port 1935 proto tcp comment 'DronStream RTMP' ;;
+esac</code></pre>
+</div>
+<div class="cmd k-undo" data-os="linux">
+<div class="cmd-h"><span class="cmd-t">Ubuntu: DronStream qoidalarini olib tashlash</span><span class="chip">bash</span><span class="chip c-admin">root (sudo) kerak</span><span class="chip k-undo">Bekor qilish</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Serverda</dd><dt>Nima qiladi</dt><dd>Avval qoidalarni raqamlari bilan ko'rsatadi. O'chirish uchun raqamni o'zingiz tanlaysiz — SSH qoidasini o'chirib yubormang</dd><dt>Kutiladigan natija</dt><dd>Raqamlangan ro'yxat; so'ng tanlangan qoida o'chiriladi</dd><dt>Xato bo‘lsa</dt><dd>Noto'g'ri raqam tanlasangiz, qoidani qayta qo'shing</dd></dl>
+<pre class="code" data-lang="bash"><code>sudo ufw status numbered
+# so'ng, 'DronStream' izohli qoida raqamini ko'rib:  sudo ufw delete &lt;RAQAM&gt;</code></pre>
+</div>
+<h3>Router</h3>
+<p>Server router ortida bo'lsa, routerda quyidagilarni server lokal manziliga yo'naltiring: TCP 8443 (yoki 443) va UDP 8189. RTMP (1935) ni internetga yo'naltirmang — pult uchun <a href="#ingest">himoyalangan yo'l</a> tanlang.</p>
+</section>
+<section class="sec" id="turn" data-title="WebRTC va TURN">
+<h2>WebRTC va TURN</h2>
+<p>Ko'p hollarda TURN kerak emas: serverda ochiq UDP 8189 bo'lsa, tomoshabin brauzeri unga to'g'ridan-to'g'ri ulanadi.</p>
+<p>TURN kerak bo'lishi mumkin bo'lgan holatlar:</p>
+<ul><li>tomoshabin tarmog'i UDP'ni butunlay to'sadi (ba'zi korporativ tarmoqlar);</li><li>tomoshabin qat'iy NAT ortida va to'g'ridan-to'g'ri ulanish o'rnatilmaydi.</li></ul>
+<p>Avval yengilroq yechimni sinab ko'ring: <code>media.webrtc_tcp_listen: &quot;:8189&quot;</code> (WebRTC'ni TCP orqali ham qabul qilish) va firewall'da TCP 8189 ni oching.</p>
+<p>Ichki TURN'ni yoqish (<code>config/dronstream.yaml</code>):</p>
+<pre class="code" data-lang="yaml"><code>turn:
+  mode: &quot;builtin&quot;
+  urls:
+    - &quot;turn:&lt;SERVER_PUBLIC_IP&gt;:3478?transport=udp&quot;
+    - &quot;turn:&lt;SERVER_PUBLIC_IP&gt;:3478?transport=tcp&quot;
+  public_ip: &quot;&lt;SERVER_PUBLIC_IP&gt;&quot;</code></pre>
+<p>Bunda firewall'da 3478 (UDP va TCP) hamda 50000–50100 (UDP) portlarini ham oching. TURN uchun hisoblar qisqa muddatli va har sessiyaga alohida beriladi; tashqi (begona) TURN xizmati ishlatilmaydi.</p>
+</section>
+<section class="sec" id="qabul-test" data-title="Qabul testi: boshqa internetdan">
+<h2>Qabul testi: boshqa internetdan</h2>
+<p>Sinovni server tarmog'idan <strong>tashqaridagi</strong> qurilmada o'tkazing — masalan, Wi-Fi o'chirilgan, mobil internetdagi telefonda. Ikki yo'lni alohida tekshiring.</p>
+<p><strong>Server → brauzer:</strong></p>
+<ol><li><code>https://&lt;DOMEN&gt;</code> ochiladi va sertifikat ogohlantirishi chiqmaydi.</li><li>Login ishlaydi.</li><li>Demo video o'ynaydi (kamida 2 daqiqa uzluksiz — ijara yangilanishi ham tekshiriladi).</li><li>Player ostidagi bitreyt va o'lcham ko'rsatkichi o'zgarib turadi.</li></ol>
+<p><strong>Pult → server:</strong></p>
+<ol><li>Pult tanlangan yo'l orqali (VPN yoki RTMPS) ulanadi.</li><li>Admin panelda stream &quot;efirda&quot;.</li><li>Tomoshabinda haqiqiy pult videosi ko'rinadi.</li></ol>
+<div class="cmd k-diag" data-os="windows">
+<div class="cmd-h"><span class="cmd-t">Windows: tashqaridan TCP port ochiqligini tekshirish</span><span class="chip">PowerShell</span><span class="chip ">Oddiy foydalanuvchi</span><span class="chip k-diag">Diagnostika — faqat o‘qiydi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Server tarmog'idan TASHQARIDAGI kompyuterda</dd><dt>Nima qiladi</dt><dd>Serverning TCP 8443 portiga ulanib ko'radi. UDP 8189 ni bu buyruq tekshira olmaydi — uni faqat demo video ko'rsatadi</dd><dt>Kutiladigan natija</dt><dd><code>TcpTestSucceeded : True</code></dd><dt>Xato bo‘lsa</dt><dd>False — firewall, router yo'naltirishi yoki CGNAT'ni tekshiring</dd></dl>
+<pre class="code" data-lang="powershell"><code>$Server = '&lt;DOMEN_YOKI_IP&gt;'
+if ($Server -match '[&lt;&gt;]') { throw &quot;Avval &lt;DOMEN_YOKI_IP&gt; o'rniga server manzilini yozing&quot; }
+Test-NetConnection -ComputerName $Server -Port 8443</code></pre>
+</div>
+<div class="cmd k-diag" data-os="linux">
+<div class="cmd-h"><span class="cmd-t">Linux/macOS: tashqaridan HTTPS javobini tekshirish</span><span class="chip">bash</span><span class="chip ">Oddiy foydalanuvchi</span><span class="chip k-diag">Diagnostika — faqat o‘qiydi</span></div>
+<dl class="cmd-meta"><dt>Qayerda bajariladi</dt><dd>Server tarmog'idan TASHQARIDAGI kompyuterda</dd><dt>Nima qiladi</dt><dd>Sog'liq manzilidan javob so'raydi. Sertifikat to'g'ri bo'lsa <code>-k</code> kerak emas; <code>-k</code> faqat diagnostika uchun</dd><dt>Kutiladigan natija</dt><dd><code>{&quot;ok&quot;:true,&quot;auth&quot;:true,&quot;media&quot;:true}</code></dd><dt>Xato bo‘lsa</dt><dd>Sertifikat xatosi — domen va sertifikatni tekshiring. Javob yo'q — port yopiq</dd></dl>
+<pre class="code" data-lang="bash"><code>SERVER='&lt;DOMEN_YOKI_IP&gt;'
+case &quot;$SERVER&quot; in
+  *'&lt;'*) echo &quot;Avval SERVER ga manzilni yozing&quot; ;;
+  *) curl &quot;https://$SERVER:8443/api/health&quot; ;;
+esac</code></pre>
+</div>
+</section>
+<section class="sec" id="ingest" data-title="Pult → server yo'li va uning himoyasi">
+<h2>Pult → server yo'li va uning himoyasi</h2>
+<p>Oddiy <strong>RTMP shifrlanmagan</strong>. Pult kaliti va video yo'lda ochiq ketadi. Shuning uchun RTMP portini (1935) internetga ochiq qoldirmang.</p>
+<div class="tbl"><table><thead><tr><th>Variant</th><th>Himoya</th><th>Cheklovi</th><th>Holati</th></tr></thead><tbody>
+<tr><td>RTMP + VPN yoki yopiq tarmoq</td><td>VPN shifrlaydi</td><td>Pult tomonda VPN router yoki VPN'li mobil router kerak</td><td>Dasturda tayyor; firewall'da 1935 faqat VPN tarmog'iga ochiladi</td></tr>
+<tr><td>RTMPS (<code>rtmps_listen: &quot;:1936&quot;</code>)</td><td>TLS shifrlaydi, VPN kerak emas</td><td>Pult RTMPS'ni qo'llashi va server sertifikatini qabul qilishi kerak</td><td>Server tomoni tayyor; <strong>DJI pulti bilan tasdiqlanmagan</strong></td></tr>
+<tr><td>Ochiq RTMP internet orqali</td><td>Yo'q</td><td>Kalit va video ochiq ketadi</td><td>Tavsiya etilmaydi</td></tr>
+</tbody></table></div>
+<p>RTMPS haqida halol holat: DJI hujjatlarida DJI Pilot 2 uchun RTMP ko'rsatilgan, RTMPS rasman tasdiqlanmagan (DJI forumidagi eski javobda qo'llanmasligi aytilgan). Pultingiz RTMPS'ni qabul qilishi va sertifikatni tekshirishi <strong>real qurilmada sinab ko'rilmaguncha</strong>, uni tayyor himoyalangan yo'l deb hisoblamang.</p>
+<p>Hozircha VPNsiz, amalda ishlaydigan variant: pult yonidagi kichik router yoki noutbuk RTMP'ni qabul qilib, serverga shifrlangan tunnel orqali uzatadi. Tomoshabinlar uchun bu o'zgarishsiz qoladi — ularga VPN kerak emas.</p>
+</section>
+<div class="part" id="f"><h1>F. Kundalik boshqaruv</h1></div>
+<section class="sec" id="f-pult" data-title="Pultlar va sarlavhalar">
+<h2>Pultlar va sarlavhalar</h2>
+<p><strong>Kontent → Dron pultlari</strong>: yangi stream yaratish, pult manzili va kalitini ko'rish, kalitni almashtirish.</p>
+<ul><li><strong>Kalitni almashtirish</strong> — eski kalit darhol ishlamay qoladi; pultga yangi manzilni kiritish kerak.</li><li><strong>Sarlavha</strong> tomoshabinga ko'rinadigan nom; texnik yo'l nomi (manzildagi qism) o'zgarmaydi, shuning uchun sarlavhani o'zgartirish pult sozlamasini buzmaydi.</li><li>Bitta yo'lga bir vaqtda faqat bitta manba ulanadi. Ikkinchisi rad etiladi va admin ogohlantiriladi.</li></ul>
+</section>
+<section class="sec" id="f-media" data-title="Media va to'plamlar">
+<h2>Media va to'plamlar</h2>
+<p><strong>Kontent → Barcha kontent</strong>: matn yozish, rasm va video yuklash, sarlavha va izohni tahrirlash, yashirish, tartiblash.</p>
+<ul><li>Fayl turi kengaytmasiga emas, haqiqiy tarkibiga qarab tekshiriladi. SVG va HTML qabul qilinmaydi.</li><li>Yuklangan fayllar ochiq papkada turmaydi: har bir so'rovda ruxsat tekshiriladi.</li></ul>
+<p><strong>To'plamlar</strong>: kontentni guruhlash. Ruxsat berishda &quot;keyin qo'shilganlar ham&quot; yoki &quot;faqat hozirgi elementlar&quot; tanlanadi.</p>
+</section>
+<section class="sec" id="f-hisob" data-title="Hisoblar va mehmon so'rovlari">
+<h2>Hisoblar va mehmon so'rovlari</h2>
+<p><strong>Doimiy foydalanuvchilar</strong>: hisob yaratish, parolni tiklash, bloklash, barcha sessiyalaridan chiqarish, ruxsat berish.</p>
+<p><strong>Kirish so'rovlari</strong>: mehmon so'rovini tasdiqlash (qaysi kontent va qancha vaqtga) yoki rad etish. Mehmon kiritgan ism tasdiqlanmagan — ruxsat berishdan oldin u kim ekaniga boshqa yo'l bilan ishonch hosil qiling.</p>
+</section>
+<section class="sec" id="f-havola" data-title="Maxsus havolalar va QR">
+<h2>Maxsus havolalar va QR</h2>
+<p><strong>Maxsus havolalar → + Havola yaratish</strong>. Uch bosqich: kimga va qanday tur → qaysi kontent yoki to'plam → cheklovlar (foydalanish soni, vaqt oralig'i, bir vaqtdagi sessiyalar, sessiya davomiyligi).</p>
+<p><strong>Ulashish / QR</strong> oynasida: havolani nusxalash, QR rasmni nusxalash, PNG yuklab olish, tizim ulashish oynasi. Brauzer rasmni nusxalashni qo'llamasa, dastur buni aytadi va PNG yuklab olishni taklif qiladi.</p>
+<ul><li>QR kod serverning o'zida yasaladi — havola tashqi xizmatga yuborilmaydi.</li><li><strong>Bekor qilish</strong> — havola va u orqali ochilgan barcha sessiyalar darhol to'xtaydi.</li><li><strong>Yangilash</strong> — eski havola ishlamay qoladi, yangisi beriladi.</li><li>Vaqtlar Toshkent vaqti bilan ko'rsatiladi.</li></ul>
+</section>
+<section class="sec" id="f-sessiya" data-title="Faol sessiyalar">
+<h2>Faol sessiyalar</h2>
+<p><strong>Faol sessiyalar</strong>: hozir kim nimani ko'rayotgani, qaysi qurilmadan, qancha vaqtdan beri. Bitta video ulanishini uzish yoki butun sessiyani yakunlash mumkin.</p>
+</section>
+<section class="sec" id="f-farq" data-title="Revoke, bloklash, publish'ni to'xtatish — farqi">
+<h2>Revoke, bloklash, publish'ni to'xtatish — farqi</h2>
+<div class="tbl"><table><thead><tr><th>Amal</th><th>Kimga ta'sir qiladi</th><th>Nima bo'ladi</th><th>Qaytarish</th></tr></thead><tbody>
+<tr><td>Ruxsatni olib tashlash (revoke)</td><td>Bitta odam, bitta kontent</td><td>O'sha videosi 1–2 soniyada uziladi, qayta ulanish rad etiladi. Boshqa ruxsatlari qoladi</td><td>Ruxsatni qayta berish</td></tr>
+<tr><td>Foydalanuvchini bloklash</td><td>Bitta odam, hamma narsa</td><td>Barcha sessiyalari tugaydi, kira olmaydi</td><td>Blokdan chiqarish</td></tr>
+<tr><td>Sessiyani yakunlash</td><td>Bitta brauzer sessiyasi</td><td>Chiqarib yuboriladi; ruxsati bo'lsa qayta kira oladi</td><td>—</td></tr>
+<tr><td>Ko'rishni yopish (stream)</td><td>Shu streamni ko'rayotgan hamma</td><td>Hech kim ko'ra olmaydi; pult yuborishda davom etadi</td><td>Ko'rishni ochish</td></tr>
+<tr><td>Publish'ni to'xtatish (stream)</td><td>Pult</td><td>Pult ulanishi uziladi va qayta ulana olmaydi</td><td>Publish'ni yoqish</td></tr>
+<tr><td>Manbani uzish</td><td>Hozir ulangan pult</td><td>Ulanish uziladi; pult qayta ulanishi mumkin</td><td>—</td></tr>
+<tr><td>Favqulodda to'xtatish</td><td>Hamma tomoshabin</td><td>Barcha video darhol to'xtaydi</td><td>O'chirib qo'yish</td></tr>
+</tbody></table></div>
+<p>Bularning hammasi serverda bajariladi: tugmani yashirish emas, ulanishni uzish.</p>
+</section>
+<section class="sec" id="f-audit" data-title="Audit, parol, chiqish, favqulodda to'xtatish">
+<h2>Audit, parol, chiqish, favqulodda to'xtatish</h2>
+<ul><li><strong>Audit va sozlamalar → Audit</strong>: kim qachon kirdi, kimga ruxsat berildi yoki olib tashlandi, qaysi ulanish rad etildi. Yozuvlar belgilangan muddat saqlanadi (sukut bo'yicha 180 kun).</li><li><strong>Parol</strong>: o'z parolingizni shu bo'limda almashtirasiz.</li><li><strong>Chiqish</strong>: sessiyani yakunlaydi. Umumiy kompyuterda albatta chiqing.</li><li><strong>Favqulodda to'xtatish</strong> (Bosh sahifa): barcha tomoshabinlar uchun videoni bir tugma bilan to'xtatadi.</li><li><strong>?</strong> tugmasi: shu qo'llanmani ochadi.</li></ul>
+</section>
+<section class="sec" id="f-yangilash" data-title="Kodni yangilash va serverni yangilash — ikki alohida ish">
+<h2>Kodni yangilash va serverni yangilash — ikki alohida ish</h2>
+<div class="tbl"><table><thead><tr><th>Ish</th><th>Vosita</th><th>Nimaga tegadi</th></tr></thead><tbody>
+<tr><td>Kodni kompyuterlar orasida ko'chirish</td><td><code>push.bat</code> va <code>pull.bat</code> (Git)</td><td>Faqat manba kod. Ishlab turgan serverga tegmaydi</td></tr>
+<tr><td>Ishlab turgan serverni yangi versiyaga o'tkazish</td><td>Yangi paket + <code>update.ps1</code> yoki <code>update.sh</code></td><td>Dastur fayllari; avval backup oladi</td></tr>
+<tr><td>Ma'lumotni boshqa serverga ko'chirish</td><td>Shifrlangan backup va restore</td><td>Baza, media, kalitlar</td></tr>
+</tbody></table></div>
+<ul><li><code>push.bat</code> yuborishdan oldin fayllar va commitlar tarixini sirlar bo'yicha tekshiradi, majburiy (force) yuborishni ishlatmaydi va oxirida lokal hamda masofaviy holat bir xilligini tekshiradi.</li><li><code>pull.bat</code> lokal o'zgarishlaringizni yo'qotmaydi va yashirmaydi: toza holatda faqat oldinga siljiydi; tarixlar ajralgan bo'lsa to'xtab, sababini aytadi.</li><li><code>pull.bat</code> ishlab turgan server dasturini almashtirmaydi — avval serverni to'xtatishingiz kerakligini aytadi.</li></ul>
+</section>
+<div class="part" id="g"><h1>G. Xatolar</h1></div>
+<section class="sec" id="x-sayt" data-title="Sayt ochilmaydi">
+<h2>Sayt ochilmaydi</h2>
+<ol><li>Server ishlayaptimi — health-check (<a href="#xizmat">buyruq</a>).</li><li>Manzil to'g'rimi: <code>https://</code> bilan va port bilan (<code>:8443</code>).</li><li>Serverning o'zida <code>https://localhost:8443</code> ochiladimi. Ochilsa — muammo tarmoqda yoki firewall'da.</li><li>Boshqa qurilma shu tarmoqdami; hotspot qurilmalarni bir-biridan ajratmayaptimi.</li><li>Firewall qoidasi bormi (<a href="#firewall">Firewall</a>).</li><li>Internetdan bo'lsa: public IP haqiqiymi (CGNAT emasmi), routerda yo'naltirish bormi.</li></ol>
+</section>
+<section class="sec" id="x-sert" data-title="Sertifikat ogohlantirishi">
+<h2>Sertifikat ogohlantirishi</h2>
+<ul><li>O'z-o'zidan imzolangan sertifikatda bu kutilgan holat.</li><li>&quot;Manzil sertifikatga mos emas&quot; — manzilni <code>web.public_hosts</code> ga qo'shing va serverni qayta ishga tushiring.</li><li>Doimiy foydalanish uchun ishonchli sertifikat o'rnating (<a href="#sertifikat">Sertifikat</a>).</li><li>Qurilma soati noto'g'ri bo'lsa ham sertifikat xatosi chiqadi.</li></ul>
+</section>
+<section class="sec" id="x-video" data-title="Sahifa bor, video yo'q">
+<h2>Sahifa bor, video yo'q</h2>
+<p>Player &quot;Ulanmoqda…&quot; yoki &quot;video kanali ulanmadi&quot; deb tursa, sahifa (TCP) ishlayapti, video yo'li (UDP) ishlamayapti.</p>
+<ol><li>Firewall'da UDP 8189 ochiqmi.</li><li>Routerda UDP 8189 yo'naltirilganmi.</li><li><code>media.webrtc_additional_hosts</code> da tomoshabin ko'radigan manzil (public IP yoki domen) bormi.</li><li>Tomoshabin tarmog'i UDP'ni to'sadimi — <code>webrtc_tcp_listen</code> yoki <a href="#turn">TURN</a> ni sinang.</li><li>Android'da — <a href="#x-android">lokal tarmoq ruxsati</a>.</li></ol>
+</section>
+<section class="sec" id="x-offline" data-title="Stream efirda emas">
+<h2>Stream efirda emas</h2>
+<p>Player &quot;Manba efirda emas (pult ulanmagan)&quot; desa, server ishlayapti, lekin pult video yubormayapti. Player o'zi kutib turadi va pult ulangach davom etadi.</p>
+<ul><li>Pultda jonli efir yoqilganmi va manzil to'g'rimi.</li><li>Kalit almashtirilmaganmi.</li><li>Stream uchun publish yoqilganmi.</li><li>Pult serverga yeta oladimi (VPN, 1935 porti).</li><li>Audit'da rad etilgan ulanish sababi yozilgan bo'ladi.</li></ul>
+</section>
+<section class="sec" id="x-limit" data-title="&quot;Juda ko'p ulanish&quot;">
+<h2>&quot;Juda ko'p ulanish&quot;</h2>
+<p>Bir odam bir vaqtda ochishi mumkin bo'lgan video oynalari soni cheklangan (sukut bo'yicha 12; <code>media.max_media_sessions_per_subject</code>). Xabarda nechta ishlatilgani va chegara ko'rsatiladi, masalan &quot;12/12&quot;.</p>
+<ul><li>Boshqa tab yoki qurilmadagi videolarni yoping.</li><li>Shu sahifada keraksiz joylarni &quot;— bo'sh —&quot; qiling.</li><li>So'ng &quot;Qayta urinish&quot;ni bosing.</li></ul>
+<p>Efirda bo'lmagan stream joyi va video ulanishining davriy yangilanishi bu hisobga kirmaydi. Chegarani haddan tashqari oshirish server yuklamasini oshiradi.</p>
+</section>
+<section class="sec" id="x-havola" data-title="Havola tugagan yoki ishlatilgan">
+<h2>Havola tugagan yoki ishlatilgan</h2>
+<div class="tbl"><table><thead><tr><th>Xabar</th><th>Sababi</th><th>Yechim</th></tr></thead><tbody>
+<tr><td>Havola ishlatib bo'lingan</td><td>Foydalanish soni tugagan</td><td>Admin yangi havola beradi yoki sonini oshiradi</td></tr>
+<tr><td>Havola muddati tugagan</td><td>Vaqt oralig'i o'tgan</td><td>Admin muddatni uzaytiradi yoki yangisini beradi</td></tr>
+<tr><td>Havola hali boshlanmagan</td><td>Boshlanish vaqti kelmagan</td><td>Kuting; vaqt Toshkent vaqti bilan</td></tr>
+<tr><td>Havola bekor qilingan</td><td>Admin bekor qilgan yoki yangilagan</td><td>Yangi havolani so'rang</td></tr>
+<tr><td>Juda ko'p sessiya</td><td>Bir vaqtdagi sessiyalar chegarasi</td><td>Boshqa qurilmadagi sessiyani yoping</td></tr>
+</tbody></table></div>
+<p>Ochiq sessiya ichida sahifani yangilash havolani qayta sarflamaydi.</p>
+</section>
+<section class="sec" id="x-port" data-title="Port band">
+<h2>Port band</h2>
+<p>Start &quot;Port band&quot; deb to'xtasa, u qaysi port va qaysi dastur ekanini ko'rsatadi. Begona dasturni to'xtatmang. <code>config/dronstream.yaml</code> da o'sha portni boshqasiga o'zgartiring (masalan <code>web.listen: &quot;:9443&quot;</code>), firewall qoidasini ham moslang.</p>
+<p>Agar portni DronStream'ning o'zi band qilgan bo'lsa — u allaqachon ishlab turibdi; ikkinchi nusxa kerak emas.</p>
+</section>
+<section class="sec" id="x-xizmat" data-title="Xizmat ishga tushmaydi">
+<h2>Xizmat ishga tushmaydi</h2>
+<p>Sababni dastur yozadi — taxmin qilmang, logni o'qing.</p>
+<ul><li>Windows: <code>C:\DronStream\logs\dronstream.log</code>.</li><li>Linux: <code>sudo journalctl -u dronstream -n 50 --no-pager</code>.</li></ul>
+<div class="tbl"><table><thead><tr><th>Logdagi sabab</th><th>Ma'nosi</th><th>Yechim</th></tr></thead><tbody>
+<tr><td>port … busy</td><td>Port band</td><td>&quot;Port band&quot; bo'limiga qarang</td></tr>
+<tr><td>master.key cannot be unlocked</td><td>Kalit boshqa Windows kompyuterga bog'langan</td><td>Papkani nusxalamang — backupdan tiklang</td></tr>
+<tr><td>master.key has mode …</td><td>Linux'da kalit fayli huquqi keng</td><td><code>sudo chmod 600</code> va egasi xizmat hisobi</td></tr>
+<tr><td>schema … is newer</td><td>Eski dastur yangi bazani ochmoqchi</td><td>Yangi versiyani ishga tushiring yoki rollback bilan backupni tiklang</td></tr>
+<tr><td>mediamtx binary not found</td><td>MediaMTX fayli yo'q</td><td>Paketni qayta o'rnating</td></tr>
+<tr><td>config …</td><td>Sozlama faylida xato</td><td>YAML'ni tekshiring (bo'sh joylar, qo'shtirnoqlar)</td></tr>
+</tbody></table></div>
+<p>Bazani o'chirish yoki kalit faylini almashtirish muammoni &quot;tuzatmaydi&quot; — ma'lumotni yo'qotadi.</p>
+</section>
+<section class="sec" id="x-git" data-title="Git: kirish va konflikt">
+<h2>Git: kirish va konflikt</h2>
+<ul><li><strong>Kirish so'raladi yoki rad etiladi</strong>: Git Credential Manager brauzer orqali GitHub'ga kirishni so'raydi. Parol yoki tokenni faylga, manzilga yoki chatga yozmang.</li><li><strong>&quot;Remote'da yangi commit bor&quot;</strong> (push): avval <code>pull.bat</code>, so'ng <code>push.bat</code>. Majburiy yuborish ishlatilmaydi.</li><li><strong>&quot;Lokal o'zgarishlar bor&quot;</strong> (pull): o'zgarishlaringizni avval <code>push.bat</code> bilan saqlang yoki o'zingiz hal qiling. Skript ularni o'chirmaydi va yashirmaydi.</li><li><strong>Tarixlar ajralgan</strong>: skript to'xtaydi. Bu holatni qo'lda, nima birlashtirilishini ko'rib hal qilish kerak.</li><li><strong>Push to'xtatildi: sir topildi</strong>: ko'rsatilgan faylni Git'dan chiqaring. Qiymat ekranga chiqarilmaydi.</li></ul>
+</section>
+<section class="sec" id="x-android" data-title="Android: lokal tarmoq ruxsati">
+<h2>Android: lokal tarmoq ruxsati</h2>
+<p>Android 17 da ilovalar lokal tarmoqdagi manzillarga (192.168.x.x, 10.x.x.x va shu kabi) ulanishi uchun alohida ruxsat talab qilinadi. Bu ruxsat &quot;Yaqin-atrofdagi qurilmalar&quot; (Nearby devices) guruhiga kiradi. U TCP ga ham, UDP ga ham tegishli — ya'ni sahifaga ham, videoga ham.</p>
+<p>Belgisi: telefonda lokal manzildagi sayt ochilmaydi yoki ochiladi-yu video ulanmaydi, kompyuterda esa hammasi ishlaydi.</p>
+<p>Yechim: telefon sozlamalarida <strong>Ilovalar → Chrome → Ruxsatlar → Yaqin-atrofdagi qurilmalar → Ruxsat berish</strong>. Menyu nomlari va joylashuvi qurilma ishlab chiqaruvchisi va Android versiyasiga qarab farq qilishi mumkin.</p>
+<ul><li>Bu faqat <strong>lokal</strong> manzillarga tegishli. Internetdagi domen orqali kirganda bu ruxsat kerak emas.</li><li>Bu loyihada bitta qurilmada kuzatilgan: Android 17, Chrome 156 — ruxsat berilgach lokal tarmoqda ikki demo video o'ynadi.</li><li>Chrome'ning saytlar uchun alohida &quot;lokal tarmoqqa kirish&quot; so'rovi boshqa narsa: u internetdagi sayt lokal manzilga murojaat qilganda chiqadi.</li></ul>
+</section>
+<div class="part" id="manbalar-qism"><h1>Manbalar</h1></div>
+<section class="sec" id="manbalar" data-title="Tekshirilgan rasmiy manbalar">
+<h2>Tekshirilgan rasmiy manbalar</h2>
+<p>Versiyaga bog'liq ma'lumotlar 2026-yil 13-noyabrda quyidagi rasmiy sahifalardan tekshirilgan. Manzillar matn sifatida berilgan — bu sahifa hech qayerga ulanmaydi.</p>
+<div class="tbl"><table><thead><tr><th>Mavzu</th><th>Manba</th></tr></thead><tbody>
+<tr><td>R570 qo'llab-quvvatlaydigan tizimlar</td><td><code>dell.com/support/home/en-us/drivers/supportedos/poweredge-r570</code></td></tr>
+<tr><td>iDRAC10 va internetga ulamaslik tavsiyasi</td><td>Dell iDRAC10 Security Configuration Guide, &quot;Best practices&quot;</td></tr>
+<tr><td>Ubuntu LTS muddatlari</td><td><code>ubuntu.com/about/release-cycle</code></td></tr>
+<tr><td>R570 uchun Ubuntu sertifikati</td><td><code>ubuntu.com/certified/202503-36549</code></td></tr>
+<tr><td>ufw</td><td><code>ubuntu.com/server/docs/how-to/security/firewalls</code></td></tr>
+<tr><td>systemd xizmat cheklovlari</td><td><code>freedesktop.org/software/systemd/man/latest/systemd.exec.html</code></td></tr>
+<tr><td>Android lokal tarmoq ruxsati</td><td><code>developer.android.com/privacy-and-security/local-network-permission</code></td></tr>
+<tr><td>WebRTC transporti, ICE, STUN, TURN</td><td>RFC 8835, RFC 8445, RFC 8489, RFC 8656</td></tr>
+<tr><td>MediaMTX WebRTC portlari</td><td><code>mediamtx.org/docs/usage/webrtc-specific-features</code></td></tr>
+<tr><td>DJI Pilot 2 jonli efir turlari</td><td><code>developer.dji.com/doc/cloud-api-tutorial</code> (Pilot livestream)</td></tr>
+</tbody></table></div>
+<p>To'liq ro'yxat va tasdiqlanmagan bandlar loyihadagi <code>guide/SOURCES.md</code> faylida.</p>
+</section>
+
+
+    <nav class="pager" aria-label="Bo‘limlar orasida o‘tish">
+      <button type="button" id="sec-prev">← Oldingi bo‘lim</button>
+      <button type="button" id="sec-top">↑ Boshiga</button>
+      <button type="button" id="sec-next">Keyingi bo‘lim →</button>
+    </nav>
+    <footer class="foot">
+      <p>DronStream qo‘llanmasi v1.2.0 (2026-11-13). Bu fayl mustaqil: internetga ulanmaydi, hech narsa yubormaydi, serveringiz sozlamalarini o‘qimaydi va buyruqlarni o‘zi bajarmaydi. Undagi manzillar va nomlar — faqat namuna.</p>
+    </footer>
+  </main>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<script src="guide.js"></script>
+</body>
+</html>

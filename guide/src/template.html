@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="uz" data-variant="{{VARIANT}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark light">
+<title>DronStream — yordam va qo‘llanma</title>
+{{HEAD}}
+</head>
+<body>
+<a class="skip" href="#content">Asosiy matnga o‘tish</a>
+<div class="progress" aria-hidden="true"><div class="progress-bar" id="progress"></div></div>
+
+<header class="bar" id="bar">
+  <div class="bar-title">
+    <svg class="logo" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="7" fill="#12283d" stroke="#3aa0ff"/><path d="M11 9.5v13l11-6.5z" fill="#3aa0ff"/></svg>
+    <span>DronStream qo‘llanmasi</span>
+    <span class="ver">v{{VERSION}} · {{DATE}}</span>
+  </div>
+  <div class="bar-tools">
+    <label class="search"><span class="sr">Qo‘llanmadan qidirish</span><input id="q" type="search" placeholder="Qidiruv…" autocomplete="off" spellcheck="false"></label>
+    <button type="button" id="btn-toc" class="narrow-only" aria-expanded="false" aria-controls="toc">Mundarija</button>
+    <span class="tool-group" role="group" aria-label="Avto namoyish">
+      <button type="button" id="btn-auto" aria-pressed="false" title="Namoyishni o‘zi aylantiradi. Istalgan tugma, g‘ildirak yoki teginish uni to‘xtatadi.">▶ Avto namoyish</button>
+      <label class="sr" for="auto-speed">Avto namoyish tezligi</label>
+      <select id="auto-speed" title="Tezlik"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
+    </span>
+    <button type="button" id="btn-anim" aria-pressed="true">Animatsiya: yoqilgan</button>
+    <button type="button" id="btn-plain" aria-pressed="false" title="Sahnasiz, oddiy matnli ko‘rinish">Oddiy rejim</button>
+    <button type="button" id="btn-print">Chop etish / PDF</button>
+  </div>
+</header>
+
+<div id="results" class="results" hidden>
+  <div class="results-head"><strong id="results-count"></strong><button type="button" id="results-close">Yopish</button></div>
+  <ol id="results-list"></ol>
+</div>
+
+<div class="layout">
+  <nav id="toc" class="toc" aria-label="Mundarija">
+    <div class="toc-part"><a href="#namoyish">Qisqa namoyish</a></div>
+    {{TOC}}
+  </nav>
+
+  <main id="content">
+    <section class="hero sec" id="namoyish" data-title="Qisqa namoyish: video qanday yetib boradi">
+      <h2>Qisqa namoyish: video qanday yetib boradi</h2>
+      <p class="lead">Pastga aylantiring: olti bosqichda pult, server, administrator va tomoshabin o‘rtasida nima sodir bo‘lishi ko‘rsatiladi. Bu <strong>sxematik tushuntirish</strong> — haqiqiy trafik, telemetriya yoki serveringizning joriy holati emas. Sahifa hech qayerga ulanmaydi.</p>
+
+      <div class="story" id="story">
+        <div class="pin">
+          <div class="stage" id="stage" data-step="1" aria-hidden="true">
+            <div class="world">
+              <div class="grid"></div>
+              <svg class="links" viewBox="0 0 640 420" width="640" height="420">
+                <path class="link l-pult" d="M165 210 L265 210"/>
+                <path class="link l-admin" d="M490 122 L372 186"/>
+                <path class="link l-view" d="M372 234 L490 298"/>
+                <path class="flow f-pult" d="M165 210 L265 210"/>
+                <path class="flow f-admin" d="M490 122 L372 186"/>
+                <path class="flow f-login" d="M490 298 L372 234"/>
+                <path class="flow f-media" d="M372 234 L490 298"/>
+                <g class="cut"><circle cx="431" cy="266" r="15"/><path d="M423 258 l16 16 M439 258 l-16 16"/></g>
+              </svg>
+              <div class="node n-pult"><div class="slab"></div><div class="card">
+                <svg viewBox="0 0 64 48" width="64" height="48"><path d="M18 14 L12 3" class="ic-line"/><path d="M46 14 L52 3" class="ic-line"/><rect x="4" y="12" width="56" height="30" rx="9" class="ic-body"/><rect x="22" y="18" width="20" height="13" rx="2" class="ic-screen"/><circle cx="13" cy="27" r="5" class="ic-knob"/><circle cx="51" cy="27" r="5" class="ic-knob"/></svg>
+                <span class="nm">DJI pulti</span><span class="st st-pult">RTMP video</span>
+              </div></div>
+              <div class="node n-server"><div class="slab"></div><div class="ring"></div><div class="card">
+                <svg viewBox="0 0 64 48" width="64" height="48"><rect x="8" y="3" width="48" height="12" rx="3" class="ic-body"/><rect x="8" y="18" width="48" height="12" rx="3" class="ic-body"/><rect x="8" y="33" width="48" height="12" rx="3" class="ic-body"/><circle cx="16" cy="9" r="2.2" class="ic-led"/><circle cx="16" cy="24" r="2.2" class="ic-led"/><circle cx="16" cy="39" r="2.2" class="ic-led"/><path d="M26 9h22M26 24h22M26 39h22" class="ic-line"/></svg>
+                <span class="nm">DronStream serveri</span><span class="st st-server">kalit tekshirildi ✓</span>
+              </div></div>
+              <div class="node n-admin"><div class="slab"></div><div class="card">
+                <svg viewBox="0 0 64 48" width="64" height="48"><circle cx="24" cy="14" r="9" class="ic-body"/><path d="M6 46c0-12 8-18 18-18s18 6 18 18z" class="ic-body"/><path d="M48 16l10 4v8c0 7-4 11-10 14-6-3-10-7-10-14v-8z" class="ic-shield"/><path d="M43 28l4 4 7-8" class="ic-check"/></svg>
+                <span class="nm">Administrator</span><span class="st st-grant">ruxsat berildi</span><span class="st st-revoke">ruxsat olib tashlandi</span>
+              </div></div>
+              <div class="node n-view"><div class="slab"></div><div class="card">
+                <svg viewBox="0 0 64 48" width="64" height="48"><rect x="6" y="4" width="52" height="32" rx="4" class="ic-body"/><rect x="10" y="8" width="44" height="24" rx="2" class="ic-screen scr"/><path d="M28 14v12l11-6z" class="ic-play"/><path d="M25 14l14 12M39 14l-14 12" class="ic-x"/><path d="M24 44h16M32 36v8" class="ic-line"/></svg>
+                <span class="nm">Tomoshabin</span><span class="st st-login">kirish / havola</span><span class="st st-play">video ko‘rsatilmoqda</span><span class="st st-cut">ulanish uzildi</span>
+              </div></div>
+            </div>
+          </div>
+          <div class="caps-wrap">
+            <ol class="caps" id="caps">
+{{STORY}}
+            </ol>
+            <div class="story-nav" id="story-nav">
+              <button type="button" id="step-prev">← Oldingi bosqich</button>
+              <span id="step-pos" aria-live="polite">1 / 6</span>
+              <button type="button" id="step-next">Keyingi bosqich →</button>
+            </div>
+            <p class="disclaimer">Sxematik namoyish. Haqiqiy trafik yoki telemetriya emas.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+{{CONTENT}}
+
+    <nav class="pager" aria-label="Bo‘limlar orasida o‘tish">
+      <button type="button" id="sec-prev">← Oldingi bo‘lim</button>
+      <button type="button" id="sec-top">↑ Boshiga</button>
+      <button type="button" id="sec-next">Keyingi bo‘lim →</button>
+    </nav>
+    <footer class="foot">
+      <p>DronStream qo‘llanmasi v{{VERSION}} ({{DATE}}). Bu fayl mustaqil: internetga ulanmaydi, hech narsa yubormaydi, serveringiz sozlamalarini o‘qimaydi va buyruqlarni o‘zi bajarmaydi. Undagi manzillar va nomlar — faqat namuna.</p>
+    </footer>
+  </main>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+{{TAIL}}
+</body>
+</html>
