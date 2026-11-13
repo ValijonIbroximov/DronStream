@@ -8,6 +8,21 @@ import ViewerPage from './pages/Viewer'
 import ChangePassword from './pages/ChangePassword'
 import AdminShell from './pages/admin/AdminShell'
 import LinkLanding from './pages/LinkLanding'
+import { ReauthHost, TotpCard } from './components/Security'
+import { Brand } from './pages/Login'
+
+function MfaRequired({ onDone, onLogout }: { onDone: () => void; onLogout: () => void }) {
+  return (
+    <div className="center-screen">
+      <div className="auth-card wide-card">
+        <Brand />
+        <ReauthHost />
+        <TotpCard forced onEnabled={onDone} />
+        <button onClick={onLogout}>Chiqish</button>
+      </div>
+    </div>
+  )
+}
 
 export default function App() {
   if (window.location.pathname === '/link') return <LinkLanding />
@@ -54,7 +69,7 @@ function MainApp() {
         closeEvents()
         refresh()
       }
-      if (e.kind === 'guest_status') refresh()
+      if (e.kind === 'guest_status' || e.kind === 'approval') refresh()
     },
     !!info?.authenticated,
   )
@@ -82,6 +97,12 @@ function MainApp() {
   const s = info.session
   if (s.kind === 'guest' && info.guest?.status !== 'approved') {
     return <WaitingPage info={info} onLogout={logout} />
+  }
+  if (s.kind === 'link' && s.approval !== 'approved') {
+    return <WaitingPage info={info} onLogout={logout} />
+  }
+  if (info.mfaSetupRequired) {
+    return <MfaRequired onDone={refresh} onLogout={logout} />
   }
   if (s.mustChangePassword) {
     return <ChangePassword forced onDone={refresh} onLogout={logout} />

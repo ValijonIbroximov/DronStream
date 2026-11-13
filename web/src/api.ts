@@ -19,6 +19,17 @@ export function getCsrf() {
   return csrf
 }
 
+// Sensitive admin actions answer 403 "reauth_required"; a dialog (ReauthHost)
+// asks for the password (+TOTP) and the request is retried once.
+type ReauthHandler = (message: string) => Promise<boolean>
+let reauthHandler: ReauthHandler | null = null
+export function setReauthHandler(h: ReauthHandler | null) {
+  reauthHandler = h
+  return () => {
+    if (reauthHandler === h) reauthHandler = null
+  }
+}
+
 type Listener = () => void
 const unauthorizedListeners = new Set<Listener>()
 export function onUnauthorized(l: Listener) {
@@ -29,6 +40,17 @@ export function onUnauthorized(l: Listener) {
 }
 
 export async function api<T = unknown>(method: string, path: string, body?: unknown, raw?: { contentType: string; data: string; headers?: Record<string, string> }): Promise<T> {
+  try {
+    return await apiOnce<T>(method, path, body, raw)
+  } catch (e) {
+    if (e instanceof ApiError && e.code === 'reauth_required' && reauthHandler && path !== '/api/me/reauth') {
+      if (await reauthHandler(e.message)) return apiOnce<T>(method, path, body, raw)
+    }
+    throw e
+  }
+}
+
+async function apiOnce<T>(method: string, path: string, body?: unknown, raw?: { contentType: string; data: string; headers?: Record<string, string> }): Promise<T> {
   const headers: Record<string, string> = { 'X-DS-Request': '1' }
   if (csrf) headers['X-CSRF-Token'] = csrf
   let payload: BodyInit | undefined
@@ -79,6 +101,9 @@ export interface Session {
   username?: string
   guestStatus?: string
   mustChangePassword?: boolean
+  approval?: 'pending' | 'approved' | 'rejected'
+  verifyCode?: string
+  totpEnabled?: boolean
   ip: string
   userAgent: string
   createdAt: number
@@ -92,6 +117,7 @@ export interface SessionInfo {
   session?: Session
   guestEnabled: boolean
   guest?: { status: string; accessUntil: number | null; note: string; name: string }
+  mfaSetupRequired?: boolean
 }
 export interface ViewerStream {
   id: number

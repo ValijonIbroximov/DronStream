@@ -49,6 +49,7 @@ func (s *Server) adminOverview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	pending, _ := s.Core.ListGuests(ctx, "pending")
+	linkReqs, _ := s.Core.PendingLinkRequests(ctx)
 	live, _ := s.Core.LiveMediaSessions(ctx)
 	sessions, _ := s.Core.ListWebSessions(ctx)
 	online := s.Hub.Online()
@@ -59,7 +60,7 @@ func (s *Server) adminOverview(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, 200, map[string]any{
-		"state": st, "streams": streams, "pendingGuests": len(pending), "mediaSessions": len(live),
+		"state": st, "streams": streams, "pendingGuests": len(pending), "pendingLinkRequests": len(linkReqs), "mediaSessions": len(live),
 		"webSessions": len(sessions), "onlineSessions": nOnline,
 		"health": map[string]any{"auth": s.Media.Healthy(), "media": s.Media.MediaUp(), "lastReconcile": s.Media.LastPass(), "lastEnforceMicros": s.Media.LastEnforce.Load()},
 	})

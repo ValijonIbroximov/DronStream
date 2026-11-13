@@ -88,20 +88,22 @@ export default function LinkLanding() {
         {info && info.status === 'active' && (
           <>
             <p>
-              Tugmani bossangiz shu brauzerda tomosha sessiyasi ochiladi
-              {info.singleBrowser ? ' va havola ishlatilgan hisoblanadi — uni boshqa brauzer yoki qurilmada ochib bo‘lmaydi.' : '.'}
+              Havola — faqat taklif. Tugmani bossangiz administratorga <b>kirish so'rovi</b> yuboriladi va ekranda tekshirish kodi chiqadi. Administrator aynan
+              shu brauzerdagi so'rovni tasdiqlamaguncha hech qanday video yoki material ochilmaydi.
+              {info.singleBrowser ? ' Tasdiqlangach havola ishlatilgan hisoblanadi.' : ''}
             </p>
             <ul className="small muted">
               <li>Sessiya davomiyligi: {Math.round(info.sessionMinutes / 60) >= 1 ? `${(info.sessionMinutes / 60).toFixed(info.sessionMinutes % 60 ? 1 : 0)} soat` : `${info.sessionMinutes} daqiqa`}</li>
               {info.endsAt && <li>Havola amal qiladi: {fmtTime(info.endsAt)} gacha (Toshkent vaqti)</li>}
               <li>Sahifani yangilash, yangi tab yoki qisqa uzilishdan keyin qayta ulanish qo'shimcha foydalanish hisoblanmaydi.</li>
               <li>Brauzer cookie fayllarini o'chirsangiz yoki boshqa brauzerga o'tsangiz, sessiyani tiklash kafolatlanmaydi.</li>
-              <li>Login-parol talab qilinmaydi, lekin har bir kontentga ruxsat serverda tekshiriladi.</li>
+              <li>Login-parol talab qilinmaydi, lekin administrator tasdig'i va har bir kontentga ruxsat serverda tekshiriladi.</li>
+              <li>Havolani boshqa odamga yuborish unga kirish bermaydi: uning so'rovi alohida tasdiqlanishi kerak.</li>
             </ul>
             {hasSession && <div className="alert info small">Bu brauzerda allaqachon havola sessiyasi bor. Davom etsangiz, yangi foydalanish faqat havola ruxsat bersa ochiladi.</div>}
             <div className="row gap wrap">
               <button className="primary big" disabled={busy} onClick={activate}>
-                {busy ? 'Ochilmoqda…' : 'Tomosha qilish'}
+                {busy ? 'Yuborilmoqda…' : "Kirish so'rovini yuborish"}
               </button>
               {hasSession && <button onClick={() => window.location.replace('/#/')}>Mavjud sessiyada davom etish</button>}
             </div>

@@ -18,6 +18,74 @@ export interface Guest {
   userAgent: string
   sessionId: number
   online: boolean
+  verifyCode: string
+}
+
+interface LinkRequest {
+  sessionId: number
+  linkId: number
+  linkName: string
+  verifyCode: string
+  createdAt: number
+  ip: string
+  userAgent: string
+}
+
+// Special-link requests: the administrator approves one exact browser session.
+// The code must be the one the visitor reads out from their own screen.
+function LinkRequests() {
+  const { data, err, reload } = useLoad(() => get<LinkRequest[]>('/api/admin/approvals'), [], 5000)
+  const [codes, setCodes] = useState<Record<number, string>>({})
+  const { busy, run } = useAction()
+  useServerEvents((e) => ['sessions', 'links'].includes(e.kind) && reload())
+  if (!data || data.length === 0) return err ? <div className="alert error">{err}</div> : null
+  return (
+    <div className="card">
+      <h2>Maxsus havola orqali kirish so'rovlari ({data.length})</h2>
+      <p className="muted small">
+        Havolani olgan har kim so'rov yubora oladi — havolaning o'zi kirish huquqi emas. Tomoshabin ekranidagi tekshirish kodini undan ishonchli yo'l bilan
+        (masalan telefon orqali) so'rang va shu yerga yozing: faqat kod mos kelsa aynan shu brauzer sessiyasi tasdiqlanadi. IP va brauzer faqat ma'lumot uchun,
+        shaxsni tasdiqlamaydi.
+      </p>
+      <div className="stream-list">
+        {data.map((r) => (
+          <div className="card inner" key={r.sessionId}>
+            <div className="row between">
+              <b>{r.linkName}</b>
+              <span className="muted small">{fmtAgo(r.createdAt)}</span>
+            </div>
+            <div className="kv small">
+              <span>So'rov vaqti</span>
+              <span>{fmtTime(r.createdAt)}</span>
+              <span>IP (shaxsni tasdiqlamaydi)</span>
+              <span>{r.ip}</span>
+              <span>Brauzer</span>
+              <span className="ua">{r.userAgent}</span>
+            </div>
+            <div className="row gap wrap">
+              <input
+                className="mono"
+                placeholder="Tomoshabin aytgan kod (XXX-XXX)"
+                value={codes[r.sessionId] || ''}
+                onChange={(e) => setCodes({ ...codes, [r.sessionId]: e.target.value })}
+                aria-label="Tekshirish kodi"
+              />
+              <button
+                className="primary"
+                disabled={busy || !(codes[r.sessionId] || '').trim()}
+                onClick={() => run(() => post(`/api/admin/approvals/${r.sessionId}/approve`, { verifyCode: codes[r.sessionId] }).then(reload), { ok: 'Tasdiqlandi' })}
+              >
+                Tasdiqlash
+              </button>
+              <button disabled={busy} onClick={() => run(() => post(`/api/admin/approvals/${r.sessionId}/reject`).then(reload), { ok: 'Rad etildi' })}>
+                Rad etish
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 const TABS = [
@@ -37,6 +105,7 @@ export default function Requests() {
   return (
     <div className="page">
       <h1>Kirish so'rovlari</h1>
+      <LinkRequests />
       <div className="tabs">
         {TABS.map((t) => (
           <button key={t.s} className={tab === t.s ? 'active' : ''} onClick={() => setTab(t.s)}>
@@ -58,6 +127,11 @@ export default function Requests() {
               </span>
             </div>
             <p className="muted small">Ism foydalanuvchi o'zi yozgan matn — tasdiqlangan shaxs emas.</p>
+            {g.status === 'pending' && g.verifyCode && (
+              <p className="small">
+                Tekshirish kodi: <b className="mono">{g.verifyCode}</b> — mehmon ekranidagi kod bilan ishonchli yo'l orqali solishtiring.
+              </p>
+            )}
             <div className="reason pre">{g.reason}</div>
             <div className="kv small">
               <span>So'rov vaqti</span>

@@ -24,6 +24,9 @@ j() { jq -r "$1" "$EXPECT"; }
 expect "backup Windows'da olingan, kalit DPAPI (DSK1) edi" "$(j .os):$(j .masterKeyFormat)" "windows:DSK1"
 tar -xzf "$TGZ" -C "$WORK"; PKG="$(echo "$WORK"/DronStream-*)"
 if sudo bash "$PKG/scripts/install.sh" --root "$ROOT" --enable; then pass "Linux'ga toza o'rnatish (ishga tushirilmagan)"; else fail "install.sh"; exit 1; fi
+# This test checks the data migration. The Windows source had no TOTP (standard mode), so the
+# migrated admin would first have to enrol in secure mode; secure mode is covered by linux-package-test.sh.
+sudo sed -i 's/^  mode: "secure"/  mode: "standard"/' "$ROOT/config/dronstream.yaml"
 if sudo DRONSTREAM_BACKUP_PASSPHRASE="$(j .backupPassphrase)" bash "$ROOT/scripts/restore.sh" --root "$ROOT" --in "$DSBAK"; then pass "Windows backup Linux'da tiklandi"; else fail "restore.sh"; fi
 expect "master kalit Linux formatiga qayta bog'landi (DSK0, 600)" "$(sudo head -c 4 "$ROOT/config/secrets/master.key") $(sudo stat -c '%a %U' "$ROOT/config/secrets/master.key")" "DSK0 600 dronstream"
 sudo systemctl start dronstream

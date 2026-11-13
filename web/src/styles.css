@@ -238,3 +238,21 @@ button.icon { background: transparent; border: none; padding: 4px 8px; font-size
 .help-bar strong { margin-right: auto; }
 .help-bar a { font-size: .9rem; }
 .help-overlay iframe { flex: 1; width: 100%; border: 0; background: #0b1118; }
+
+/* v1.3 security UI */
+.verify-code { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 10px 0; padding: 10px 16px; border: 1px dashed var(--line); border-radius: 10px; }
+.verify-code b { font-size: 1.9rem; letter-spacing: .12em; }
+.mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.qr-box { background: #fff; padding: 10px; border-radius: 8px; width: fit-content; }
+pre.codes { background: var(--bg2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; line-height: 1.7; }
+.wide-card { max-width: 560px; width: 100%; display: flex; flex-direction: column; gap: 12px; }
+.card.inner { background: var(--bg2); }
+.sec-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.sec-item { display: grid; grid-template-columns: 120px 1fr; gap: 10px; align-items: start; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
+.sec-badge { font-size: .74rem; text-align: center; padding: 2px 6px; border-radius: 99px; border: 1px solid currentColor; }
+.s-ok .sec-badge { color: var(--ok); }
+.s-warn .sec-badge { color: var(--warn); }
+.s-fail .sec-badge { color: var(--bad); }
+.s-unverified .sec-badge { color: #9db0c4; }
+.s-not_implemented .sec-badge { color: #c18cff; }
+@media (max-width: 560px) { .sec-item { grid-template-columns: 1fr; } .sec-badge { justify-self: start; } }

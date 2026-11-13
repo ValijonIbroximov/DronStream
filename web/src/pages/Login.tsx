@@ -38,7 +38,7 @@ export default function LoginPage({ info, onDone, notice }: { info: SessionInfo;
           )}
         </div>
         {tab === 'login' ? (
-          <LoginForm busy={busy} onSubmit={(u, p) => run(() => post<SessionInfo>('/api/login', { username: u, password: p }))} />
+          <LoginForm busy={busy} onSubmit={(u, p, otp) => run(() => post<SessionInfo>('/api/login', { username: u, password: p, otp }))} needOtp={/ikkinchi bosqich/i.test(err)} />
         ) : (
           <GuestForm busy={busy} onSubmit={(n, r) => run(() => post<SessionInfo>('/api/guest', { name: n, reason: r }))} />
         )}
@@ -60,12 +60,13 @@ export function Brand() {
   )
 }
 
-function LoginForm({ onSubmit, busy }: { onSubmit: (u: string, p: string) => void; busy: boolean }) {
+function LoginForm({ onSubmit, busy, needOtp }: { onSubmit: (u: string, p: string, otp: string) => void; busy: boolean; needOtp: boolean }) {
   const [u, setU] = useState('')
   const [p, setP] = useState('')
+  const [otp, setOtp] = useState('')
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    onSubmit(u, p)
+    onSubmit(u, p, otp)
   }
   return (
     <form onSubmit={submit} className="form">
@@ -77,6 +78,12 @@ function LoginForm({ onSubmit, busy }: { onSubmit: (u: string, p: string) => voi
         Parol
         <input type="password" autoComplete="current-password" value={p} onChange={(e) => setP(e.target.value)} required />
       </label>
+      {needOtp && (
+        <label>
+          Autentifikator kodi (yoki tiklash kodi)
+          <input inputMode="text" autoComplete="one-time-code" value={otp} onChange={(e) => setOtp(e.target.value)} required autoFocus />
+        </label>
+      )}
       <button className="primary" disabled={busy}>
         Kirish
       </button>

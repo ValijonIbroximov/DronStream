@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { get, post, fmtBytes, fmtTime } from '../../api'
 import { useAction, useLoad } from '../../components/ui'
+import { SecurityStatus, TotpCard } from '../../components/Security'
 
 export default function System() {
   const { data, err, reload } = useLoad(() => get<any>('/api/admin/system'), [])
@@ -161,6 +162,8 @@ export default function System() {
         )}
       </div>
 
+      <SecurityStatus />
+      <TotpCard />
       <div className="card">
         <h2>Mening parolim</h2>
         <div className="row gap wrap">

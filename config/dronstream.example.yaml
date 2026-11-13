@@ -30,9 +30,10 @@ media:
   # Brauzerlarga e'lon qilinadigan server IP/domenlari (public IP, LAN IP, domen).
   webrtc_additional_hosts: []
   webrtc_ips_from_interfaces: true
-  # Pultdan RTMP. Xavfsizlik uchun VPN interfeysi IP siga bog'lang, masalan "10.8.0.1:1935".
-  # ":1935" barcha interfeyslar demakdir — shunda firewall bilan VPN tarmog'iga cheklang.
-  rtmp_listen: ":1935"
+  # Pultdan oddiy RTMP. RTMP SHIFRLANMAGAN: uni faqat VPN yoki yopiq tarmoq interfeysiga bog'lang,
+  # masalan "10.8.0.1:1935". Bo'sh = o'chiq (sukut). secure rejimda ":1935" (barcha interfeyslar) yoki
+  # ommaviy IP bilan dastur ishga tushmaydi. Avtomatik RTMPS -> RTMP fallback yo'q.
+  rtmp_listen: ""
   # Ixtiyoriy RTMPS (shifrlangan). config\secrets\tls.crt/tls.key kerak. Bo'sh = o'chiq.
   rtmps_listen: ""
   # Pult URL ida ko'rsatiladigan host: VPN IP (RTMP uchun) yoki domen (RTMPS uchun).
@@ -67,6 +68,10 @@ turn:
   stun_urls: []
 
 security:
+  # secure = production siyosati: ochiq interfeysdagi shifrlanmagan RTMP taqiqlanadi va har bir administrator
+  # ikkinchi bosqichni (TOTP) yoqmaguncha admin amallari bloklanadi. standard = cheklovlarsiz (sinov uchun).
+  # Havola/QR har ikki rejimda ham faqat taklif: administrator aniq brauzer sessiyasini tasdiqlaydi.
+  mode: "secure"
   session_hours: 24
   idle_minutes: 480
   guest_max_hours: 24

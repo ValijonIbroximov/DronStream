@@ -22,7 +22,25 @@ api() { # METHOD PATH [JSON]
   if [ $# -ge 3 ]; then a+=(-H 'Content-Type: application/json' -d "$3"); fi
   curl "${a[@]}"
 }
-login() { CSRF=""; rm -f "$JAR"; CSRF="$(api POST /api/login "{\"username\":\"boss\",\"password\":\"$ADMIN_PASS\"}" | jq -r '.csrf // empty')"; [ -n "$CSRF" ]; }
+TOTP_SECRET=""
+# RFC 6238 code from the base32 secret (python3 standard library only).
+totp() { python3 -c 'import base64,hmac,hashlib,struct,sys,time
+k=base64.b32decode(sys.argv[1]+"="*(-len(sys.argv[1])%8)); m=hmac.new(k,struct.pack(">Q",int(time.time())//30),hashlib.sha1).digest(); o=m[-1]&15
+print("%06d"%((struct.unpack(">I",m[o:o+4])[0]&0x7fffffff)%1000000))' "$1"; }
+# Sign in as admin; with TOTP enabled the current code is sent. A code can be used once per
+# 30 s step (replay protection), so a second login in the same step waits for the next one.
+login() {
+  local i r otp=""
+  for i in 1 2; do
+    CSRF=""; rm -f "$JAR"
+    if [ -n "$TOTP_SECRET" ]; then otp="$(totp "$TOTP_SECRET")"; fi
+    r="$(api POST /api/login "{\"username\":\"boss\",\"password\":\"$ADMIN_PASS\",\"otp\":\"$otp\"}")"
+    CSRF="$(echo "$r" | jq -r '.csrf // empty')"
+    [ -n "$CSRF" ] && return 0
+    [ "$(echo "$r" | jq -r '.code // empty')" = "bad_otp" ] && sleep 31 || return 1
+  done
+  return 1
+}
 wait_health() { local i; for i in $(seq 1 "${1:-60}"); do [ "$(curl -ks -o /dev/null -w '%{http_code}' "$BASE/api/health")" = "200" ] && return 0; sleep 1; done; return 1; }
 dump() { echo "---- journal ----"; sudo journalctl -u dronstream -n 60 --no-pager || true; sudo journalctl -u dronstream -n 6 --no-pager -o cat 2>/dev/null | while IFS= read -r l; do echo "::warning title=journal::$l"; done; }
 trap 'if [ "$FAIL" -gt 0 ]; then dump; fi' EXIT
@@ -40,6 +58,8 @@ if bash "$PKG1/scripts/install.sh" --root /etc >/dev/null 2>&1; then fail "tizim
 
 # ---- install + systemd ----
 if sudo bash "$PKG1/scripts/install.sh" --root "$ROOT" --enable --start; then pass "install.sh --enable --start"; else fail "install.sh"; exit 1; fi
+expect "paket sozlamasi secure rejimda" "$(sudo grep -c '^  mode: "secure"' "$ROOT/config/dronstream.yaml")" "1"
+expect "secure: shifrlanmagan RTMP sukut bo'yicha o'chiq (1935 tinglanmaydi)" "$(ss -H -ltn 2>/dev/null | awk '$4 ~ /:1935$/' | wc -l | tr -d ' ')" "0"
 expect "systemd: active" "$(systemctl is-active dronstream)" "active"
 expect "systemd: enabled (qayta yuklashda avtomatik)" "$(systemctl is-enabled dronstream)" "enabled"
 MAINPID="$(systemctl show -p MainPID --value dronstream)"
@@ -59,6 +79,18 @@ TOK="$(sudo cat "$ROOT/data/runtime/setup-token.txt" | tr -d '[:space:]')"
 CSRF="$(api POST /api/setup "{\"setupToken\":\"$TOK\",\"username\":\"boss\",\"password\":\"$ADMIN_PASS\"}" | jq -r '.csrf // empty')"
 if [ -n "$CSRF" ]; then pass "birinchi administrator (bir martalik kod)"; else fail "setup"; fi
 if sudo journalctl -u dronstream --no-pager | grep -q "$TOK"; then fail "setup kodi jurnalga yozilgan"; else pass "setup kodi jurnalga yozilmagan"; fi
+# ---- secure mode: an administrator without TOTP can only enrol ----
+expect "secure: TOTP'siz admin API bloklangan" "$(api GET /api/admin/users | jq -r '.code')" "mfa_setup_required"
+TS="$(api POST /api/me/totp/setup '{}')"
+TOTP_SECRET="$(echo "$TS" | jq -r '.secret // empty')"
+if echo "$TS" | jq -r '.uri' | grep -q '^otpauth://totp/'; then pass "TOTP: otpauth QR ma'lumoti berildi"; else fail "TOTP setup"; fi
+REC="$(api POST /api/me/totp/enable "{\"code\":\"$(totp "$TOTP_SECRET")\"}" | jq -r '.recoveryCodes | length')"
+expect "TOTP yoqildi, 10 ta tiklash kodi" "$REC" "10"
+OLDJAR="$JAR"; JAR="$WORK/jar-nootp"
+expect "parolning o'zi bilan kirish rad (mfa_required)" "$(api POST /api/login "{\"username\":\"boss\",\"password\":\"$ADMIN_PASS\"}" | jq -r '.code')" "mfa_required"
+JAR="$OLDJAR"
+sleep 31   # the enabling code's 30 s step is spent: wait for a fresh one
+if login; then pass "parol + TOTP bilan kirish"; else fail "TOTP login"; fi
 api POST /api/admin/users '{"username":"viewer1","password":"Viewer-Pass-12345","role":"user"}' >/dev/null
 ST="$(api POST /api/admin/streams '{"name":"Pult X","slug":"pultx"}')"
 SID="$(echo "$ST" | jq -r '.stream.id')"; KEY="$(echo "$ST" | jq -r '.key')"
@@ -93,6 +125,23 @@ if sudo journalctl -u dronstream --no-pager -n 30 | grep -q "chmod 600"; then pa
 sudo systemctl stop dronstream; sudo chmod 600 "$ROOT/config/secrets/master.key"; sudo systemctl start dronstream
 if wait_health 60; then pass "huquq tuzatilgach ishga tushdi"; else fail "huquq tuzatilgach ishga tushmadi"; fi
 
+# ---- secure mode refuses to start with unencrypted RTMP on all interfaces ----
+sudo systemctl stop dronstream
+sudo cp "$ROOT/config/dronstream.yaml" "$WORK/cfg.bak"
+sudo sed -i 's/^  rtmp_listen: ""/  rtmp_listen: ":1935"/' "$ROOT/config/dronstream.yaml"
+sudo systemctl start dronstream || true
+sleep 5
+if [ "$(systemctl is-active dronstream || true)" != "active" ] && sudo journalctl -u dronstream -n 30 --no-pager | grep -q "security.mode=secure"; then
+  pass "secure: rtmp_listen \":1935\" bilan xizmat ishga tushmaydi (aniq sabab jurnalda)"
+else
+  fail "secure: ochiq RTMP bilan ishga tushib ketdi"
+fi
+sudo systemctl stop dronstream || true
+sudo cp "$WORK/cfg.bak" "$ROOT/config/dronstream.yaml"
+sudo systemctl reset-failed dronstream || true
+sudo systemctl start dronstream
+if wait_health 60 && login; then pass "sozlama tiklangach ishga tushdi"; else fail "sozlama tiklangach"; fi
+
 # ---- backup / restore ----
 if sudo DRONSTREAM_BACKUP_PASSPHRASE="$BK_PASS" bash "$ROOT/scripts/backup.sh" --root "$ROOT" >/dev/null; then pass "backup.sh (server ishlab turganda)"; else fail "backup.sh"; fi
 BK="$(sudo sh -c "ls -1t $ROOT/data/backups/dronstream-*.dsbak | head -n1")"
@@ -103,7 +152,10 @@ sudo systemctl stop dronstream
 if sudo DRONSTREAM_BACKUP_PASSPHRASE="Wrong-Passphrase-000" bash "$ROOT/scripts/restore.sh" --root "$ROOT" --in "$BK" --force >/dev/null 2>&1; then fail "noto'g'ri parol qabul qilindi"; else pass "restore: noto'g'ri parol rad etiladi"; fi
 if sudo DRONSTREAM_BACKUP_PASSPHRASE="$BK_PASS" bash "$ROOT/scripts/restore.sh" --root "$ROOT" --in "$BK" --force >/dev/null; then pass "restore.sh"; else fail "restore.sh"; fi
 sudo systemctl start dronstream
-if wait_health 60 && login; then pass "restore'dan keyin admin kiradi"; else fail "restore'dan keyin login"; fi
+JAR="$WORK/jar-restored"
+expect "restore'dan keyin ham TOTP talab qilinadi" "$(api POST /api/login "{\"username\":\"boss\",\"password\":\"$ADMIN_PASS\"}" | jq -r '.code')" "mfa_required"
+JAR="$WORK/jar"
+if wait_health 60 && login; then pass "restore'dan keyin admin kiradi (parol + TOTP)"; else fail "restore'dan keyin login"; fi
 expect "restore'dan keyin KUTISH (standby)" "$(api GET /api/admin/system | jq -r '.state.instanceState')" "standby"
 expect "publish kaliti saqlangan" "$(api GET "/api/admin/streams/$SID/key" | jq -r '.key')" "$KEY"
 api POST /api/admin/system/instance "{\"state\":\"active\",\"confirm\":\"ESKI SERVER O'CHIRILDI\"}" >/dev/null

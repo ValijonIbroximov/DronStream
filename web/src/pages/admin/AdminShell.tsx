@@ -4,6 +4,7 @@ import { useServerEvents } from '../../events'
 import { navigate } from '../../router'
 import { beep, toast, Toasts } from '../../components/ui'
 import { HelpButton } from '../../components/Help'
+import { ReauthHost } from '../../components/Security'
 import Dashboard from './Dashboard'
 import Content from './Content'
 import Collections from './Collections'
@@ -35,7 +36,7 @@ export default function AdminShell({ info, route, onLogout }: { info: SessionInf
   const refreshCounts = async () => {
     try {
       const o = await get<any>('/api/admin/overview')
-      setPending(o.pendingGuests)
+      setPending(o.pendingGuests + (o.pendingLinkRequests || 0))
       setInstance(o.state.instanceState)
     } catch {
       /* ignore */
@@ -128,6 +129,7 @@ export default function AdminShell({ info, route, onLogout }: { info: SessionInf
           </div>
         </div>
       </aside>
+      <ReauthHost />
       <main>
         <button className="menu-btn" onClick={() => setMenu(!menu)}>
           ☰ Menyu

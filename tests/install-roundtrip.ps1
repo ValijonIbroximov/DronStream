@@ -28,6 +28,9 @@ $A = "$Work\serverA"; $B = "$Work\serverB"
 Check "install: layout created" ((Test-Path "$A\app\active.txt") -and (Test-Path "$A\config\dronstream.yaml") -and (Test-Path "$A\data") -and (Test-Path "$A\logs"))
 # use non-default ports so a developer instance does not collide
 $cfg = Get-Content "$A\config\dronstream.yaml" -Raw
+# The package template is in secure mode (admin TOTP required). This test exercises install/backup/restore
+# with plain admin API calls, so it runs in standard mode; secure mode has its own tests (web, CI).
+$cfg = $cfg.Replace('mode: "secure"', 'mode: "standard"')
 $cfg = $cfg.Replace('listen: ":8443"', 'listen: "127.0.0.1:28443"').Replace('"127.0.0.1:9180"', '"127.0.0.1:29180"').Replace('"127.0.0.1:9997"', '"127.0.0.1:29997"').Replace('"127.0.0.1:8889"', '"127.0.0.1:28889"').Replace('webrtc_udp_listen: ":8189"', 'webrtc_udp_listen: "127.0.0.1:28189"').Replace('rtmp_listen: ":1935"', 'rtmp_listen: "127.0.0.1:21935"')
 Set-Content "$A\config\dronstream.yaml" $cfg -Encoding utf8
 & powershell -NoProfile -ExecutionPolicy Bypass -File "$A\scripts\start.ps1" -Root $A | Out-Null
