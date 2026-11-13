@@ -13,5 +13,4 @@ $pass = Read-DsPassphrase "Backup paroli (kamida 12 belgi; yo'qotsangiz backupni
 $a = @("backup", "--root", $Root)
 if ($Out) { $a += @("--out", $Out) }
 if ($MigrateOut) { $a += "--migrate-out" }
-$code = Invoke-DsWithPassphrase $exe $a $pass
-exit $code
+exit (Invoke-DsWithPassphrase $exe $a $pass)

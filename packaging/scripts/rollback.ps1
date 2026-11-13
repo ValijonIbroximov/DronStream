@@ -16,7 +16,7 @@ if ($Backup) {
   if (-not $Passphrase) { $Passphrase = Read-DsPassphrase "Backup paroli" }
   if ((Invoke-DsWithPassphrase $exe @("restore", "--root", $Root, "--in", $Backup, "--force") $Passphrase) -ne 0) { throw "Backup tiklanmadi" }
   # Same machine rollback: the old server is this one, so re-activate immediately.
-  & $exe activate --root $Root
+  Invoke-DsExe $exe @("activate", "--root", $Root) | Out-Null
 }
 & (Join-Path $PSScriptRoot "start.ps1") -Root $Root
 if (Wait-DsHealthy $exe $Root 60) { Write-Host "Rollback tayyor: $ToVersion ishlayapti" -ForegroundColor Green }

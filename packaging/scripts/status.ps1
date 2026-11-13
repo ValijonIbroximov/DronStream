@@ -6,5 +6,4 @@ $exe = Get-DsExe $Root
 $svc = Get-DsService
 if ($svc) { Write-Host "Service: $($svc.Status)" } else { Write-Host "Service: o'rnatilmagan" }
 Write-Host "Faol versiya: $(Get-DsActiveVersion $Root)"
-& $exe status --root $Root
-exit $LASTEXITCODE
+exit (Invoke-DsExe $exe @("status", "--root", $Root))

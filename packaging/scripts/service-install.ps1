@@ -5,7 +5,7 @@ if (-not (Test-DsAdmin)) { throw "Administrator sifatida ishga tushiring" }
 $Root = Resolve-DsRoot $Root
 $exe = Get-DsExe $Root
 if (Get-DsService) { throw "DronStream service allaqachon mavjud (avval service-uninstall.ps1)" }
-if (Test-DsRunning $exe $Root) { & $exe stop --root $Root }
+if (Test-DsRunning $exe $Root) { Invoke-DsExe $exe @("stop", "--root", $Root) | Out-Null }
 $bin = "`"$exe`" run --root `"$Root`""
 New-Service -Name "DronStream" -BinaryPathName $bin -DisplayName "DronStream server" -Description "DronStream: DJI jonli video, faqat ruxsat bilan ko'rish (MediaMTX)" -StartupType Automatic | Out-Null
 & sc.exe failure DronStream reset= 86400 actions= restart/5000/restart/10000/restart/30000 | Out-Null

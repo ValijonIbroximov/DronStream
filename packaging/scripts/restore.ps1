@@ -14,5 +14,4 @@ if (Test-DsRunning $exe $Root) {
 $pass = Read-DsPassphrase "Backup paroli"
 $a = @("restore", "--root", $Root, "--in", $In)
 if ($Force) { $a += "--force" }
-$code = Invoke-DsWithPassphrase $exe $a $pass
-exit $code
+exit (Invoke-DsWithPassphrase $exe $a $pass)

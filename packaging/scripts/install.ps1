@@ -43,7 +43,7 @@ if (-not (Test-Path $active)) {
 foreach ($d in "config\secrets", "data", "logs") {
   $p = Join-Path $Root $d
   & icacls $p /inheritance:r /grant:r "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-18:(OI)(CI)F" "$($env:USERDOMAIN)\$($env:USERNAME):(OI)(CI)F" | Out-Null
-  if ($LASTEXITCODE -ne 0) { Write-Warning "icacls $p muvaffaqiyatsiz — ruxsatlarni qo'lda tekshiring" }
+  if ($LASTEXITCODE -ne 0) { Write-Warning "icacls $p muvaffaqiyatsiz - ruxsatlarni qo'lda tekshiring" }
 }
 Write-Host ""
 Write-Host "Keyingi qadamlar:" -ForegroundColor Green

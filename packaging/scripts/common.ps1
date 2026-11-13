@@ -33,6 +33,11 @@ function ConvertFrom-DsSecure([Security.SecureString]$s) {
 }
 
 function Read-DsPassphrase([string]$Prompt, [switch]$Confirm) {
+  # Non-interactive automation (scheduled task): passphrase from the environment.
+  if ($env:DRONSTREAM_BACKUP_PASSPHRASE) {
+    if ($env:DRONSTREAM_BACKUP_PASSPHRASE.Length -lt 12) { throw "Backup paroli kamida 12 belgi bo'lishi kerak" }
+    return $env:DRONSTREAM_BACKUP_PASSPHRASE
+  }
   $p1 = ConvertFrom-DsSecure (Read-Host -AsSecureString $Prompt)
   if ($Confirm) {
     $p2 = ConvertFrom-DsSecure (Read-Host -AsSecureString "Qayta kiriting")
@@ -42,23 +47,34 @@ function Read-DsPassphrase([string]$Prompt, [switch]$Confirm) {
   return $p1
 }
 
+# Runs dronstream.exe and returns its exit code. Output is shown unless -Quiet.
+# Windows PowerShell 5.1 turns native stderr into error records, which would be
+# fatal under ErrorActionPreference=Stop, so it is relaxed for the call.
+function Invoke-DsExe([string]$Exe, [string[]]$DsArgs, [switch]$Quiet) {
+  $old = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    & $Exe @DsArgs 2>&1 | ForEach-Object { if (-not $Quiet) { Write-Host "$_" } }
+    return $LASTEXITCODE
+  } finally { $ErrorActionPreference = $old }
+}
+
 # Runs dronstream.exe with the passphrase in a process-scoped environment
 # variable (never on the command line, so it does not appear in process lists).
 function Invoke-DsWithPassphrase([string]$Exe, [string[]]$DsArgs, [string]$Pass) {
+  $had = $env:DRONSTREAM_BACKUP_PASSPHRASE
   $env:DRONSTREAM_BACKUP_PASSPHRASE = $Pass
-  try { & $Exe @DsArgs; return $LASTEXITCODE } finally { Remove-Item Env:DRONSTREAM_BACKUP_PASSPHRASE -ErrorAction SilentlyContinue }
+  try { return (Invoke-DsExe $Exe $DsArgs) } finally { if ($had) { $env:DRONSTREAM_BACKUP_PASSPHRASE = $had } else { Remove-Item Env:DRONSTREAM_BACKUP_PASSPHRASE -ErrorAction SilentlyContinue } }
+}
+
+function Test-DsRunning([string]$Exe, [string]$Root) {
+  return ((Invoke-DsExe $Exe @("status", "--root", $Root) -Quiet) -eq 0)
 }
 
 function Wait-DsHealthy([string]$Exe, [string]$Root, [int]$Seconds = 30) {
   for ($i = 0; $i -lt $Seconds; $i++) {
-    & $Exe status --root $Root *> $null
-    if ($LASTEXITCODE -eq 0) { return $true }
+    if (Test-DsRunning $Exe $Root) { return $true }
     Start-Sleep -Seconds 1
   }
   return $false
-}
-
-function Test-DsRunning([string]$Exe, [string]$Root) {
-  & $Exe status --root $Root *> $null
-  return ($LASTEXITCODE -eq 0)
 }

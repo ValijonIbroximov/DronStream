@@ -9,12 +9,14 @@ if ($svc) {
   Write-Host "Windows service ishga tushirildi."
 } else {
   if (Test-DsRunning $exe $Root) { Write-Host "Allaqachon ishlayapti."; exit 0 }
-  $log = Join-Path $Root "logs\console.log"
-  Start-Process -FilePath $exe -ArgumentList @("run", "--root", "`"$Root`"") -WindowStyle Hidden -RedirectStandardOutput $log -RedirectStandardError "$log.err"
+  # No output redirection: with redirection Start-Process makes the child
+  # inherit the caller's handles (a pipe would never close). The server
+  # writes its own logs to <ROOT>\logs\dronstream.log.
+  Start-Process -FilePath $exe -ArgumentList @("run", "--root", "`"$Root`"") -WindowStyle Hidden
 }
 if (Wait-DsHealthy $exe $Root 30) {
   Write-Host "DronStream ishlayapti." -ForegroundColor Green
-  & $exe status --root $Root
+  Invoke-DsExe $exe @("status", "--root", $Root) | Out-Null
 } else {
   Write-Warning "30 s ichida sog'lom holatga kelmadi. Loglar: $Root\logs"
   exit 1
