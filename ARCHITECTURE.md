@@ -130,3 +130,15 @@ Ko'rish mumkin, agar hammasi to'g'ri bo'lsa: instance `active`; favqulodda to'xt
 | To'xtatish | `dronstream stop` / service stop | SIGTERM (`systemctl stop`) yoki `dronstream stop` |
 | Paket | `.zip`, PowerShell skriptlari, BAT | `.tar.gz`, bash skriptlari |
 | Firewall | `firewall-rules.ps1` (ko'rsatadi / `-Apply` / `-Remove`) | ufw buyruqlari qo'llanmada (skript o'zi ochmaydi) |
+
+## 10. v1.3 qo'shimchalari (sxema v3)
+| # | Qaror | Sabab |
+|---|---|---|
+| D44 | Havola faollashtirish = `web_sessions.approval='pending'` + `verify_code`; admin `ApproveLinkSession(session, code)` BEGIN IMMEDIATE ichida limitlarni tekshiradi va `uses_count` ni oshiradi | Havola egasi bo'lish = kirish huquqi emas; begona so'rov limitni yemasin; parallel tasdiqda ham limit oshmasin |
+| D45 | `sessionSubject` (yagona ruxsat funksiyasining kirish qismi) link sessiyasi uchun `approval='approved'` talab qiladi | Chipta, hook, reconciler, fayl, kutubxona — hammasi bir joydan rad etadi |
+| D46 | TOTP stdlib bilan (HMAC-SHA1, 30 s, 6 raqam), `totp_last_step` bilan replay himoyasi; sir master kalit bilan AES-GCM | Tashqi bog'liqliksiz standart algoritm; bazaning o'zi sirni ochmaydi |
+| D47 | `reauth_at` sessiyada; `sensitive` middleware 10 daqiqa | O'g'irlangan cookie bilan eng xavfli amallar bajarilmasin |
+| D48 | `security.mode`; secure'da `rtmp_listen` faqat loopback/xususiy IP yoki bo'sh, aks holda `Validate` xato (fail-closed); TOTP gate admin middleware'da | Shifrlanmagan ingest internetga ochilmasin; "secure" belgisi faqat bayroq emas |
+| D49 | Migratsiya v2→v3 avtomatik `VACUUM INTO pre-migration-schema-v2-*.db` dan keyin; eski havola sessiyalari `pending` + yangi kod | Qat'iyroq siyosat mavjud sessiyalarga ham qo'llanadi |
+| D50 | E2EE amalga oshirilmagan: manba (DJI Pilot 2) E2EE qila olmaydi; MediaMTX kadrlarni ochiq qayta paketlaydi; brauzer JS'i serverdan keladi | SECURITY_MODEL.md 6-bo'lim — maket yoki animatsiya bilan almashtirilmaydi |
+| D51 | CI'da paket ushlash (`tests/ci/pcap-check.py`): WebRTC UDP'da demo SPS/SEI yo'q, oddiy RTMP'da kalit ochiq | Shifrlash borligi va oddiy RTMP xavfi uchun qo'shimcha dalil (yagona isbot emas) |

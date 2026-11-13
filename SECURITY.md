@@ -126,3 +126,15 @@ Loyiha egasiga yopiq kanal orqali xabar bering; publish kalitlari va parollarni 
 ### Skriptlar
 - `Set-StrictMode -Version 3.0` barcha PowerShell skriptlarida yoqilgan va o'chirilmaydi (istisno yo'q). `tests/ps-lint.ps1` buni, sintaksisni, ASCII'ni va qiymat berilmagan o'zgaruvchilarni tekshiradi; `push.bat` uni commit oldidan ishga tushiradi.
 - CI sirsiz ishlaydi (`permissions: contents: read`); tashqi yuklamalar mahkamlangan va tekshirilgan (MediaMTX SHA-256, `package-lock.json`, `go.sum`).
+
+## 14. v1.3: havola faqat taklif, administrator TOTP, secure rejim
+
+Bu bo'lim avvalgi "maxsus havola o'zi kirish beradi" qoidasini **bekor qiladi** (12-bo'limdagi havola faollashtirish tavsifi endi faqat so'rov yaratishga tegishli). Umumiy model va raqiblar tahlili: [SECURITY_MODEL.md](SECURITY_MODEL.md). Qabul testlari: [SECURITY_ACCEPTANCE.md](SECURITY_ACCEPTANCE.md).
+
+- **Havola/QR**: "Kirish" = kutayotgan sessiya + tasodifiy tekshirish kodi. Administrator kodni kiritib aynan shu sessiyani tasdiqlaydi (`/api/admin/approvals/{id}/approve`). Tasdiqsiz sessiyada chipta, fayl, kutubxona yo'q (`link_pending_approval`). Foydalanish tasdiqda sanaladi; havola bo'yicha kutayotgan so'rovlar ≤ 5. Eski havola sessiyalari migratsiyada kutayotgan holatga o'tadi.
+- **Mehmon**: oldingidek admin tasdig'i; endi tekshirish kodi ham ko'rsatiladi.
+- **TOTP (RFC 6238)**: sir AES-GCM (master kalit) bilan; qayta ishlatish rad; 10 ta xeshlangan bir martalik tiklash kodi; `reset-admin` TOTP'ni ham tozalaydi.
+- **Qayta tasdiqlash**: kalit ko'rish/almashtirish/bekor qilish, stream o'chirish, foydalanuvchi yaratish/o'zgartirish, parol tiklash, server holati — 10 daqiqalik oynadan tashqarida `reauth_required`.
+- **secure rejim** (`security.mode: secure`, paketda sukut): ochiq interfeysdagi oddiy RTMP bilan ishga tushmaydi; TOTP'siz admin faqat TOTP yoqa oladi.
+- **Xavfsizlik holati** (`/api/admin/security-status`): har band ish vaqtida "tekshirilgan / zaif / buzilgan / tasdiqlanmagan / mavjud emas".
+- **Amalga oshirilmagan**: E2EE (server videoni ochiq ko'radi), passkey, qurilma kaliti bilan sessiya bog'lash, saqlangan mediani serverdan yashirish.

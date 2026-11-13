@@ -122,3 +122,13 @@ Manba kod; Windows build/skript; README_UZ.md; ADMIN_GUIDE_UZ.md; DJI_SETUP_UZ.m
 - R14.10 BAT/PS1 skriptlari yakunlangan; StrictMode keng doirada o'chirilmaydi.
 - R14.11 Testlar amalda bajarilgan holda yoziladi; lokal test tashqi internet yoki haqiqiy R570 bilan tenglashtirilmaydi.
 - R14.12 Yangi paket (oldingilar ustidan yozilmaydi), GitHub commit/push, masofadagi SHA tekshiruvi.
+
+## R15. v1.3 — video maxfiyligi va 3D qo'llanma (2026-11-13 topshirig'i; avvalgi zid talablarni almashtiradi)
+- R15.1 Video faqat ruxsatli admin va admin tasdiqlagan tomoshabinga. Kim hali ko'ra olishi ochiq yoziladi (SECURITY_MODEL.md).
+- R15.2 Havola faqat taklif/so'rov; admin aniq sessiyani tasdiqlaydi; tekshirish kodi; nusxa boshqa brauzerga huquq bermaydi; IP/UA shaxs dalili emas; limitlar saqlanadi; eski havolalar migratsiya qilinadi.
+- R15.3 Admin: TOTP, tiklash, muhim amallarda qayta tasdiqlash (passkey — keyingi bosqich).
+- R15.4 Pult → server auditi; secure rejimda ochiq oddiy RTMP yo'q; RTMPS fallback yo'q; DJI RTMPS va sertifikat sinovi tartibi; tashqi ulanishlar inventarizatsiyasi.
+- R15.5 E2EE imkoniyati tekshirildi: blokerlar va rejalashtirilgan arxitektura; amalga oshirilmagan narsa bajarilgandek ko'rsatilmaydi.
+- R15.6 Saqlangan media, thumbnail, Range, backup, log, crash dump ishonch chegaralari.
+- R15.7 SECURITY_ACCEPTANCE.md: dalil turlari ajratilgan (kod testi, integratsiya, CI, simulyatsiya, haqiqiy qurilma, mustaqil audit).
+- R15.8 info.html: haqiqiy 3D (Three.js, offline bundle), 12 sahna scroll timeline, kamera o'tishlari, obyektga bog'langan label, "Batafsil", qidiruv, avto namoyish, 2D fallback, reduced-motion, print; dark blue tech uslubi; stilizatsiyalangan modellar shunday deb belgilanadi.
