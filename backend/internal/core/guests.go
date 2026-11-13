@@ -65,8 +65,17 @@ func (s *Service) CreateGuestRequest(ctx context.Context, name, reason, ip, ua s
 // ApproveGuest grants the guest access to the given streams until `until`
 // (unix ms; 0 = default duration). Previous grants are replaced.
 func (s *Service) ApproveGuest(ctx context.Context, a Actor, guestID int64, streamIDs []int64, until int64, note string) error {
-	if len(streamIDs) == 0 {
-		return errf(400, "no_streams", "Kamida bitta streamni tanlang")
+	objs, err := s.streamContentIDs(ctx, streamIDs)
+	if err != nil {
+		return err
+	}
+	return s.ApproveGuestObjects(ctx, a, guestID, objs, until, note)
+}
+
+// ApproveGuestObjects approves a guest for contents/collections until `until`.
+func (s *Service) ApproveGuestObjects(ctx context.Context, a Actor, guestID int64, objs []GrantObject, until int64, note string) error {
+	if len(objs) == 0 {
+		return errf(400, "no_streams", "Kamida bitta kontent yoki to'plamni tanlang")
 	}
 	now := s.nowMs()
 	if until == 0 {
@@ -94,22 +103,17 @@ func (s *Service) ApproveGuest(ctx context.Context, a Actor, guestID int64, stre
 		if _, err := tx.ExecContext(ctx, `UPDATE guests SET status='approved', decided_at=?, decided_by=?, decision_note=?, access_until=? WHERE id=?`, now, a.ID, cleanText(note, 300, false), until, guestID); err != nil {
 			return err
 		}
-		if _, err := tx.ExecContext(ctx, `UPDATE permissions SET revoked_at=?, revoked_by=? WHERE subject_type='guest' AND subject_id=? AND revoked_at IS NULL`, now, a.ID, guestID); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE grants SET revoked_at=?, revoked_by=? WHERE subject_type='guest' AND subject_id=? AND revoked_at IS NULL`, now, a.ID, guestID); err != nil {
 			return err
 		}
-		for _, sid := range streamIDs {
-			if err := streamExists(ctx, tx, sid); err != nil {
-				return err
-			}
-			if _, err := tx.ExecContext(ctx, `INSERT INTO permissions(subject_type,subject_id,stream_id,granted_by,granted_at,expires_at) VALUES('guest',?,?,?,?,?)`, guestID, sid, a.ID, now, until); err != nil {
-				return err
-			}
+		if err := s.grantTx(ctx, tx, a, "guest", guestID, objs, &until); err != nil {
+			return err
 		}
 		// Guest browser session lives until the access ends.
 		if _, err := tx.ExecContext(ctx, `UPDATE web_sessions SET expires_at=? WHERE guest_id=? AND revoked_at IS NULL`, until+5*60_000, guestID); err != nil {
 			return err
 		}
-		s.auditExec(ctx, tx, a, "guest_approve", "guest:"+itoa(guestID), map[string]any{"streams": streamIDs, "until": until})
+		s.auditExec(ctx, tx, a, "guest_approve", "guest:"+itoa(guestID), map[string]any{"objects": objs, "until": until})
 		return nil
 	})
 	if err != nil {
@@ -130,7 +134,7 @@ func (s *Service) RejectGuest(ctx context.Context, a Actor, guestID int64, note 
 	if n, _ := res.RowsAffected(); n == 0 {
 		return ErrNotFound
 	}
-	s.St.DB.ExecContext(ctx, `UPDATE permissions SET revoked_at=?, revoked_by=? WHERE subject_type='guest' AND subject_id=? AND revoked_at IS NULL`, now, a.ID, guestID)
+	s.St.DB.ExecContext(ctx, `UPDATE grants SET revoked_at=?, revoked_by=? WHERE subject_type='guest' AND subject_id=? AND revoked_at IS NULL`, now, a.ID, guestID)
 	s.Audit(ctx, a, "guest_reject", "guest:"+itoa(guestID), nil)
 	s.Enforcer.EnforceNow(ctx, "guest_reject")
 	s.notifyGuest(ctx, guestID, "guest_status")
@@ -150,7 +154,7 @@ func (s *Service) EndGuest(ctx context.Context, a Actor, guestID int64) error {
 		if n, _ := res.RowsAffected(); n == 0 {
 			return ErrNotFound
 		}
-		if _, err := tx.ExecContext(ctx, `UPDATE permissions SET revoked_at=?, revoked_by=? WHERE subject_type='guest' AND subject_id=? AND revoked_at IS NULL`, now, a.ID, guestID); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE grants SET revoked_at=?, revoked_by=? WHERE subject_type='guest' AND subject_id=? AND revoked_at IS NULL`, now, a.ID, guestID); err != nil {
 			return err
 		}
 		rows, err := tx.QueryContext(ctx, `SELECT id FROM web_sessions WHERE guest_id=? AND revoked_at IS NULL`, guestID)

@@ -56,6 +56,7 @@ type Enforcer interface {
 type EventSink interface {
 	ToAdmins(kind string, data any)
 	ToSession(sessionID int64, kind string, data any)
+	ToAll(kind string, data any)
 	CloseSession(sessionID int64)
 }
 
@@ -68,6 +69,7 @@ type nopEvents struct{}
 
 func (nopEvents) ToAdmins(string, any)          {}
 func (nopEvents) ToSession(int64, string, any) {}
+func (nopEvents) ToAll(string, any)            {}
 func (nopEvents) CloseSession(int64)           {}
 
 type Service struct {
@@ -252,7 +254,10 @@ func (s *Service) Cleanup(ctx context.Context) error {
 		{`DELETE FROM media_sessions WHERE status='ended' AND ended_at < ?`, []any{now - 30*86400_000}},
 		{`DELETE FROM playback_tickets WHERE expires_at < ?`, []any{now - 86400_000}},
 		{`DELETE FROM web_sessions WHERE (revoked_at IS NOT NULL OR expires_at < ?) AND last_seen_at < ? AND id NOT IN (SELECT web_session_id FROM media_sessions WHERE status!='ended')`, []any{now, now - 7*86400_000}},
-		{`DELETE FROM permissions WHERE (revoked_at IS NOT NULL AND revoked_at < ?) OR (expires_at IS NOT NULL AND expires_at < ?)`, []any{cut, cut}},
+		{`DELETE FROM grants WHERE (revoked_at IS NOT NULL AND revoked_at < ?) OR (expires_at IS NOT NULL AND expires_at < ?)`, []any{cut, cut}},
+		{`DELETE FROM grants WHERE object_type='content' AND object_id NOT IN (SELECT id FROM contents)`, nil},
+		{`DELETE FROM grants WHERE object_type='collection' AND object_id NOT IN (SELECT id FROM collections)`, nil},
+		{`DELETE FROM link_activations WHERE created_at < ? AND created_at > 0`, []any{cut}},
 		{`DELETE FROM guests WHERE status IN ('rejected','ended') AND COALESCE(decided_at, created_at) < ? AND id NOT IN (SELECT guest_id FROM web_sessions WHERE guest_id IS NOT NULL)`, []any{cut}},
 	}
 	for _, st := range stmts {

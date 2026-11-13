@@ -131,8 +131,11 @@ func BackupCLI(root, out, pass string, migrateOut bool) error {
 	if err := CreateBackup(context.Background(), L, st, key, pass, out, migrateOut); err != nil {
 		return err
 	}
-	if _, _, err := backup.Open(out, pass); err != nil { // verify it can be read back
+	if a, err := backup.OpenArchive(out, pass, L.RuntimeDir); err != nil { // verify it can be read back
 		return fmt.Errorf("backup verification failed: %w", err)
+	} else {
+		fmt.Println("Media fayllar:", a.Manifest.MediaFiles)
+		a.Close()
 	}
 	fmt.Println("Backup yaratildi va tekshirildi:", out)
 	if migrateOut {
@@ -153,10 +156,16 @@ func RestoreCLI(root, in, pass string, force bool) error {
 	if running(root) {
 		return errors.New("stop DronStream first (dronstream stop)")
 	}
-	m, files, err := backup.Open(in, pass)
+	L0 := config.NewLayout(root)
+	if err := L0.Ensure(); err != nil {
+		return err
+	}
+	ar, err := backup.OpenArchive(in, pass, L0.RuntimeDir)
 	if err != nil {
 		return err
 	}
+	defer ar.Close()
+	m, files := ar.Manifest, ar.Small
 	if m.SchemaVersion > store.SchemaVersion {
 		return fmt.Errorf("backup schema v%d is newer than this program (v%d): install the newer version first", m.SchemaVersion, store.SchemaVersion)
 	}
@@ -180,9 +189,14 @@ func RestoreCLI(root, in, pass string, force bool) error {
 			os.Rename(secure.MasterKeyPath(L.SecretsDir), secure.MasterKeyPath(L.SecretsDir)+".pre-restore-"+ts)
 		}
 	}
-	if err := os.WriteFile(L.DBFile, files["dronstream.db"], 0o600); err != nil {
+	if err := ar.WriteDB(L.DBFile); err != nil {
 		return err
 	}
+	nMedia, err := ar.ExtractMedia(L.MediaDir)
+	if err != nil {
+		return fmt.Errorf("media: %w", err)
+	}
+	fmt.Println("Media fayllar tiklandi:", nMedia)
 	if err := secure.WriteMasterKey(L.SecretsDir, files["master.key"]); err != nil {
 		return err
 	}
@@ -215,6 +229,8 @@ func RestoreCLI(root, in, pass string, force bool) error {
 		`UPDATE web_sessions SET revoked_at=` + fmt.Sprint(now) + `, revoke_reason='restored' WHERE revoked_at IS NULL`,
 		`UPDATE media_sessions SET status='ended', ended_at=` + fmt.Sprint(now) + `, end_reason='restored' WHERE status!='ended'`,
 		`DELETE FROM playback_tickets`,
+		// a used one-time link stays used after a move: no activation retries
+		`UPDATE link_activations SET created_at=0`,
 	}
 	for _, q := range stmts {
 		if _, err := st.DB.Exec(q); err != nil {

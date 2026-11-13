@@ -47,13 +47,16 @@ type Manager struct {
 	statsMu sync.RWMutex
 	stats   map[string]StreamStats // by MediaMTX path
 	prev    map[string][3]int64    // path -> inbound, outbound, ts(ms)
+	transfersMu sync.Mutex
+	transfers   map[*Transfer]struct{}
+
 	// Kick latency measurements (for TEST_REPORT / admin diagnostics).
 	LastEnforce atomic.Int64 // duration of the last EnforceNow in µs
 }
 
 func NewManager(c *core.Service, api mtx.API, webrtcBase string, interval time.Duration, log *slog.Logger) *Manager {
 	m := &Manager{Core: c, API: api, Log: log, WebRTCBase: webrtcBase, Interval: interval,
-		stats: map[string]StreamStats{}, prev: map[string][3]int64{}}
+		stats: map[string]StreamStats{}, prev: map[string][3]int64{}, transfers: map[*Transfer]struct{}{}}
 	m.healthy.Store(true)
 	c.Enforcer = m
 	c.PathBusy = m.PathBusy
@@ -146,6 +149,9 @@ func (m *Manager) EnforceNow(ctx context.Context, why string) {
 	// Use a detached context so a cancelled HTTP request cannot abort kicks.
 	c, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
+	if m.healthy.Load() {
+		m.enforceTransfers(c) // independent of MediaMTX availability
+	}
 	m.pass(c, why)
 	m.LastEnforce.Store(time.Since(start).Microseconds())
 }
@@ -173,6 +179,7 @@ func (m *Manager) pass(ctx context.Context, why string) {
 	m.mtxUp.Store(true)
 	if !m.healthy.Load() {
 		m.kickAllReaders(ctx, "auth_unavailable")
+		m.cancelAllTransfers("auth_unavailable")
 		return
 	}
 	sys, err := m.Core.State(ctx)
@@ -250,6 +257,7 @@ func (m *Manager) pass(ctx context.Context, why string) {
 		m.Core.EndMedia(ctx, ms, reason)
 	}
 	m.lastPass.Store(now.UnixMilli())
+	m.enforceTransfers(ctx)
 	m.refreshPaths(ctx, sys)
 }
 
@@ -416,4 +424,59 @@ func (m *Manager) KickMedia(ctx context.Context, a core.Actor, id int64) error {
 	m.Core.EndMedia(ctx, ms, "kicked_by_admin")
 	m.Core.Audit(ctx, a, "media_kick", "stream:"+ms.StreamName, map[string]any{"subject": ms.SubjectType + ":" + ms.SubjectName})
 	return nil
+}
+
+// Transfer is an in-flight delivery of an uploaded file (image/video bytes,
+// including HTTP Range requests). Revocation cancels its context, which
+// aborts the response mid-body; the next Range request is refused anyway.
+type Transfer struct {
+	WebSessionID int64
+	ContentID    int64
+	Cancel       func()
+	Reason       string
+}
+
+func (m *Manager) TrackTransfer(t *Transfer) func() {
+	m.transfersMu.Lock()
+	m.transfers[t] = struct{}{}
+	m.transfersMu.Unlock()
+	return func() {
+		m.transfersMu.Lock()
+		delete(m.transfers, t)
+		m.transfersMu.Unlock()
+	}
+}
+
+func (m *Manager) ActiveTransfers() int {
+	m.transfersMu.Lock()
+	defer m.transfersMu.Unlock()
+	return len(m.transfers)
+}
+
+func (m *Manager) snapshotTransfers() []*Transfer {
+	m.transfersMu.Lock()
+	defer m.transfersMu.Unlock()
+	out := make([]*Transfer, 0, len(m.transfers))
+	for t := range m.transfers {
+		out = append(out, t)
+	}
+	return out
+}
+
+func (m *Manager) enforceTransfers(ctx context.Context) {
+	for _, t := range m.snapshotTransfers() {
+		if d := m.Core.AuthorizeContent(ctx, t.WebSessionID, t.ContentID); !d.OK {
+			t.Reason = d.Reason
+			t.Cancel()
+			m.Core.Events.ToSession(t.WebSessionID, "content_revoked", map[string]any{"contentId": t.ContentID, "reason": d.Reason, "message": core.ReasonText(d.Reason)})
+			m.Log.Info("file transfer cut", "content", t.ContentID, "reason", d.Reason)
+		}
+	}
+}
+
+func (m *Manager) cancelAllTransfers(reason string) {
+	for _, t := range m.snapshotTransfers() {
+		t.Reason = reason
+		t.Cancel()
+	}
 }

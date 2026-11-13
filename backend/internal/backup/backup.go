@@ -36,6 +36,7 @@ type Manifest struct {
 	InstanceID    string    `json:"instanceId"`
 	OS            string    `json:"os"`
 	ForMigration  bool      `json:"forMigration"`
+	MediaFiles    int       `json:"mediaFiles"`
 }
 
 type File struct {
@@ -44,8 +45,8 @@ type File struct {
 	Data []byte
 }
 
-// Create writes an encrypted archive to out.
-func Create(out string, pass string, m Manifest, files []File) error {
+// CreateV1 writes the 1.0.x format (kept so compatibility can be tested).
+func CreateV1(out string, pass string, m Manifest, files []File) error {
 	if len([]rune(pass)) < 12 {
 		return errors.New("backup passphrase must be at least 12 characters")
 	}

@@ -15,6 +15,7 @@ type Session struct {
 	Kind        string `json:"kind"` // user | guest
 	UserID      int64  `json:"userId,omitempty"`
 	GuestID     int64  `json:"guestId,omitempty"`
+	LinkID      int64  `json:"linkId,omitempty"`
 	CSRF        string `json:"-"`
 	CreatedAt   int64  `json:"createdAt"`
 	LastSeen    int64  `json:"lastSeen"`
@@ -31,8 +32,11 @@ type Session struct {
 func (s *Session) Actor(ip string) Actor {
 	t := s.Role
 	id := s.UserID
-	if s.Kind == "guest" {
+	switch s.Kind {
+	case "guest":
 		id = s.GuestID
+	case "link":
+		id = s.LinkID
 	}
 	return Actor{Type: t, ID: id, Name: s.Name, IP: ip}
 }
@@ -178,44 +182,55 @@ func (s *Service) Login(ctx context.Context, username, password, ip, ua string) 
 }
 
 func (s *Service) newSession(ctx context.Context, kind string, userID, guestID int64, ip, ua string, expires int64) (string, *Session, error) {
+	return s.newSessionTx(ctx, s.St.DB, kind, userID, guestID, 0, ip, ua, expires)
+}
+
+func (s *Service) newSessionTx(ctx context.Context, db execer, kind string, userID, guestID, linkID int64, ip, ua string, expires int64) (string, *Session, error) {
 	tok := secure.Token(32)
 	csrf := secure.Token(24)
 	now := s.nowMs()
-	var uid, gid any
+	var uid, gid, lid any
 	if userID != 0 {
 		uid = userID
 	}
 	if guestID != 0 {
 		gid = guestID
 	}
+	if linkID != 0 {
+		lid = linkID
+	}
 	ua = cleanText(ua, 300, false)
-	res, err := s.St.DB.ExecContext(ctx, `INSERT INTO web_sessions(token_hash,kind,user_id,guest_id,csrf_token,created_at,last_seen_at,expires_at,ip,user_agent) VALUES(?,?,?,?,?,?,?,?,?,?)`,
-		secure.Hash(tok), kind, uid, gid, csrf, now, now, expires, ip, ua)
+	res, err := db.ExecContext(ctx, `INSERT INTO web_sessions(token_hash,kind,user_id,guest_id,link_id,csrf_token,created_at,last_seen_at,expires_at,ip,user_agent) VALUES(?,?,?,?,?,?,?,?,?,?,?)`,
+		secure.Hash(tok), kind, uid, gid, lid, csrf, now, now, expires, ip, ua)
 	if err != nil {
 		return "", nil, err
 	}
 	id, _ := res.LastInsertId()
-	return tok, &Session{ID: id, Kind: kind, UserID: userID, GuestID: guestID, CSRF: csrf, CreatedAt: now, LastSeen: now, ExpiresAt: expires, IP: ip, UserAgent: ua}, nil
+	return tok, &Session{ID: id, Kind: kind, UserID: userID, GuestID: guestID, LinkID: linkID, CSRF: csrf, CreatedAt: now, LastSeen: now, ExpiresAt: expires, IP: ip, UserAgent: ua}, nil
 }
 
-const sessionSelect = `SELECT ws.id, ws.kind, COALESCE(ws.user_id,0), COALESCE(ws.guest_id,0), ws.csrf_token, ws.created_at, ws.last_seen_at, ws.expires_at, ws.ip, ws.user_agent, ws.revoked_at,
+const sessionSelect = `SELECT ws.id, ws.kind, COALESCE(ws.user_id,0), COALESCE(ws.guest_id,0), COALESCE(ws.link_id,0), COALESCE(l.name,''), ws.csrf_token, ws.created_at, ws.last_seen_at, ws.expires_at, ws.ip, ws.user_agent, ws.revoked_at,
  COALESCE(u.role,''), COALESCE(u.status,''), COALESCE(u.display_name,''), COALESCE(u.username,''), COALESCE(u.must_change_password,0),
  COALESCE(g.display_name,''), COALESCE(g.status,''), g.access_until
- FROM web_sessions ws LEFT JOIN users u ON u.id=ws.user_id LEFT JOIN guests g ON g.id=ws.guest_id`
+ FROM web_sessions ws LEFT JOIN users u ON u.id=ws.user_id LEFT JOIN guests g ON g.id=ws.guest_id LEFT JOIN access_links l ON l.id=ws.link_id`
 
 func (s *Service) scanSession(row interface{ Scan(...any) error }) (*Session, sql.NullInt64, string, sql.NullInt64, error) {
 	var x Session
 	var revoked, guestUntil sql.NullInt64
 	var userStatus string
-	var gName string
-	err := row.Scan(&x.ID, &x.Kind, &x.UserID, &x.GuestID, &x.CSRF, &x.CreatedAt, &x.LastSeen, &x.ExpiresAt, &x.IP, &x.UserAgent, &revoked,
+	var gName, lName string
+	err := row.Scan(&x.ID, &x.Kind, &x.UserID, &x.GuestID, &x.LinkID, &lName, &x.CSRF, &x.CreatedAt, &x.LastSeen, &x.ExpiresAt, &x.IP, &x.UserAgent, &revoked,
 		&x.Role, &userStatus, &x.Name, &x.Username, &x.MustChange, &gName, &x.GuestStatus, &guestUntil)
 	if err != nil {
 		return nil, revoked, "", guestUntil, err
 	}
-	if x.Kind == "guest" {
+	switch x.Kind {
+	case "guest":
 		x.Role = "guest"
 		x.Name = gName
+	case "link":
+		x.Role = "link"
+		x.Name = lName
 	}
 	return &x, revoked, userStatus, guestUntil, nil
 }

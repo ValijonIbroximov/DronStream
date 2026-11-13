@@ -53,6 +53,11 @@ func (h *Hub) ToSession(id int64, kind string, data any) {
 	h.send(func(c *client) bool { return c.sessionID == id }, kind, data)
 }
 
+// ToAll notifies every connected browser (e.g. library changed).
+func (h *Hub) ToAll(kind string, data any) {
+	h.send(func(*client) bool { return true }, kind, data)
+}
+
 func (h *Hub) CloseSession(id int64) {
 	h.mu.Lock()
 	defer h.mu.Unlock()

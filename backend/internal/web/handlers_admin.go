@@ -250,15 +250,20 @@ func (s *Server) adminGuests(w http.ResponseWriter, r *http.Request) {
 func (s *Server) adminApproveGuest(w http.ResponseWriter, r *http.Request) {
 	id, err := pathID(r)
 	var in struct {
-		StreamIDs []int64 `json:"streamIds"`
-		Until     int64   `json:"until"`
-		Note      string  `json:"note"`
+		StreamIDs []int64            `json:"streamIds"`
+		Objects   []core.GrantObject `json:"objects"`
+		Until     int64              `json:"until"`
+		Note      string             `json:"note"`
 	}
 	if err == nil {
 		err = readJSON(r, &in)
 	}
 	if err == nil {
-		err = s.Core.ApproveGuest(r.Context(), actor(r), id, in.StreamIDs, in.Until, in.Note)
+		if len(in.Objects) > 0 {
+			err = s.Core.ApproveGuestObjects(r.Context(), actor(r), id, in.Objects, in.Until, in.Note)
+		} else {
+			err = s.Core.ApproveGuest(r.Context(), actor(r), id, in.StreamIDs, in.Until, in.Note)
+		}
 	}
 	if err != nil {
 		writeErr(w, err)
@@ -377,7 +382,7 @@ func (s *Server) adminLogoutAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) adminPermissions(w http.ResponseWriter, r *http.Request) {
-	ps, err := s.Core.ListPermissions(r.Context())
+	ps, err := s.Core.ListGrants(r.Context(), "", 0)
 	if err != nil {
 		writeErr(w, err)
 		return

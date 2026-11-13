@@ -18,6 +18,7 @@ import (
 	"dronstream/internal/config"
 	"dronstream/internal/core"
 	"dronstream/internal/media"
+	"dronstream/internal/mediafiles"
 	"dronstream/internal/secure"
 )
 
@@ -49,13 +50,16 @@ type Server struct {
 	// HTTP client for the loopback WHEP proxy.
 	whep *http.Client
 
-	limLogin, limGuest, limSetup, limTicket *limiter
+	limLogin, limGuest, limSetup, limTicket, limLink *limiter
+
+	// Files is the uploaded media store (images/videos).
+	Files *mediafiles.Store
 }
 
 func New(c *core.Service, m *media.Manager, hub *Hub, cfg *config.Config, log *slog.Logger, static fs.FS, hooks Hooks) *Server {
 	return &Server{Core: c, Media: m, Hub: hub, Cfg: cfg, Log: log, Static: static, Hooks: hooks,
 		whep:     &http.Client{Timeout: 20 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }},
-		limLogin: newLimiter(10, 5), limGuest: newLimiter(0.3, 3), limSetup: newLimiter(5, 5), limTicket: newLimiter(120, 30),
+		limLogin: newLimiter(10, 5), limGuest: newLimiter(0.3, 3), limSetup: newLimiter(5, 5), limTicket: newLimiter(120, 30), limLink: newLimiter(20, 10),
 	}
 }
 
@@ -70,6 +74,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/logout", s.authed(s.logout))
 	mux.HandleFunc("POST /api/me/password", s.authed(s.changePassword))
 	mux.HandleFunc("GET /api/events", s.authed(s.events))
+	mux.HandleFunc("POST /api/link/inspect", s.public(s.linkInspect))
+	mux.HandleFunc("POST /api/link/activate", s.public(s.linkActivate))
+	mux.HandleFunc("GET /api/library", s.authed(s.library))
+	mux.HandleFunc("GET /api/content/{id}/file", s.authed(s.contentFile(false)))
+	mux.HandleFunc("GET /api/content/{id}/thumb", s.authed(s.contentFile(true)))
 	// viewer
 	mux.HandleFunc("GET /api/streams", s.authed(s.viewerStreams))
 	mux.HandleFunc("POST /api/watch/{id}/ticket", s.authed(s.ticket))
@@ -115,6 +124,30 @@ func (s *Server) Handler() http.Handler {
 	a("POST /api/admin/backups", s.adminBackup)
 	a("GET /api/admin/backups", s.adminListBackups)
 	a("GET /api/admin/backups/{name}", s.adminDownloadBackup)
+	a("GET /api/admin/contents", s.adminContents)
+	a("POST /api/admin/contents/text", s.adminCreateText)
+	a("POST /api/admin/contents/upload", s.adminUpload)
+	a("POST /api/admin/contents/bulk", s.adminBulkContent)
+	a("PUT /api/admin/contents/{id}", s.adminUpdateContent)
+	a("DELETE /api/admin/contents/{id}", s.adminDeleteContent)
+	a("GET /api/admin/collections", s.adminCollections)
+	a("POST /api/admin/collections", s.adminSaveCollection)
+	a("PUT /api/admin/collections/{id}", s.adminSaveCollection)
+	a("DELETE /api/admin/collections/{id}", s.adminDeleteCollection)
+	a("GET /api/admin/grants", s.adminGrants)
+	a("POST /api/admin/grants", s.adminApplyGrants)
+	a("POST /api/admin/grants/copy", s.adminCopyGrants)
+	a("POST /api/admin/grants/{id}/revoke", s.adminRevokeGrant)
+	a("GET /api/admin/preview", s.adminPreview)
+	a("GET /api/admin/links", s.adminLinks)
+	a("POST /api/admin/links", s.adminCreateLink)
+	a("PUT /api/admin/links/{id}", s.adminUpdateLink)
+	a("POST /api/admin/links/{id}/revoke", s.adminRevokeLink)
+	a("POST /api/admin/links/{id}/regenerate", s.adminRegenerateLink)
+	a("GET /api/admin/links/{id}/share", s.adminLinkShare)
+	a("GET /api/admin/login-share", s.adminLoginShare)
+	a("GET /api/admin/settings", s.adminGetSettings)
+	a("POST /api/admin/settings/base-url", s.adminSetBaseURL)
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) { writeErr(w, core.ErrNotFound) })
 	mux.HandleFunc("/", s.static)
 	return s.securityHeaders(mux)
@@ -307,7 +340,8 @@ func (s *Server) static(w http.ResponseWriter, r *http.Request) {
 	if strings.HasPrefix(p, "assets/") {
 		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	} else {
-		w.Header().Set("Cache-Control", "no-cache")
+		// index.html also serves /link (special links): never cache.
+		w.Header().Set("Cache-Control", "no-store")
 	}
 	http.ServeContent(w, r, p, st.ModTime(), f.(io.ReadSeeker))
 }

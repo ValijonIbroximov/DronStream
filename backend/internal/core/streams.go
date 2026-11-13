@@ -134,6 +134,9 @@ func (s *Service) CreateStream(ctx context.Context, a Actor, in StreamInput, dem
 		if err := s.setKeyTx(ctx, tx, id, key); err != nil {
 			return err
 		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO contents(type,title,description,stream_id,sort_order,created_at,updated_at) VALUES('stream',?,?,?,(SELECT COALESCE(MAX(sort_order),0)+10 FROM contents),?,?)`, in.Name, in.Description, id, now, now); err != nil {
+			return err
+		}
 		s.auditExec(ctx, tx, a, "stream_create", "stream:"+in.Slug, map[string]any{"demo": demo, "mode": in.PublishMode})
 		return nil
 	})
@@ -283,6 +286,7 @@ func (s *Service) DeleteStream(ctx context.Context, a Actor, id int64) error {
 	s.St.DB.ExecContext(ctx, `UPDATE streams SET viewing_enabled=0, publish_enabled=0 WHERE id=?`, id)
 	s.Enforcer.KickPublisher(ctx, id, "stream_deleted")
 	s.Enforcer.EnforceNow(ctx, "stream_deleted")
+	s.St.DB.ExecContext(ctx, `UPDATE grants SET revoked_at=? WHERE object_type='content' AND object_id IN (SELECT id FROM contents WHERE stream_id=?) AND revoked_at IS NULL`, s.nowMs(), id)
 	if _, err := s.St.DB.ExecContext(ctx, `DELETE FROM streams WHERE id=?`, id); err != nil {
 		return err
 	}
@@ -290,115 +294,61 @@ func (s *Service) DeleteStream(ctx context.Context, a Actor, id int64) error {
 	return nil
 }
 
-// ---- permissions ----
+// ---- legacy stream-level permissions (v1 API, kept for compatibility) ----
 
-type Permission struct {
-	ID          int64  `json:"id"`
-	SubjectType string `json:"subjectType"`
-	SubjectID   int64  `json:"subjectId"`
-	SubjectName string `json:"subjectName"`
-	StreamID    int64  `json:"streamId"`
-	StreamName  string `json:"streamName"`
-	GrantedAt   int64  `json:"grantedAt"`
-	GrantedBy   string `json:"grantedBy"`
-	ExpiresAt   *int64 `json:"expiresAt"`
+func (s *Service) streamContentIDs(ctx context.Context, streamIDs []int64) ([]GrantObject, error) {
+	var objs []GrantObject
+	for _, sid := range streamIDs {
+		c, err := s.ContentForStream(ctx, sid)
+		if err != nil {
+			return nil, errf(400, "bad_stream", "Stream topilmadi")
+		}
+		objs = append(objs, GrantObject{Type: "content", ID: c.ID})
+	}
+	return objs, nil
 }
 
-// Grant gives subject access to streams (replacing an existing active grant
-// for the same pair, e.g. to change the expiry).
+// Grant gives subject access to streams (content grants of their stream items).
 func (s *Service) Grant(ctx context.Context, a Actor, subjectType string, subjectID int64, streamIDs []int64, expiresAt *int64) error {
-	if subjectType != "user" && subjectType != "guest" {
-		return ErrBadRequest
-	}
 	if len(streamIDs) == 0 {
 		return errf(400, "no_streams", "Kamida bitta streamni tanlang")
 	}
-	now := s.nowMs()
-	if expiresAt != nil && *expiresAt <= now {
-		return errf(400, "bad_until", "Tugash vaqti kelajakda bo'lishi kerak")
-	}
-	err := s.St.Tx(ctx, func(tx *sql.Tx) error {
-		var ok int
-		var q string
-		if subjectType == "user" {
-			q = `SELECT count(*) FROM users WHERE id=?`
-		} else {
-			q = `SELECT count(*) FROM guests WHERE id=? AND status='approved'`
-		}
-		if err := tx.QueryRowContext(ctx, q, subjectID).Scan(&ok); err != nil {
-			return err
-		}
-		if ok == 0 {
-			return errf(400, "bad_subject", "Foydalanuvchi topilmadi (mehmon avval tasdiqlanishi kerak)")
-		}
-		for _, sid := range streamIDs {
-			if err := streamExists(ctx, tx, sid); err != nil {
-				return err
-			}
-			if _, err := tx.ExecContext(ctx, `UPDATE permissions SET revoked_at=?, revoked_by=? WHERE subject_type=? AND subject_id=? AND stream_id=? AND revoked_at IS NULL`, now, a.ID, subjectType, subjectID, sid); err != nil {
-				return err
-			}
-			if _, err := tx.ExecContext(ctx, `INSERT INTO permissions(subject_type,subject_id,stream_id,granted_by,granted_at,expires_at) VALUES(?,?,?,?,?,?)`, subjectType, subjectID, sid, a.ID, now, nullPtr(expiresAt)); err != nil {
-				return err
-			}
-		}
-		s.auditExec(ctx, tx, a, "permission_grant", subjectType+":"+itoa(subjectID), map[string]any{"streams": streamIDs, "expiresAt": expiresAt})
-		return nil
-	})
+	objs, err := s.streamContentIDs(ctx, streamIDs)
 	if err != nil {
 		return err
 	}
-	s.Enforcer.EnforceNow(ctx, "grant") // a shortened expiry must apply to live sessions
-	s.notifySubject(ctx, subjectType, subjectID, "permissions")
-	return nil
+	return s.GrantObjects(ctx, a, subjectType, []int64{subjectID}, objs, expiresAt)
 }
 
-// Revoke removes one stream permission. DB first, then media is cut.
+// Revoke removes the direct content grant of one stream for a subject.
 func (s *Service) Revoke(ctx context.Context, a Actor, subjectType string, subjectID, streamID int64) error {
-	res, err := s.St.DB.ExecContext(ctx, `UPDATE permissions SET revoked_at=?, revoked_by=? WHERE subject_type=? AND subject_id=? AND stream_id=? AND revoked_at IS NULL`, s.nowMs(), a.ID, subjectType, subjectID, streamID)
+	c, err := s.ContentForStream(ctx, streamID)
+	if err != nil {
+		return err
+	}
+	return s.RevokeObject(ctx, a, subjectType, subjectID, "content", c.ID)
+}
+
+// RevokeObject revokes all active grants of subject on one object.
+func (s *Service) RevokeObject(ctx context.Context, a Actor, subjectType string, subjectID int64, objType string, objID int64) error {
+	res, err := s.St.DB.ExecContext(ctx, `UPDATE grants SET revoked_at=?, revoked_by=? WHERE subject_type=? AND subject_id=? AND object_type=? AND object_id=? AND revoked_at IS NULL`,
+		s.nowMs(), a.ID, subjectType, subjectID, objType, objID)
 	if err != nil {
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		return ErrNotFound
 	}
-	s.Audit(ctx, a, "permission_revoke", subjectType+":"+itoa(subjectID), map[string]any{"stream": streamID})
+	s.Audit(ctx, a, "permission_revoke", subjectType+":"+itoa(subjectID), map[string]any{objType: objID})
 	s.Enforcer.EnforceNow(ctx, "revoke")
 	s.notifySubject(ctx, subjectType, subjectID, "permissions")
 	return nil
 }
 
 func (s *Service) notifySubject(ctx context.Context, subjectType string, subjectID int64, kind string) {
-	col := "user_id"
-	if subjectType == "guest" {
-		col = "guest_id"
-	}
-	for _, id := range s.activeSessionIDs(ctx, col+"=?", subjectID) {
+	for _, id := range s.activeSessionIDs(ctx, subjectSessionsCol(subjectType)+"=?", subjectID) {
 		s.Events.ToSession(id, kind, nil)
 	}
-}
-
-func (s *Service) ListPermissions(ctx context.Context) ([]Permission, error) {
-	rows, err := s.St.DB.QueryContext(ctx, `SELECT p.id,p.subject_type,p.subject_id,
-	 CASE p.subject_type WHEN 'user' THEN COALESCE((SELECT display_name||' ('||username||')' FROM users WHERE id=p.subject_id),'?') ELSE COALESCE((SELECT 'Mehmon: '||display_name FROM guests WHERE id=p.subject_id),'?') END,
-	 p.stream_id, st.name, p.granted_at, COALESCE((SELECT display_name FROM users WHERE id=p.granted_by),''), p.expires_at
-	 FROM permissions p JOIN streams st ON st.id=p.stream_id
-	 WHERE p.revoked_at IS NULL AND (p.expires_at IS NULL OR p.expires_at > ?) ORDER BY p.subject_type, p.subject_id, st.name`, s.nowMs())
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []Permission{}
-	for rows.Next() {
-		var p Permission
-		var exp sql.NullInt64
-		if err := rows.Scan(&p.ID, &p.SubjectType, &p.SubjectID, &p.SubjectName, &p.StreamID, &p.StreamName, &p.GrantedAt, &p.GrantedBy, &exp); err != nil {
-			return nil, err
-		}
-		p.ExpiresAt = nullable(exp)
-		out = append(out, p)
-	}
-	return out, rows.Err()
 }
 
 func nullPtr(v *int64) any {

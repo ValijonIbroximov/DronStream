@@ -24,6 +24,7 @@ type Layout struct {
 	BackupDir  string
 	RuntimeDir string
 	LogDir     string
+	MediaDir   string
 }
 
 func NewLayout(root string) Layout {
@@ -37,11 +38,12 @@ func NewLayout(root string) Layout {
 		BackupDir:  filepath.Join(root, "data", "backups"),
 		RuntimeDir: filepath.Join(root, "data", "runtime"),
 		LogDir:     filepath.Join(root, "logs"),
+		MediaDir:   filepath.Join(root, "data", "media"),
 	}
 }
 
 func (l Layout) Ensure() error {
-	for _, d := range []string{filepath.Dir(l.ConfigFile), l.SecretsDir, l.DataDir, l.BackupDir, l.RuntimeDir, l.LogDir} {
+	for _, d := range []string{filepath.Dir(l.ConfigFile), l.SecretsDir, l.DataDir, l.BackupDir, l.RuntimeDir, l.LogDir, l.MediaDir} {
 		if err := os.MkdirAll(d, 0o700); err != nil {
 			return err
 		}
@@ -77,6 +79,13 @@ type Config struct {
 	Security SecurityConfig `yaml:"security"`
 	Logging  LoggingConfig  `yaml:"logging"`
 	Demo     DemoConfig     `yaml:"demo"`
+	Library  LibraryConfig  `yaml:"library"`
+}
+
+// LibraryConfig limits uploaded media (images, videos, text).
+type LibraryConfig struct {
+	MaxImageMB int64 `yaml:"max_image_mb"`
+	MaxVideoMB int64 `yaml:"max_video_mb"`
 }
 
 type WebConfig struct {
@@ -86,6 +95,9 @@ type WebConfig struct {
 	ACMEDomain   string   `yaml:"acme_domain"`   // optional Let's Encrypt domain (needs :443 reachable)
 	ACMEEmail    string   `yaml:"acme_email"`
 	InternalAddr string   `yaml:"internal_listen"` // loopback-only hook/control listener
+	// PublicBaseURL is the external address used in shared links and QR codes,
+	// e.g. https://stream.example.uz:8443 (can also be set in the admin UI).
+	PublicBaseURL string `yaml:"public_base_url"`
 }
 
 type MediaConfig struct {
@@ -151,6 +163,7 @@ func Default() Config {
 		Security: SecurityConfig{SessionHours: 24, IdleMinutes: 480, GuestMaxHours: 24, MaxPendingGuests: 50, AuditRetainDays: 180, SameSite: "Strict"},
 		Logging:  LoggingConfig{Level: "info", MaxSizeMB: 20, Keep: 5},
 		Demo:     DemoConfig{Enabled: true},
+		Library:  LibraryConfig{MaxImageMB: 25, MaxVideoMB: 2048},
 	}
 }
 
@@ -195,6 +208,12 @@ func (c *Config) Validate() error {
 	case "", "off", "builtin", "external":
 	default:
 		return fmt.Errorf("turn.mode must be off|builtin|external")
+	}
+	if c.Library.MaxImageMB <= 0 {
+		c.Library.MaxImageMB = 25
+	}
+	if c.Library.MaxVideoMB <= 0 {
+		c.Library.MaxVideoMB = 2048
 	}
 	if c.Security.SameSite != "Lax" {
 		c.Security.SameSite = "Strict"

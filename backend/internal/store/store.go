@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -22,6 +23,11 @@ var ErrNotFound = errors.New("not found")
 type Store struct {
 	DB   *sql.DB
 	path string
+
+	// MigratedFrom is the schema version found on open when a migration ran (0 = none).
+	MigratedFrom int
+	// PreMigrationCopy is the path of the automatic pre-migration snapshot.
+	PreMigrationCopy string
 
 	healthOnce sync.Once
 	health     *sql.DB
@@ -236,21 +242,45 @@ CREATE INDEX IF NOT EXISTS ix_audit_ts ON audit_log(ts);
 `
 
 func (s *Store) migrate(ctx context.Context) error {
-	if _, err := s.DB.ExecContext(ctx, schemaV1); err != nil {
-		return fmt.Errorf("schema: %w", err)
-	}
 	var v int
-	err := s.DB.QueryRowContext(ctx, `SELECT version FROM schema_version LIMIT 1`).Scan(&v)
-	if errors.Is(err, sql.ErrNoRows) {
-		if _, err := s.DB.ExecContext(ctx, `INSERT INTO schema_version(version) VALUES (1)`); err != nil {
+	var hasVersion int
+	if err := s.DB.QueryRowContext(ctx, `SELECT count(*) FROM sqlite_master WHERE type='table' AND name='schema_version'`).Scan(&hasVersion); err != nil {
+		return err
+	}
+	if hasVersion == 1 {
+		err := s.DB.QueryRowContext(ctx, `SELECT version FROM schema_version LIMIT 1`).Scan(&v)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return err
 		}
-		v = 1
-	} else if err != nil {
-		return err
 	}
 	if v > SchemaVersion {
 		return fmt.Errorf("database schema v%d is newer than this program (v%d); use the matching version (rollback)", v, SchemaVersion)
+	}
+	fresh := v == 0
+	if v == 0 { // fresh database: create v1, then migrate forward like an upgrade
+		if _, err := s.DB.ExecContext(ctx, schemaV1); err != nil {
+			return fmt.Errorf("schema: %w", err)
+		}
+		if _, err := s.DB.ExecContext(ctx, `DELETE FROM schema_version; INSERT INTO schema_version(version) VALUES (1)`); err != nil {
+			return err
+		}
+		v = 1
+	}
+	if v == 1 {
+		if !fresh {
+			// Safety copy of the old schema (consistent snapshot) next to the backups.
+			s.MigratedFrom = 1
+			dir := filepath.Join(filepath.Dir(s.path), "backups")
+			os.MkdirAll(dir, 0o700)
+			s.PreMigrationCopy = filepath.Join(dir, "pre-migration-schema-v1-"+time.Now().Format("20060102-150405")+".db")
+			if _, err := s.DB.ExecContext(ctx, `VACUUM INTO ?`, s.PreMigrationCopy); err != nil {
+				return fmt.Errorf("pre-migration copy: %w", err)
+			}
+		}
+		if err := s.migrateV2(ctx); err != nil {
+			return err
+		}
+		v = 2
 	}
 	defaults := map[string]string{
 		"instance_id":          randomID(),
@@ -267,7 +297,7 @@ func (s *Store) migrate(ctx context.Context) error {
 	return nil
 }
 
-const SchemaVersion = 1
+const SchemaVersion = 2
 
 func (s *Store) Setting(ctx context.Context, key string) (string, error) {
 	var v string

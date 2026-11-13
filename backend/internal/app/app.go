@@ -24,6 +24,7 @@ import (
 	"dronstream/internal/demo"
 	"dronstream/internal/logx"
 	"dronstream/internal/media"
+	"dronstream/internal/mediafiles"
 	"dronstream/internal/mtx"
 	"dronstream/internal/secure"
 	"dronstream/internal/store"
@@ -82,6 +83,10 @@ func Run(ctx context.Context, opt Options) error {
 	}
 	defer st.Close()
 	svc := core.New(st, &cfg, key, log)
+	if st.MigratedFrom > 0 {
+		log.Warn("database migrated to the new schema", "from", st.MigratedFrom, "to", store.SchemaVersion, "preMigrationCopy", st.PreMigrationCopy)
+		svc.Audit(ctx, core.System, "schema_migrate", fmt.Sprintf("v%d->v%d", st.MigratedFrom, store.SchemaVersion), nil)
+	}
 
 	// One-time setup token (only while no admin exists).
 	setup := newSetupToken(L, svc, log, opt.Console)
@@ -236,6 +241,7 @@ func Run(ctx context.Context, opt Options) error {
 		},
 	}
 	srv := web.New(svc, mgr, hub, &cfg, log, webui.FS(), hooks)
+	srv.Files = &mediafiles.Store{Dir: L.MediaDir, MaxImageBytes: cfg.Library.MaxImageMB << 20, MaxVideoBytes: cfg.Library.MaxVideoMB << 20}
 	hs := &http.Server{
 		Addr: cfg.Web.Listen, Handler: srv.Handler(), TLSConfig: tlsCfg,
 		ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 120 * time.Second,
@@ -438,7 +444,7 @@ func CreateBackup(ctx context.Context, L config.Layout, st *store.Store, masterK
 		{Name: "tls.crt", Path: filepath.Join(L.SecretsDir, "tls.crt")},
 		{Name: "tls.key", Path: filepath.Join(L.SecretsDir, "tls.key")},
 		{Name: "turn.secret", Path: filepath.Join(L.SecretsDir, "turn.secret")},
-	})
+	}, backup.Dir{Prefix: "media/", Path: L.MediaDir})
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

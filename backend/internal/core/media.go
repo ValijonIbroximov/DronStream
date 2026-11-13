@@ -24,100 +24,6 @@ type Decision struct {
 
 func deny(r string) Decision { return Decision{Reason: r} }
 
-// authorizeView decides whether web session wsID may watch streamID now.
-func (s *Service) authorizeView(ctx context.Context, q querier, wsID, streamID, now int64, sys SystemState) Decision {
-	if sys.InstanceState != "active" {
-		return deny("instance_" + sys.InstanceState)
-	}
-	if sys.EmergencyStop {
-		return deny("emergency_stop")
-	}
-	var viewing bool
-	if err := q.QueryRowContext(ctx, `SELECT viewing_enabled FROM streams WHERE id=?`, streamID).Scan(&viewing); err != nil {
-		if isNoRows(err) {
-			return deny("stream_deleted")
-		}
-		return deny("internal_error")
-	}
-	if !viewing {
-		return deny("stream_closed")
-	}
-	var (
-		kind, revokeReason, role, userStatus, guestStatus string
-		userID, guestID, expires                          int64
-		revoked, guestUntil                               sql.NullInt64
-	)
-	err := q.QueryRowContext(ctx, `SELECT ws.kind, COALESCE(ws.user_id,0), COALESCE(ws.guest_id,0), ws.revoked_at, ws.revoke_reason, ws.expires_at,
-	  COALESCE(u.role,''), COALESCE(u.status,''), COALESCE(g.status,''), g.access_until
-	  FROM web_sessions ws LEFT JOIN users u ON u.id=ws.user_id LEFT JOIN guests g ON g.id=ws.guest_id WHERE ws.id=?`, wsID).
-		Scan(&kind, &userID, &guestID, &revoked, &revokeReason, &expires, &role, &userStatus, &guestStatus, &guestUntil)
-	if err != nil {
-		if isNoRows(err) {
-			return deny("session_ended")
-		}
-		return deny("internal_error")
-	}
-	if revoked.Valid {
-		switch revokeReason {
-		case "user_blocked", "guest_ended", "password_reset":
-			return deny(revokeReason)
-		}
-		return deny("session_ended")
-	}
-	if expires <= now {
-		return deny("session_expired")
-	}
-	var subjType string
-	var subjID int64
-	until := expires
-	if kind == "user" {
-		if userStatus != "active" {
-			return deny("user_blocked")
-		}
-		if role == "admin" {
-			return Decision{OK: true, Until: until}
-		}
-		subjType, subjID = "user", userID
-	} else {
-		switch guestStatus {
-		case "approved":
-		case "pending":
-			return deny("guest_pending")
-		case "rejected":
-			return deny("guest_rejected")
-		default:
-			return deny("guest_ended")
-		}
-		if guestUntil.Valid {
-			if guestUntil.Int64 <= now {
-				return deny("guest_expired")
-			}
-			until = minPositive(until, guestUntil.Int64)
-		}
-		subjType, subjID = "guest", guestID
-	}
-	var permExp sql.NullInt64
-	var permRevoked sql.NullInt64
-	err = q.QueryRowContext(ctx, `SELECT expires_at, revoked_at FROM permissions WHERE subject_type=? AND subject_id=? AND stream_id=?
-	  ORDER BY (revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?)) DESC, id DESC LIMIT 1`, subjType, subjID, streamID, now).Scan(&permExp, &permRevoked)
-	if isNoRows(err) {
-		return deny("no_permission")
-	}
-	if err != nil {
-		return deny("internal_error")
-	}
-	if permRevoked.Valid {
-		return deny("permission_revoked")
-	}
-	if permExp.Valid {
-		if permExp.Int64 <= now {
-			return deny("permission_expired")
-		}
-		until = minPositive(until, permExp.Int64)
-	}
-	return Decision{OK: true, Until: until}
-}
-
 // AuthorizeView is the exported read-only check (used by the reconciler).
 func (s *Service) AuthorizeView(ctx context.Context, wsID, streamID int64, sys SystemState) Decision {
 	return s.authorizeView(ctx, s.St.DB, wsID, streamID, s.nowMs(), sys)
@@ -164,6 +70,20 @@ func ReasonText(r string) string {
 		return "Bu server boshqa kompyuterga ko'chirilgan va o'chirilgan"
 	case "auth_unavailable":
 		return "Ruxsat xizmati vaqtincha ishlamayapti"
+	case "link_revoked":
+		return "Administrator bu maxsus havolani bekor qildi"
+	case "link_expired":
+		return "Maxsus havolaning amal qilish muddati tugadi"
+	case "link_not_started":
+		return "Maxsus havola hali kuchga kirmagan"
+	case "link_used_up":
+		return "Bu havoladan foydalanish limiti tugagan (u allaqachon ishlatilgan)"
+	case "link_parallel_limit":
+		return "Bu havola orqali bir vaqtdagi sessiyalar soni chegarada. Keyinroq urining"
+	case "invalid_link":
+		return "Havola noto'g'ri yoki yangilangan"
+	case "content_hidden", "content_deleted":
+		return "Bu kontent endi mavjud emas yoki yashirilgan"
 	}
 	return "Ulanish uzildi"
 }
@@ -177,16 +97,24 @@ type Ticket struct {
 	nonce      string
 }
 
-func (s *Service) activeCounts(ctx context.Context, q querier, sess *Session, streamID int64, tab string, now int64) (subject, tabStream int, err error) {
-	subjCol, subjID := "user", sess.UserID
-	if sess.Kind == "guest" {
-		subjCol, subjID = "guest", sess.GuestID
+func sessionSubjectOf(sess *Session) (string, int64) {
+	switch sess.Kind {
+	case "guest":
+		return "guest", sess.GuestID
+	case "link":
+		return "link", sess.LinkID
 	}
+	return "user", sess.UserID
+}
+
+func (s *Service) activeCounts(ctx context.Context, q querier, sess *Session, streamID int64, tab string, now int64) (subject, tabStream int, err error) {
+	subjType, subjID := sessionSubjectOf(sess)
+	col := subjectSessionsCol(subjType)
 	err = q.QueryRowContext(ctx, `SELECT
 	   (SELECT count(*) FROM media_sessions WHERE subject_type=? AND subject_id=? AND status!='ended') +
-	   (SELECT count(*) FROM playback_tickets t JOIN web_sessions w ON w.id=t.web_session_id WHERE (w.user_id=? OR w.guest_id=?) AND w.kind=? AND t.used_at IS NULL AND t.expires_at>?),
+	   (SELECT count(*) FROM playback_tickets t JOIN web_sessions w ON w.id=t.web_session_id WHERE w.`+col+`=? AND w.kind=? AND t.used_at IS NULL AND t.expires_at>?),
 	   (SELECT count(*) FROM media_sessions WHERE web_session_id=? AND stream_id=? AND client_tab=? AND status!='ended')`,
-		subjCol, subjID, subjID, subjID, sess.Kind, now, sess.ID, streamID, tab).Scan(&subject, &tabStream)
+		subjType, subjID, subjID, sess.Kind, now, sess.ID, streamID, tab).Scan(&subject, &tabStream)
 	return
 }
 
@@ -336,10 +264,7 @@ func (s *Service) HookRead(ctx context.Context, r HookRequest) (int64, error) {
 			return nil
 		}
 		lease = minPositive(now+s.Cfg.Lease().Milliseconds(), d.Until)
-		subjType, subjID := "user", sess.UserID
-		if sess.Kind == "guest" {
-			subjType, subjID = "guest", sess.GuestID
-		}
+		subjType, subjID := sessionSubjectOf(sess)
 		_, err = tx.ExecContext(ctx, `INSERT INTO media_sessions(mtx_id,nonce,ticket_id,web_session_id,subject_type,subject_id,stream_id,client_tab,status,created_at,last_seen_at,lease_expires_at,remote_addr,user_agent)
 		  VALUES(?,?,?,?,?,?,?,?,'pending',?,?,?,?,?)`, r.ID, nonce, tid, wsID, subjType, subjID, streamID, tab, now, now, lease, r.IP, cleanText(r.UserAgent, 300, false))
 		if err != nil {
@@ -481,7 +406,7 @@ type MediaSession struct {
 }
 
 const mediaSelect = `SELECT m.id,m.mtx_id,m.web_session_id,m.subject_type,m.subject_id,
- CASE m.subject_type WHEN 'user' THEN COALESCE((SELECT display_name FROM users WHERE id=m.subject_id),'?') ELSE COALESCE((SELECT display_name FROM guests WHERE id=m.subject_id),'?') END,
+ CASE m.subject_type WHEN 'user' THEN COALESCE((SELECT display_name FROM users WHERE id=m.subject_id),'?') WHEN 'link' THEN COALESCE((SELECT 'Havola: '||name FROM access_links WHERE id=m.subject_id),'?') ELSE COALESCE((SELECT display_name FROM guests WHERE id=m.subject_id),'?') END,
  m.stream_id, COALESCE((SELECT name FROM streams WHERE id=m.stream_id),'?'), m.client_tab, m.status, m.created_at, m.established_at, m.last_seen_at, m.lease_expires_at,
  m.remote_addr, m.user_agent, m.bytes_sent, m.ended_at, m.end_reason, m.whep_resource FROM media_sessions m`
 
