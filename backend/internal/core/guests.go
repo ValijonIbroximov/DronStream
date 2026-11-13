@@ -19,6 +19,9 @@ type GuestInfo struct {
 	UserAgent   string `json:"userAgent"`
 	SessionID   int64  `json:"sessionId"`
 	Online      bool   `json:"online"`
+	// Shown on the guest's waiting screen too; compare it over a trusted
+	// channel (phone call) before approving. Name and message prove nothing.
+	VerifyCode string `json:"verifyCode"`
 }
 
 // CreateGuestRequest creates an unverified guest identity bound to a brand
@@ -110,7 +113,7 @@ func (s *Service) ApproveGuestObjects(ctx context.Context, a Actor, guestID int6
 			return err
 		}
 		// Guest browser session lives until the access ends.
-		if _, err := tx.ExecContext(ctx, `UPDATE web_sessions SET expires_at=? WHERE guest_id=? AND revoked_at IS NULL`, until+5*60_000, guestID); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE web_sessions SET expires_at=?, approval='approved', approved_by=?, approved_at=? WHERE guest_id=? AND revoked_at IS NULL`, until+5*60_000, a.ID, now, guestID); err != nil {
 			return err
 		}
 		s.auditExec(ctx, tx, a, "guest_approve", "guest:"+itoa(guestID), map[string]any{"objects": objs, "until": until})
@@ -193,7 +196,8 @@ func (s *Service) notifyGuest(ctx context.Context, guestID int64, kind string) {
 
 func (s *Service) ListGuests(ctx context.Context, status string) ([]GuestInfo, error) {
 	q := `SELECT g.id,g.display_name,g.reason,g.status,g.created_at,g.decided_at,COALESCE(u.display_name,''),g.decision_note,g.access_until,g.ip,g.user_agent,
-	 COALESCE((SELECT max(id) FROM web_sessions WHERE guest_id=g.id),0)
+	 COALESCE((SELECT max(id) FROM web_sessions WHERE guest_id=g.id),0),
+	 COALESCE((SELECT verify_code FROM web_sessions WHERE guest_id=g.id ORDER BY id DESC LIMIT 1),'')
 	 FROM guests g LEFT JOIN users u ON u.id=g.decided_by`
 	args := []any{}
 	if status != "" {
@@ -210,7 +214,7 @@ func (s *Service) ListGuests(ctx context.Context, status string) ([]GuestInfo, e
 	for rows.Next() {
 		var g GuestInfo
 		var dec, until sql.NullInt64
-		if err := rows.Scan(&g.ID, &g.DisplayName, &g.Reason, &g.Status, &g.CreatedAt, &dec, &g.DecidedBy, &g.Note, &until, &g.IP, &g.UserAgent, &g.SessionID); err != nil {
+		if err := rows.Scan(&g.ID, &g.DisplayName, &g.Reason, &g.Status, &g.CreatedAt, &dec, &g.DecidedBy, &g.Note, &until, &g.IP, &g.UserAgent, &g.SessionID, &g.VerifyCode); err != nil {
 			return nil, err
 		}
 		g.DecidedAt, g.AccessUntil = nullable(dec), nullable(until)

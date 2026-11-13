@@ -83,6 +83,14 @@ func ReasonText(r string) string {
 		return "Bu havola orqali bir vaqtdagi sessiyalar soni chegarada. Keyinroq urining"
 	case "invalid_link":
 		return "Havola noto'g'ri yoki yangilangan"
+	case "link_pending_approval":
+		return "So'rovingiz administrator tasdig'ini kutmoqda. Havolaning o'zi kirish huquqini bermaydi"
+	case "link_rejected":
+		return "Administrator bu kirish so'rovini rad etdi"
+	case "link_too_many_requests":
+		return "Bu havola bo'yicha tasdiq kutayotgan so'rovlar juda ko'p. Administrator ularni ko'rib chiqqach qayta urining"
+	case "approval_not_pending":
+		return "Bu so'rov allaqachon ko'rib chiqilgan yoki yakunlangan"
 	case "content_hidden", "content_deleted":
 		return "Bu kontent endi mavjud emas yoki yashirilgan"
 	}

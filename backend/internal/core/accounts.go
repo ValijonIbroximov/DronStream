@@ -27,6 +27,12 @@ type Session struct {
 	Username    string `json:"username,omitempty"`
 	GuestStatus string `json:"guestStatus,omitempty"`
 	MustChange  bool   `json:"mustChangePassword,omitempty"`
+	// Approval of this exact browser session by an administrator
+	// ('pending' | 'approved' | 'rejected'; '' for user sessions).
+	Approval    string `json:"approval,omitempty"`
+	VerifyCode  string `json:"verifyCode,omitempty"`
+	ReauthAt    int64  `json:"-"`
+	TOTPEnabled bool   `json:"totpEnabled,omitempty"`
 }
 
 func (s *Session) Actor(ip string) Actor {
@@ -130,16 +136,24 @@ var errBadLogin = errf(401, "bad_login", "Login yoki parol noto'g'ri")
 
 // Login verifies credentials and creates a session. Returns the raw cookie token.
 func (s *Service) Login(ctx context.Context, username, password, ip, ua string) (string, *Session, error) {
+	return s.LoginOTP(ctx, username, password, "", ip, ua)
+}
+
+// LoginOTP signs in with password and, when the account has TOTP enabled,
+// the current authenticator code or one recovery code. Without the code the
+// answer is "mfa_required" and no session is created.
+func (s *Service) LoginOTP(ctx context.Context, username, password, otp, ip, ua string) (string, *Session, error) {
 	var (
-		id                   int64
-		hash, role, status   string
-		display, uname       string
-		failed               int
-		lockedUntil          int64
-		mustChange           bool
+		totpEnabled        bool
+		id                 int64
+		hash, role, status string
+		display, uname     string
+		failed             int
+		lockedUntil        int64
+		mustChange         bool
 	)
-	err := s.St.DB.QueryRowContext(ctx, `SELECT id,username,display_name,password_hash,role,status,failed_logins,locked_until,must_change_password FROM users WHERE username=?`, strings.TrimSpace(username)).
-		Scan(&id, &uname, &display, &hash, &role, &status, &failed, &lockedUntil, &mustChange)
+	err := s.St.DB.QueryRowContext(ctx, `SELECT id,username,display_name,password_hash,role,status,failed_logins,locked_until,must_change_password,totp_enabled FROM users WHERE username=?`, strings.TrimSpace(username)).
+		Scan(&id, &uname, &display, &hash, &role, &status, &failed, &lockedUntil, &mustChange, &totpEnabled)
 	now := s.nowMs()
 	anon := Actor{Type: "anonymous", Name: cleanText(username, 40, false), IP: ip}
 	if isNoRows(err) {
@@ -170,12 +184,32 @@ func (s *Service) Login(ctx context.Context, username, password, ip, ua string) 
 		s.Audit(ctx, anon, "login_failed", "user:"+uname, map[string]any{"reason": "blocked"})
 		return "", nil, errf(403, "blocked", "Hisob bloklangan. Administratorga murojaat qiling")
 	}
+	if totpEnabled {
+		if strings.TrimSpace(otp) == "" {
+			return "", nil, errf(401, "mfa_required", "Ikkinchi bosqich: autentifikator ilovasidagi 6 xonali kodni (yoki tiklash kodini) kiriting")
+		}
+		ok, usedRecovery := s.checkSecondFactor(ctx, id, otp)
+		if !ok {
+			failed++
+			lock := int64(0)
+			if failed >= maxFailedLogins {
+				lock = now + lockDuration.Milliseconds()
+				failed = 0
+			}
+			s.St.DB.ExecContext(ctx, `UPDATE users SET failed_logins=?, locked_until=? WHERE id=?`, failed, lock, id)
+			s.Audit(ctx, anon, "login_failed", "user:"+uname, map[string]any{"reason": "bad_otp"})
+			return "", nil, errf(401, "bad_otp", "Ikkinchi bosqich kodi noto'g'ri yoki allaqachon ishlatilgan")
+		}
+		if usedRecovery {
+			s.Audit(ctx, Actor{Type: role, ID: id, Name: display, IP: ip}, "recovery_code_used", "user:"+uname, map[string]any{"left": s.RecoveryCodesLeft(ctx, id)})
+		}
+	}
 	s.St.DB.ExecContext(ctx, `UPDATE users SET failed_logins=0, locked_until=0 WHERE id=?`, id)
 	tok, sess, err := s.newSession(ctx, "user", id, 0, ip, ua, now+int64(s.Cfg.Security.SessionHours)*3600_000)
 	if err != nil {
 		return "", nil, err
 	}
-	sess.Role, sess.Name, sess.Username, sess.MustChange = role, display, uname, mustChange
+	sess.Role, sess.Name, sess.Username, sess.MustChange, sess.TOTPEnabled = role, display, uname, mustChange, totpEnabled
 	s.Audit(ctx, Actor{Type: role, ID: id, Name: display, IP: ip}, "login", "user:"+uname, map[string]any{"session": sess.ID})
 	s.Events.ToAdmins("sessions", nil)
 	return tok, sess, nil
@@ -200,18 +234,29 @@ func (s *Service) newSessionTx(ctx context.Context, db execer, kind string, user
 		lid = linkID
 	}
 	ua = cleanText(ua, 300, false)
-	res, err := db.ExecContext(ctx, `INSERT INTO web_sessions(token_hash,kind,user_id,guest_id,link_id,csrf_token,created_at,last_seen_at,expires_at,ip,user_agent) VALUES(?,?,?,?,?,?,?,?,?,?,?)`,
-		secure.Hash(tok), kind, uid, gid, lid, csrf, now, now, expires, ip, ua)
+	// Login-free sessions (guest request, special link) start unapproved and
+	// carry a short verification code; an administrator approves the exact
+	// session. A user session was just authenticated (password, TOTP), which
+	// also counts as a fresh re-confirmation.
+	approval, code, reauth := "", "", int64(0)
+	if kind == "guest" || kind == "link" {
+		approval, code = "pending", secure.NewVerifyCode()
+	} else {
+		reauth = now
+	}
+	res, err := db.ExecContext(ctx, `INSERT INTO web_sessions(token_hash,kind,user_id,guest_id,link_id,csrf_token,created_at,last_seen_at,expires_at,ip,user_agent,approval,verify_code,reauth_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		secure.Hash(tok), kind, uid, gid, lid, csrf, now, now, expires, ip, ua, approval, code, reauth)
 	if err != nil {
 		return "", nil, err
 	}
 	id, _ := res.LastInsertId()
-	return tok, &Session{ID: id, Kind: kind, UserID: userID, GuestID: guestID, LinkID: linkID, CSRF: csrf, CreatedAt: now, LastSeen: now, ExpiresAt: expires, IP: ip, UserAgent: ua}, nil
+	return tok, &Session{ID: id, Kind: kind, UserID: userID, GuestID: guestID, LinkID: linkID, CSRF: csrf, CreatedAt: now, LastSeen: now, ExpiresAt: expires, IP: ip, UserAgent: ua, Approval: approval, VerifyCode: code, ReauthAt: reauth}, nil
 }
 
 const sessionSelect = `SELECT ws.id, ws.kind, COALESCE(ws.user_id,0), COALESCE(ws.guest_id,0), COALESCE(ws.link_id,0), COALESCE(l.name,''), ws.csrf_token, ws.created_at, ws.last_seen_at, ws.expires_at, ws.ip, ws.user_agent, ws.revoked_at,
  COALESCE(u.role,''), COALESCE(u.status,''), COALESCE(u.display_name,''), COALESCE(u.username,''), COALESCE(u.must_change_password,0),
- COALESCE(g.display_name,''), COALESCE(g.status,''), g.access_until
+ COALESCE(g.display_name,''), COALESCE(g.status,''), g.access_until,
+ ws.approval, ws.verify_code, ws.reauth_at, COALESCE(u.totp_enabled,0)
  FROM web_sessions ws LEFT JOIN users u ON u.id=ws.user_id LEFT JOIN guests g ON g.id=ws.guest_id LEFT JOIN access_links l ON l.id=ws.link_id`
 
 func (s *Service) scanSession(row interface{ Scan(...any) error }) (*Session, sql.NullInt64, string, sql.NullInt64, error) {
@@ -220,7 +265,8 @@ func (s *Service) scanSession(row interface{ Scan(...any) error }) (*Session, sq
 	var userStatus string
 	var gName, lName string
 	err := row.Scan(&x.ID, &x.Kind, &x.UserID, &x.GuestID, &x.LinkID, &lName, &x.CSRF, &x.CreatedAt, &x.LastSeen, &x.ExpiresAt, &x.IP, &x.UserAgent, &revoked,
-		&x.Role, &userStatus, &x.Name, &x.Username, &x.MustChange, &gName, &x.GuestStatus, &guestUntil)
+		&x.Role, &userStatus, &x.Name, &x.Username, &x.MustChange, &gName, &x.GuestStatus, &guestUntil,
+		&x.Approval, &x.VerifyCode, &x.ReauthAt, &x.TOTPEnabled)
 	if err != nil {
 		return nil, revoked, "", guestUntil, err
 	}

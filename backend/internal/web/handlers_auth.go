@@ -13,6 +13,8 @@ type sessionOut struct {
 	Session       *core.Session `json:"session,omitempty"`
 	GuestEnabled  bool          `json:"guestEnabled"`
 	Guest         any           `json:"guest,omitempty"`
+	// Secure mode: this administrator must enable TOTP before anything else.
+	MFASetupRequired bool `json:"mfaSetupRequired,omitempty"`
 }
 
 func (s *Server) sessionPayload(r *http.Request, se *core.Session) sessionOut {
@@ -25,6 +27,7 @@ func (s *Server) sessionPayload(r *http.Request, se *core.Session) sessionOut {
 		out.Authenticated = true
 		out.CSRF = se.CSRF
 		out.Session = se
+		out.MFASetupRequired = s.mfaSetupRequired(se)
 		if se.Kind == "guest" {
 			gs, _ := s.Core.ListGuests(r.Context(), "")
 			for _, g := range gs {
@@ -82,7 +85,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, &core.Error{Status: 429, Code: "rate", Msg: "Juda ko'p urinish. Bir daqiqadan so'ng qayta urining"})
 		return
 	}
-	var in struct{ Username, Password string }
+	var in struct{ Username, Password, Otp string }
 	if err := readJSON(r, &in); err != nil {
 		writeErr(w, err)
 		return
@@ -90,7 +93,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	if old := s.sessionFrom(r); old != nil {
 		s.Core.Logout(r.Context(), old, ip) // no session fixation / mixing
 	}
-	tok, se, err := s.Core.Login(r.Context(), in.Username, in.Password, ip, r.UserAgent())
+	tok, se, err := s.Core.LoginOTP(r.Context(), in.Username, in.Password, in.Otp, ip, r.UserAgent())
 	if err != nil {
 		writeErr(w, err)
 		return

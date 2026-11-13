@@ -289,7 +289,7 @@ func ResetAdmin(root, username string) error {
 	if err != nil {
 		return err
 	}
-	res, err := st.DB.Exec(`UPDATE users SET password_hash=?, must_change_password=1, failed_logins=0, locked_until=0, status='active' WHERE username=? AND role='admin'`, h, username)
+	res, err := st.DB.Exec(`UPDATE users SET password_hash=?, must_change_password=1, failed_logins=0, locked_until=0, status='active', totp_enabled=0, totp_enc=NULL, totp_pending_enc=NULL, totp_last_step=0 WHERE username=? AND role='admin'`, h, username)
 	if err != nil {
 		return err
 	}
@@ -297,7 +297,9 @@ func ResetAdmin(root, username string) error {
 		return errors.New("admin not found")
 	}
 	st.DB.Exec(`UPDATE web_sessions SET revoked_at=?, revoke_reason='password_reset' WHERE user_id=(SELECT id FROM users WHERE username=?) AND revoked_at IS NULL`, store.Now(), username)
-	st.DB.Exec(`INSERT INTO audit_log(ts,actor_type,actor_name,action,target) VALUES(?,?,?,?,?)`, store.Now(), "system", "cli", "password_reset", "user:"+username)
+	st.DB.Exec(`DELETE FROM recovery_codes WHERE user_id=(SELECT id FROM users WHERE username=?)`, username)
+	st.DB.Exec(`INSERT INTO audit_log(ts,actor_type,actor_name,action,target) VALUES(?,?,?,?,?)`, store.Now(), "system", "cli", "password_reset_totp_cleared", "user:"+username)
 	fmt.Println("Yangi vaqtinchalik parol (birinchi kirishda almashtiring):", pw)
+	fmt.Println("Ikkinchi bosqich (TOTP) va tiklash kodlari o'chirildi: kirgandan keyin qayta yoqing.")
 	return nil
 }

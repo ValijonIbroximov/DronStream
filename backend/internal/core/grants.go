@@ -277,15 +277,15 @@ type subjectInfo struct {
 // sessionSubject validates the browser session and returns who it is.
 func (s *Service) sessionSubject(ctx context.Context, q querier, wsID, now int64) (subjectInfo, string) {
 	var (
-		kind, revokeReason, role, userStatus, guestStatus, linkUserStatus string
-		userID, guestID, linkID, expires                                  int64
-		revoked, guestUntil, linkRevoked, linkStarts, linkEnds            sql.NullInt64
+		kind, revokeReason, role, userStatus, guestStatus, linkUserStatus, approval string
+		userID, guestID, linkID, expires                                            int64
+		revoked, guestUntil, linkRevoked, linkStarts, linkEnds                      sql.NullInt64
 	)
 	err := q.QueryRowContext(ctx, `SELECT ws.kind, COALESCE(ws.user_id,0), COALESCE(ws.guest_id,0), COALESCE(ws.link_id,0), ws.revoked_at, ws.revoke_reason, ws.expires_at,
 	  COALESCE(u.role,''), COALESCE(u.status,''), COALESCE(g.status,''), g.access_until,
-	  l.revoked_at, l.starts_at, l.ends_at, COALESCE((SELECT status FROM users WHERE id=l.for_user_id),'')
+	  l.revoked_at, l.starts_at, l.ends_at, COALESCE((SELECT status FROM users WHERE id=l.for_user_id),''), ws.approval
 	  FROM web_sessions ws LEFT JOIN users u ON u.id=ws.user_id LEFT JOIN guests g ON g.id=ws.guest_id LEFT JOIN access_links l ON l.id=ws.link_id WHERE ws.id=?`, wsID).
-		Scan(&kind, &userID, &guestID, &linkID, &revoked, &revokeReason, &expires, &role, &userStatus, &guestStatus, &guestUntil, &linkRevoked, &linkStarts, &linkEnds, &linkUserStatus)
+		Scan(&kind, &userID, &guestID, &linkID, &revoked, &revokeReason, &expires, &role, &userStatus, &guestStatus, &guestUntil, &linkRevoked, &linkStarts, &linkEnds, &linkUserStatus, &approval)
 	if err != nil {
 		if isNoRows(err) {
 			return subjectInfo{}, "session_ended"
@@ -332,6 +332,15 @@ func (s *Service) sessionSubject(ctx context.Context, q querier, wsID, now int64
 	case "link":
 		if linkRevoked.Valid {
 			return subjectInfo{}, "link_revoked"
+		}
+		// A link is only an invitation: until an administrator approves THIS
+		// browser session it grants nothing (no media, no files, no keys).
+		switch approval {
+		case "approved":
+		case "rejected":
+			return subjectInfo{}, "link_rejected"
+		default:
+			return subjectInfo{}, "link_pending_approval"
 		}
 		if linkStarts.Valid && linkStarts.Int64 > now {
 			return subjectInfo{}, "link_not_started"

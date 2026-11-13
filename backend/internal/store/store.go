@@ -2,10 +2,10 @@
 package store
 
 import (
-	crand "crypto/rand"
-	"encoding/hex"
 	"context"
+	crand "crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/url"
@@ -266,27 +266,33 @@ func (s *Store) migrate(ctx context.Context) error {
 		}
 		v = 1
 	}
-	if v == 1 {
-		if !fresh {
-			// Safety copy of the old schema (consistent snapshot) next to the backups.
-			s.MigratedFrom = 1
-			dir := filepath.Join(filepath.Dir(s.path), "backups")
-			os.MkdirAll(dir, 0o700)
-			s.PreMigrationCopy = filepath.Join(dir, "pre-migration-schema-v1-"+time.Now().Format("20060102-150405")+".db")
-			if _, err := s.DB.ExecContext(ctx, `VACUUM INTO ?`, s.PreMigrationCopy); err != nil {
-				return fmt.Errorf("pre-migration copy: %w", err)
-			}
+	if !fresh && v < SchemaVersion {
+		// Safety copy of the old schema (consistent snapshot) next to the backups.
+		s.MigratedFrom = v
+		dir := filepath.Join(filepath.Dir(s.path), "backups")
+		os.MkdirAll(dir, 0o700)
+		s.PreMigrationCopy = filepath.Join(dir, fmt.Sprintf("pre-migration-schema-v%d-%s.db", v, time.Now().Format("20060102-150405")))
+		if _, err := s.DB.ExecContext(ctx, `VACUUM INTO ?`, s.PreMigrationCopy); err != nil {
+			return fmt.Errorf("pre-migration copy: %w", err)
 		}
+	}
+	if v == 1 {
 		if err := s.migrateV2(ctx); err != nil {
 			return err
 		}
 		v = 2
 	}
+	if v == 2 {
+		if err := s.migrateV3(ctx); err != nil {
+			return err
+		}
+		v = 3
+	}
 	defaults := map[string]string{
-		"instance_id":          randomID(),
-		"instance_state":       "active", // active | standby | migrated
-		"emergency_stop":       "0",
-		"guest_enabled":        "1",
+		"instance_id":           randomID(),
+		"instance_state":        "active", // active | standby | migrated
+		"emergency_stop":        "0",
+		"guest_enabled":         "1",
 		"guest_default_minutes": "120",
 	}
 	for k, val := range defaults {
@@ -297,7 +303,7 @@ func (s *Store) migrate(ctx context.Context) error {
 	return nil
 }
 
-const SchemaVersion = 2
+const SchemaVersion = 3
 
 func (s *Store) Setting(ctx context.Context, key string) (string, error) {
 	var v string

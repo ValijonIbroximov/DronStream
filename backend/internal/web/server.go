@@ -73,6 +73,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/guest", s.public(s.guestRequest))
 	mux.HandleFunc("POST /api/logout", s.authed(s.logout))
 	mux.HandleFunc("POST /api/me/password", s.authed(s.changePassword))
+	mux.HandleFunc("POST /api/me/reauth", s.authed(s.meReauth))
+	mux.HandleFunc("GET /api/me/security", s.authed(s.meSecurity))
+	mux.HandleFunc("POST /api/me/totp/setup", s.authed(s.meTOTPSetup))
+	mux.HandleFunc("POST /api/me/totp/enable", s.authed(s.meTOTPEnable))
+	mux.HandleFunc("POST /api/me/totp/disable", s.authed(s.meTOTPDisable))
 	mux.HandleFunc("GET /api/events", s.authed(s.events))
 	mux.HandleFunc("POST /api/link/inspect", s.public(s.linkInspect))
 	mux.HandleFunc("POST /api/link/activate", s.public(s.linkActivate))
@@ -94,10 +99,16 @@ func (s *Server) Handler() http.Handler {
 	a("GET /api/admin/streams", s.adminStreams)
 	a("POST /api/admin/streams", s.adminCreateStream)
 	a("PUT /api/admin/streams/{id}", s.adminUpdateStream)
-	a("DELETE /api/admin/streams/{id}", s.adminDeleteStream)
-	a("GET /api/admin/streams/{id}/key", s.adminRevealKey)
-	a("POST /api/admin/streams/{id}/rotate-key", s.adminRotateKey)
-	a("POST /api/admin/streams/{id}/revoke-key", s.adminRevokeKey)
+	// sensitive: need a fresh password(+TOTP) re-confirmation on this session
+	sa := func(p string, h http.HandlerFunc) { mux.HandleFunc(p, s.sensitive(h)) }
+	sa("DELETE /api/admin/streams/{id}", s.adminDeleteStream)
+	sa("GET /api/admin/streams/{id}/key", s.adminRevealKey)
+	sa("POST /api/admin/streams/{id}/rotate-key", s.adminRotateKey)
+	sa("POST /api/admin/streams/{id}/revoke-key", s.adminRevokeKey)
+	a("GET /api/admin/approvals", s.adminApprovals)
+	a("POST /api/admin/approvals/{id}/approve", s.adminApproveSession)
+	a("POST /api/admin/approvals/{id}/reject", s.adminRejectSession)
+	a("GET /api/admin/security-status", s.adminSecurityStatus)
 	a("POST /api/admin/streams/{id}/publish", s.adminSetPublish)
 	a("POST /api/admin/streams/{id}/viewing", s.adminSetViewing)
 	a("POST /api/admin/streams/{id}/kick-publisher", s.adminKickPublisher)
@@ -106,10 +117,10 @@ func (s *Server) Handler() http.Handler {
 	a("POST /api/admin/guests/{id}/reject", s.adminRejectGuest)
 	a("POST /api/admin/guests/{id}/end", s.adminEndGuest)
 	a("GET /api/admin/users", s.adminUsers)
-	a("POST /api/admin/users", s.adminCreateUser)
-	a("PUT /api/admin/users/{id}", s.adminUpdateUser)
+	sa("POST /api/admin/users", s.adminCreateUser)
+	sa("PUT /api/admin/users/{id}", s.adminUpdateUser)
 	a("POST /api/admin/users/{id}/block", s.adminBlockUser)
-	a("POST /api/admin/users/{id}/reset-password", s.adminResetPassword)
+	sa("POST /api/admin/users/{id}/reset-password", s.adminResetPassword)
 	a("POST /api/admin/users/{id}/logout-all", s.adminLogoutAll)
 	a("GET /api/admin/permissions", s.adminPermissions)
 	a("POST /api/admin/permissions", s.adminGrant)
@@ -122,7 +133,7 @@ func (s *Server) Handler() http.Handler {
 	a("POST /api/admin/emergency", s.adminEmergency)
 	a("GET /api/admin/system", s.adminSystem)
 	a("POST /api/admin/system/guest", s.adminGuestSettings)
-	a("POST /api/admin/system/instance", s.adminInstance)
+	sa("POST /api/admin/system/instance", s.adminInstance)
 	a("POST /api/admin/backups", s.adminBackup)
 	a("GET /api/admin/backups", s.adminListBackups)
 	a("GET /api/admin/backups/{name}", s.adminDownloadBackup)
@@ -290,6 +301,10 @@ func (s *Server) admin(h http.HandlerFunc) http.HandlerFunc {
 	return s.authed(func(w http.ResponseWriter, r *http.Request) {
 		if !sess(r).IsAdmin() {
 			writeErr(w, core.ErrForbidden)
+			return
+		}
+		if s.mfaSetupRequired(sess(r)) && !mfaGateAllowed(r.URL.Path) {
+			writeErr(w, &core.Error{Status: 403, Code: "mfa_setup_required", Msg: "Secure rejim: avval ikkinchi bosqichni (TOTP) yoqing"})
 			return
 		}
 		h(w, r)

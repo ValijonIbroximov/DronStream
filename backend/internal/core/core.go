@@ -64,12 +64,12 @@ type EventSink interface {
 
 type nopEnforcer struct{}
 
-func (nopEnforcer) EnforceNow(context.Context, string)            {}
+func (nopEnforcer) EnforceNow(context.Context, string)           {}
 func (nopEnforcer) KickPublisher(context.Context, int64, string) {}
 
 type nopEvents struct{}
 
-func (nopEvents) ToAdmins(string, any)          {}
+func (nopEvents) ToAdmins(string, any)         {}
 func (nopEvents) ToSession(int64, string, any) {}
 func (nopEvents) ToAll(string, any)            {}
 func (nopEvents) CloseSession(int64)           {}

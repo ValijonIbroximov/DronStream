@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"regexp"
+	"strings"
 	"time"
 
 	"dronstream/internal/secure"
@@ -352,10 +353,16 @@ func tokenShape(t string) bool { return tokenRe.MatchString(t) }
 // window re-issues the session instead of consuming another use.
 const retryWindow = 10 * time.Minute
 
-// ActivateLink atomically checks the link and, in one BEGIN IMMEDIATE
-// transaction, consumes one use and creates the browser session. Concurrent
-// attempts are serialised by SQLite's single writer, so a one-time link
-// yields exactly one session.
+// MaxPendingPerLink limits unapproved requests per link, so someone who got
+// hold of a link cannot flood the administrator.
+const MaxPendingPerLink = 5
+
+// ActivateLink turns "Kirish" on a link page into an ACCESS REQUEST: it
+// creates a browser session in the 'pending' state with a short verification
+// code. The session grants nothing until an administrator approves exactly
+// this session (ApproveLinkSession). Uses are counted at approval, so
+// pressing "Kirish" on a copied link cannot use up the real recipient's
+// one-time link. Everything runs in one BEGIN IMMEDIATE transaction.
 func (s *Service) ActivateLink(ctx context.Context, tok, requestID, ip, ua string) (string, *Session, bool, error) {
 	if !tokenShape(tok) {
 		return "", nil, false, &Error{Status: 404, Code: "invalid_link", Msg: ReasonText("invalid_link")}
@@ -432,27 +439,23 @@ func (s *Service) ActivateLink(ctx context.Context, tok, requestID, ip, ua strin
 			denyCode = "link_used_up"
 			return nil
 		}
-		if l.MaxParallel != nil && l.ActiveSessions >= *l.MaxParallel {
-			denyCode = "link_parallel_limit"
-			return nil
-		}
-		res, err := tx.ExecContext(ctx, `UPDATE access_links SET uses_count=uses_count+1 WHERE id=? AND (max_uses IS NULL OR uses_count < max_uses)`, l.ID)
-		if err != nil {
+		var pending int64
+		if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM web_sessions WHERE link_id=? AND approval='pending' AND revoked_at IS NULL AND expires_at>?`, l.ID, now).Scan(&pending); err != nil {
 			return err
 		}
-		if n, _ := res.RowsAffected(); n != 1 {
-			denyCode = "link_used_up"
+		if pending >= MaxPendingPerLink {
+			denyCode = "link_too_many_requests"
 			return nil
 		}
 		cookie, sess, err = s.newSessionTx(ctx, tx, "link", 0, 0, l.ID, ip, ua, expires)
 		if err != nil {
 			return err
 		}
-		if _, err := tx.ExecContext(ctx, `INSERT INTO link_activations(link_id,request_id,session_id,created_at,ip,user_agent) VALUES(?,?,?,?,?,?)`,
+		if _, err := tx.ExecContext(ctx, `INSERT INTO link_activations(link_id,request_id,session_id,created_at,ip,user_agent,approved) VALUES(?,?,?,?,?,?,0)`,
 			l.ID, requestID, sess.ID, now, ip, cleanText(ua, 300, false)); err != nil {
 			return err
 		}
-		s.auditExec(ctx, tx, Actor{Type: "link", ID: l.ID, Name: l.Name, IP: ip}, "link_activate", "link:"+itoa(l.ID), map[string]any{"session": sess.ID, "use": l.UsesCount + 1})
+		s.auditExec(ctx, tx, Actor{Type: "link", ID: l.ID, Name: l.Name, IP: ip}, "link_request", "link:"+itoa(l.ID), map[string]any{"session": sess.ID})
 		sess.Role, sess.Name = "link", l.Name
 		return nil
 	})
@@ -482,4 +485,138 @@ func (s *Service) ActivateLink(ctx context.Context, tok, requestID, ip, ua strin
 	s.Events.ToAdmins("sessions", nil)
 	s.Events.ToAdmins("links", nil)
 	return cookie, sess, retried, nil
+}
+
+// PendingApproval is a browser session waiting for an administrator: a guest
+// request or a special-link request. IP and browser are shown for context
+// only; they do not identify a person.
+type PendingApproval struct {
+	SessionID  int64  `json:"sessionId"`
+	Kind       string `json:"kind"` // link | guest
+	LinkID     int64  `json:"linkId,omitempty"`
+	LinkName   string `json:"linkName,omitempty"`
+	VerifyCode string `json:"verifyCode"`
+	CreatedAt  int64  `json:"createdAt"`
+	IP         string `json:"ip"`
+	UserAgent  string `json:"userAgent"`
+}
+
+// PendingLinkRequests lists unapproved link sessions (newest first).
+func (s *Service) PendingLinkRequests(ctx context.Context) ([]PendingApproval, error) {
+	now := s.nowMs()
+	rows, err := s.St.DB.QueryContext(ctx, `SELECT ws.id, ws.link_id, COALESCE(l.name,''), ws.verify_code, ws.created_at, ws.ip, ws.user_agent
+	  FROM web_sessions ws JOIN access_links l ON l.id=ws.link_id
+	  WHERE ws.kind='link' AND ws.approval='pending' AND ws.revoked_at IS NULL AND ws.expires_at>? ORDER BY ws.created_at DESC LIMIT 200`, now)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []PendingApproval{}
+	for rows.Next() {
+		p := PendingApproval{Kind: "link"}
+		if err := rows.Scan(&p.SessionID, &p.LinkID, &p.LinkName, &p.VerifyCode, &p.CreatedAt, &p.IP, &p.UserAgent); err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
+// ApproveLinkSession lets exactly one browser session use the link's grants.
+// The link's limits are checked here, in the same write transaction:
+// max_uses counts approved sessions, max_parallel counts approved sessions
+// that are still open. verifyCode must match what the visitor sees, so the
+// administrator approves the session they actually compared.
+func (s *Service) ApproveLinkSession(ctx context.Context, a Actor, sessionID int64, verifyCode string) error {
+	var linkID int64
+	var denyCode string
+	err := s.St.Tx(ctx, func(tx *sql.Tx) error {
+		now := s.nowMs()
+		var approval, code string
+		var revoked sql.NullInt64
+		var expires int64
+		err := tx.QueryRowContext(ctx, `SELECT COALESCE(link_id,0), approval, verify_code, revoked_at, expires_at FROM web_sessions WHERE id=? AND kind='link'`, sessionID).
+			Scan(&linkID, &approval, &code, &revoked, &expires)
+		if err != nil {
+			denyCode = "approval_not_pending"
+			return nil
+		}
+		if approval != "pending" || revoked.Valid || expires <= now {
+			denyCode = "approval_not_pending"
+			return nil
+		}
+		if !secure.Equal([]byte(strings.ToUpper(strings.TrimSpace(verifyCode))), []byte(code)) {
+			denyCode = "verify_code_mismatch"
+			return nil
+		}
+		l, err := scanLink(tx.QueryRowContext(ctx, `SELECT `+linkCols+` FROM access_links l WHERE l.id=?`, now, linkID), now)
+		if err != nil {
+			denyCode = "invalid_link"
+			return nil
+		}
+		switch l.Status(now) {
+		case "revoked":
+			denyCode = "link_revoked"
+		case "expired":
+			denyCode = "link_expired"
+		case "pending":
+			denyCode = "link_not_started"
+		case "used_up":
+			denyCode = "link_used_up"
+		}
+		if denyCode != "" {
+			return nil
+		}
+		var openApproved int64
+		tx.QueryRowContext(ctx, `SELECT count(*) FROM web_sessions WHERE link_id=? AND approval='approved' AND revoked_at IS NULL AND expires_at>?`, linkID, now).Scan(&openApproved)
+		if l.MaxParallel != nil && openApproved >= *l.MaxParallel {
+			denyCode = "link_parallel_limit"
+			return nil
+		}
+		res, err := tx.ExecContext(ctx, `UPDATE access_links SET uses_count=uses_count+1 WHERE id=? AND (max_uses IS NULL OR uses_count < max_uses)`, linkID)
+		if err != nil {
+			return err
+		}
+		if n, _ := res.RowsAffected(); n != 1 {
+			denyCode = "link_used_up"
+			return nil
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE web_sessions SET approval='approved', approved_by=?, approved_at=? WHERE id=? AND approval='pending'`, a.ID, now, sessionID); err != nil {
+			return err
+		}
+		tx.ExecContext(ctx, `UPDATE link_activations SET approved=1 WHERE session_id=?`, sessionID)
+		s.auditExec(ctx, tx, a, "link_session_approve", "link:"+itoa(linkID), map[string]any{"session": sessionID, "use": l.UsesCount + 1})
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	if denyCode != "" {
+		msg := ReasonText(denyCode)
+		if denyCode == "verify_code_mismatch" {
+			msg = "Tekshirish kodi mos emas: tomoshabin ekranidagi kodni qayta so'rang"
+		}
+		return &Error{Status: 409, Code: denyCode, Msg: msg}
+	}
+	s.Events.ToSession(sessionID, "approval", map[string]any{"state": "approved"})
+	s.Events.ToAdmins("sessions", nil)
+	s.Events.ToAdmins("links", nil)
+	return nil
+}
+
+// RejectLinkSession ends a pending link request. The visitor sees the outcome.
+func (s *Service) RejectLinkSession(ctx context.Context, a Actor, sessionID int64) error {
+	now := s.nowMs()
+	res, err := s.St.DB.ExecContext(ctx, `UPDATE web_sessions SET approval='rejected', approved_by=?, approved_at=?, expires_at=MIN(expires_at, ?) WHERE id=? AND kind='link' AND approval='pending'`,
+		a.ID, now, now+10*60_000, sessionID)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return &Error{Status: 409, Code: "approval_not_pending", Msg: ReasonText("approval_not_pending")}
+	}
+	s.Audit(ctx, a, "link_session_reject", "session:"+itoa(sessionID), nil)
+	s.Events.ToSession(sessionID, "approval", map[string]any{"state": "rejected"})
+	s.Events.ToAdmins("sessions", nil)
+	return nil
 }

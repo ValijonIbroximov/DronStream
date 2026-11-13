@@ -101,22 +101,22 @@ type WebConfig struct {
 }
 
 type MediaConfig struct {
-	Binary             string   `yaml:"mediamtx_binary"`   // path to mediamtx.exe; empty = next to dronstream.exe
-	APIAddr            string   `yaml:"api_listen"`        // loopback only
-	WebRTCHTTPAddr     string   `yaml:"webrtc_http_listen"`// loopback only
-	WebRTCUDPAddr      string   `yaml:"webrtc_udp_listen"` // public ICE UDP
-	WebRTCTCPAddr      string   `yaml:"webrtc_tcp_listen"` // optional ICE TCP
-	WebRTCHosts        []string `yaml:"webrtc_additional_hosts"`
-	WebRTCInterfaces   bool     `yaml:"webrtc_ips_from_interfaces"`
-	RTMPListen         string   `yaml:"rtmp_listen"`  // e.g. "10.8.0.1:1935" (VPN only) or ":1935"
-	RTMPSListen        string   `yaml:"rtmps_listen"` // empty = RTMPS off
-	PublishHost        string   `yaml:"publish_host"` // host shown in pult URLs (VPN IP or domain)
-	LeaseSeconds       int      `yaml:"lease_seconds"`
-	TicketTTLSeconds   int      `yaml:"ticket_ttl_seconds"`
-	MaxPerUser         int      `yaml:"max_media_sessions_per_subject"`
-	ReconcileMillis    int      `yaml:"reconcile_interval_ms"`
-	LogLevel           string   `yaml:"mediamtx_log_level"`
-	DisableManagedMTX  bool     `yaml:"external_mediamtx"` // tests only: do not spawn MediaMTX
+	Binary            string   `yaml:"mediamtx_binary"`    // path to mediamtx.exe; empty = next to dronstream.exe
+	APIAddr           string   `yaml:"api_listen"`         // loopback only
+	WebRTCHTTPAddr    string   `yaml:"webrtc_http_listen"` // loopback only
+	WebRTCUDPAddr     string   `yaml:"webrtc_udp_listen"`  // public ICE UDP
+	WebRTCTCPAddr     string   `yaml:"webrtc_tcp_listen"`  // optional ICE TCP
+	WebRTCHosts       []string `yaml:"webrtc_additional_hosts"`
+	WebRTCInterfaces  bool     `yaml:"webrtc_ips_from_interfaces"`
+	RTMPListen        string   `yaml:"rtmp_listen"`  // e.g. "10.8.0.1:1935" (VPN only) or ":1935"
+	RTMPSListen       string   `yaml:"rtmps_listen"` // empty = RTMPS off
+	PublishHost       string   `yaml:"publish_host"` // host shown in pult URLs (VPN IP or domain)
+	LeaseSeconds      int      `yaml:"lease_seconds"`
+	TicketTTLSeconds  int      `yaml:"ticket_ttl_seconds"`
+	MaxPerUser        int      `yaml:"max_media_sessions_per_subject"`
+	ReconcileMillis   int      `yaml:"reconcile_interval_ms"`
+	LogLevel          string   `yaml:"mediamtx_log_level"`
+	DisableManagedMTX bool     `yaml:"external_mediamtx"` // tests only: do not spawn MediaMTX
 }
 
 type TURNConfig struct {
@@ -141,6 +141,41 @@ type SecurityConfig struct {
 	SameSite          string `yaml:"cookie_samesite"` // Strict (default) or Lax
 	// LinkRatePerMinute limits special-link inspect/activate requests per IP.
 	LinkRatePerMinute int `yaml:"link_rate_per_minute"`
+	// Mode: "standard" or "secure". secure = production policy:
+	//   - plain (unencrypted) RTMP may only listen on a loopback or private
+	//     (VPN/LAN) address, never on all interfaces; there is no fallback;
+	//   - every administrator must enable TOTP before using the admin API.
+	// Missing value = "standard" (keeps existing installations starting).
+	Mode string `yaml:"mode"`
+}
+
+// Secure reports whether the production security policy is on.
+func (c *Config) Secure() bool { return c.Security.Mode == "secure" }
+
+// PlainRTMPProblem explains why the plain RTMP listener is not acceptable in
+// secure mode ("" = acceptable). Plain RTMP is unencrypted: it must be
+// reachable only from a VPN or a closed network.
+func PlainRTMPProblem(listen string) string {
+	if listen == "" {
+		return ""
+	}
+	host, _, err := net.SplitHostPort(listen)
+	if err != nil {
+		return "media.rtmp_listen noto'g'ri: " + listen
+	}
+	ip := net.ParseIP(host)
+	if host == "" || ip == nil || ip.IsUnspecified() {
+		return "media.rtmp_listen barcha interfeyslarda (" + listen + "): shifrlanmagan RTMP internetga ochiq bo'lishi mumkin. VPN/lokal interfeys IP sini yozing (masalan 10.8.0.1:1935) yoki bo'sh qoldiring"
+	}
+	if ip.IsLoopback() || ip.IsPrivate() || isCGNAT(ip) {
+		return ""
+	}
+	return "media.rtmp_listen ommaviy manzilda (" + listen + "): shifrlanmagan RTMP faqat VPN/lokal interfeysda bo'lishi mumkin"
+}
+
+func isCGNAT(ip net.IP) bool {
+	v4 := ip.To4()
+	return v4 != nil && v4[0] == 100 && v4[1]&0xc0 == 64 // 100.64.0.0/10 (often VPN overlays)
 }
 
 type LoggingConfig struct {
@@ -223,8 +258,24 @@ func (c *Config) Validate() error {
 	if c.Security.SameSite != "Lax" {
 		c.Security.SameSite = "Strict"
 	}
+	switch c.Security.Mode {
+	case "":
+		c.Security.Mode = "standard"
+	case "standard", "secure":
+	default:
+		return fmt.Errorf("security.mode must be standard or secure; got %q", c.Security.Mode)
+	}
+	if c.Secure() {
+		// Fail closed: refuse to start rather than accept unencrypted ingest
+		// from the internet. RTMPS (if configured) is unaffected.
+		if p := PlainRTMPProblem(c.Media.RTMPListen); p != "" {
+			return fmt.Errorf("security.mode=secure: %s", p)
+		}
+	}
 	return nil
 }
 
-func (c *Config) Lease() time.Duration     { return time.Duration(c.Media.LeaseSeconds) * time.Second }
-func (c *Config) TicketTTL() time.Duration { return time.Duration(c.Media.TicketTTLSeconds) * time.Second }
+func (c *Config) Lease() time.Duration { return time.Duration(c.Media.LeaseSeconds) * time.Second }
+func (c *Config) TicketTTL() time.Duration {
+	return time.Duration(c.Media.TicketTTLSeconds) * time.Second
+}
