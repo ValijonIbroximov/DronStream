@@ -142,7 +142,7 @@ $buildInfo = @(
   "DronStream $Version (win64)",
   "source_commit: $srcCommit",
   "source_tree_dirty: $srcDirty",
-  "built_utc: " + [DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+  ("built_utc: " + [DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")),
   "mediamtx: $MediaMTXVersion",
   "release_type: sinov relizi (test release)",
   "",
@@ -171,8 +171,18 @@ Write-Host "SHA256: $zh"
 if ($Linux) {
   $gitCmd = Get-Command git -ErrorAction SilentlyContinue
   if (-not $gitCmd) { throw "Linux paketi uchun Git Bash kerak (git topilmadi)" }
-  $bash = Join-Path (Split-Path (Split-Path $gitCmd.Source -Parent) -Parent) "bin\bash.exe"
-  if (-not (Test-Path $bash)) { throw "Git Bash topilmadi: $bash" }
+  # git.exe may be ...\Git\cmd\git.exe (PowerShell) or ...\Git\ucrt64\bin\git.exe (started from Git Bash):
+  # walk up until a bin\bash.exe is found.
+  $bash = $null
+  $dir = Split-Path $gitCmd.Source -Parent
+  foreach ($n in 1..4) {
+    $cand = Join-Path $dir "bin\bash.exe"
+    if (Test-Path $cand) { $bash = $cand; break }
+    $parent = Split-Path $dir -Parent
+    if (-not $parent -or $parent -eq $dir) { break }
+    $dir = $parent
+  }
+  if (-not $bash) { throw ("Git Bash topilmadi (git: " + $gitCmd.Source + ")") }
   Step "Linux paketi (linux/amd64)"
   $bashArgs = @((Join-Path $Root "packaging\linux\build-package.sh"), $Version)
   if ($Force) { $bashArgs += "--force" }
