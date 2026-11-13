@@ -41,6 +41,7 @@ Copy-Item (Join-Path $Package "app\$newVer") (Join-Path $Root "app") -Recurse -F
 Copy-Item (Join-Path $Package "scripts\*") (Join-Path $Root "scripts") -Force
 foreach ($bf in "DronStreamStart.bat", "DronStreamTayyorla.bat") { if (Test-Path (Join-Path $Package $bf)) { Copy-Item (Join-Path $Package $bf) $Root -Force } }
 Copy-Item (Join-Path $Package "docs\*") (Join-Path $Root "docs") -Force -ErrorAction SilentlyContinue
+if (Test-Path (Join-Path $Package "info.html")) { Copy-Item (Join-Path $Package "info.html") $Root -Force }
 Copy-Item (Join-Path $Package "config\dronstream.example.yaml") (Join-Path $Root "config") -Force
 Set-Content (Join-Path $Root "app\active.txt") $newVer -Encoding ascii
 $svc = Get-DsService

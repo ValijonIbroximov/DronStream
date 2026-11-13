@@ -33,7 +33,12 @@ try {
   $h["X-CSRF-Token"] = $r.csrf
   function Api([string]$method, [string]$path, $body) {
     try {
-      if ($null -eq $body) { return Invoke-RestMethod -Method $method -Uri "$base$path" -WebSession $ws -Headers $h -SkipCertificateCheck }
+      if ($null -eq $body) {
+        # PowerShell 7 emits a JSON array as ONE object; returning it from a variable enumerates it,
+        # so "| Where-Object" in the caller sees the items and not the whole array.
+        $res = Invoke-RestMethod -Method $method -Uri "$base$path" -WebSession $ws -Headers $h -SkipCertificateCheck
+        return $res
+      }
       $json = $body | ConvertTo-Json -Compress
       return Invoke-RestMethod -Method $method -Uri "$base$path" -WebSession $ws -Headers $h -ContentType "application/json; charset=utf-8" -SkipCertificateCheck -Body ([Text.Encoding]::UTF8.GetBytes($json))
     } catch {
@@ -45,7 +50,9 @@ try {
   }
   Api "Post" "/api/admin/users" @{ username = "viewer1"; password = "Viewer-Pass-12345"; role = "user" } | Out-Null
   $st = Api "Post" "/api/admin/streams" @{ name = "Pult X"; slug = "pultx" }
-  $uid = @(Api "Get" "/api/admin/users" $null | Where-Object { $_.username -eq "viewer1" })[0].id
+  $viewer = @(Api "Get" "/api/admin/users" $null | Where-Object { $_.username -eq "viewer1" })
+  if ($viewer.Count -ne 1) { throw "viewer1 topilmadi (topildi: $($viewer.Count))" }
+  $uid = [int64]$viewer[0].id
   Api "Post" "/api/admin/permissions" @{ subjectType = "user"; subjectId = $uid; streamIds = @($st.stream.id) } | Out-Null
   $txt = Api "Post" "/api/admin/contents/text" @{ title = "Brifing"; body = "Windows'dan ko'chirilgan matn" }
   # a small valid PNG (1x1) as uploaded media

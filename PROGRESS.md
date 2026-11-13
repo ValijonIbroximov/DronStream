@@ -59,13 +59,20 @@ Kontekst siqilsa shu bo'lim + `git log` + `git status` orqali davom eting. Tayyo
 5. `Player.tsx`: muvaffaqiyatsiz renewal ulanishi yopilmaydi (`onDrop` da `cur.current !== dropped` → return); WHEP 201 dan keyingi xatoda resurs DELETE qilinmaydi; `alive` ref effekt qayta ishlaganda eski `connect` ni to'xtatmaydi.
 6. Mobil: `.player-top` (sarlavha + statistika) va `.watermark` (pos2/pos3 `top:14%`) kichik playerda ustma-ust tushadi.
 
-### Reja (tartib bilan) va holat
-- [ ] A. Sessiya limiti/Player tuzatishlari + testlar (yuqoridagi 1–6).
-- [ ] B. StrictMode: `ds-*.ps1` da qayta yoqish, sabablarni tuzatish, PS 5.1 da test.
-- [ ] C. Linux: `mediamtx` binary nomi, `Pdeathsig` (fail-closed), master kalit fayl huquqlari tekshiruvi, `service`siz systemd unit, `packaging/linux/*`, linux-amd64 paket, Windows→Linux backup ko'chirish testi.
-- [ ] D. Qo'llanma: `guide/src/*` yagona manba → `info.html` (mustaqil) + admin yordam (`/api/admin/help/`), admin "?" tugmasi.
-- [ ] E. `SERVER_INSTALL_UZ.md`, README/SECURITY/TEST_REPORT/ARCHITECTURE yangilash.
-- [ ] F. Testlar, 1.2.0 paketlari (win64 + linux-amd64), push.
+### Reja (tartib bilan) va holat — yangilangan 2026-11-13 kechqurun
+- [x] A. Sessiya limiti/Player tuzatishlari + testlar (commit c024c46). Brauzerda tasdiqlangan: offline joy 30 s dan keyin ham "kutilmoqda"; chegara xabari "3/3"; 375 px da overlaylar ustma-ust emas.
+- [x] B. StrictMode 3.0 qayta yoqildi (`ds-common.ps1`, `packaging/scripts/common.ps1`, testlar, `build.ps1`); `tests/ps-lint.ps1` (commit 2721eb4).
+- [x] C. Linux kodi va paketlash: SIGTERM, Pdeathsig, mediamtx nomi, master.key 0600 tekshiruvi, `packaging/linux/*` (preflight/install/backup/restore/update/rollback/uninstall-service, systemd unit), `build-package.sh`.
+- [~] C2. CI (`.github/workflows/ci.yml`, `tests/ci/*`): Ubuntu 24.04 runner'da unit (7 paket) va integratsiya (4 test) O'TDI; paket sinovi 44/45 (topilgan nuqson: setup kodi journald'ga tushardi — tuzatildi, commit a13ba0e, CI qayta tekshirishi kerak). Windows→Linux backup ko'chirish (windows-backup + migrate ishlari) HALI O'TMAGAN: `make-windows-backup.ps1` da 400 xato, sababi aniqlanmoqda (annotatsiyaga server javobi qo'shildi).
+- [x] D. Qo'llanma: `guide/src/{guide.md,template.html,guide.css,guide.js,meta.json}` → `node guide/build.mjs` → `info.html` + `backend/internal/webui/help/*`; `/api/admin/help/` (faqat admin, alohida CSP, `help_test.go`); admin panel va tomosha sahifasida "?" (`web/src/components/Help.tsx`). Brauzerda tekshirilgan: qidiruv, mundarija, kod belgilash, Esc, fokus, video uzilmasligi.
+- [ ] D2. `info.html` ni haqiqiy file:// da (headless Edge) tarmoq so'rovisiz ochilishini tekshirish; chop etish; avto namoyish va reduced-motion.
+- [ ] E. `SERVER_INSTALL_UZ.md`, README/SECURITY/TEST_REPORT/ARCHITECTURE/REQUIREMENTS yangilash.
+- [ ] F. `build.ps1`: guide build + info.html + SERVER_INSTALL_UZ + Linux paket, mavjud versiya ustidan yozmaslik (`-Force`). Testlar: go unit, integratsiya (hammasi), install-roundtrip, update-rollback 1.1.0→1.2.0, scripts-test. Paketlar: `dist/DronStream-1.2.0-win64.zip` va `-linux-amd64.tar.gz`. Push (`push.bat`).
+
+### Sinov muhiti eslatmasi
+- Brauzer sinovi uchun vaqtinchalik server: scratchpad ichidagi `uiroot` (portlar 58443/59180/59997/58889/58189/51935), binary `build/devbin/dronstream-dev.exe`, Vite: launch config `web-dev-test` (5174, `DS_DEV_API`). Ish tugagach to'xtatiladi.
+- CI holatini ko'rish (ochiq repo, autentifikatsiyasiz): GitHub API `actions/runs` va `check-runs/<job id>/annotations` (skriptlar `::error` / `::notice` chiqaradi).
+- Foydalanuvchining o'z serveri (`runtime/`, 8443) butun ish davomida ishlab turibdi va eski 1.1.0 binary'da — unga tegilmagan.
 
 ### Qarorlar (v1.2)
 - Versiya 1.2.0 (sxema o'zgarmasa v2 qoladi; 1.1.0 paketi ustidan yozilmaydi).
@@ -74,4 +81,4 @@ Kontekst siqilsa shu bo'lim + `git log` + `git status` orqali davom eting. Tayyo
 
 ### To'siqlar
 - Haqiqiy R570 ga kirish yo'q: OS noma'lum → o'rnatish bajarilmaydi, faqat preflight + qo'llanma + paket.
-- Linux runtime sinovi faqat shu kompyuterda WSL/Docker bo'lsa mumkin (tekshiriladi); bo'lmasa faqat cross-compile deb yoziladi.
+- Bu kompyuterda WSL ham, Docker ham yo'q: Linux runtime sinovi faqat GitHub Actions (Ubuntu 24.04 runner) orqali. Haqiqiy R570 va Ubuntu 26.04 sinalmagan.

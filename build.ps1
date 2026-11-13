@@ -7,14 +7,19 @@
   3) dronstream.exe ni versiya bilan yig'adi (frontend ichiga joylanadi)
   4) MediaMTX (mahkamlangan versiya, SHA256 tekshirilgan) ni qo'shadi
   5) dist\DronStream-<versiya>-win64\ va .zip + .sha256 yaratadi
+  6) -Linux bilan: dist\DronStream-<versiya>-linux-amd64.tar.gz (cross-compile, Git Bash orqali)
+  Qo'llanma (info.html va admin yordam) guide\src dan qayta hosil qilinadi.
+  Mavjud paket ustidan yozilmaydi (chiqarilgan versiyalar o'zgarmasin); qayta yig'ish uchun -Force.
   Faqat ishlab chiquvchi kompyuterida kerak. Yakuniy foydalanuvchiga Go/Node kerak emas.
 .EXAMPLE
-  powershell -ExecutionPolicy Bypass -File build.ps1 -Version 1.0.0
+  powershell -ExecutionPolicy Bypass -File build.ps1 -Version 1.2.0 -Linux
 #>
 param(
-  [string]$Version = "1.0.0",
+  [Parameter(Mandatory = $true)][string]$Version,
   [switch]$SkipTests,
-  [switch]$SkipFrontend
+  [switch]$SkipFrontend,
+  [switch]$Linux,
+  [switch]$Force
 )
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 3.0
@@ -24,6 +29,10 @@ $MediaMTXVersion = "v1.21.3"
 $MediaMTXSha256 = "b2f5246b07cb72961df03b8d5e8cad43dc657bcf3f49a87bb031bdf22721af74" # mediamtx_v1.21.3_windows_amd64.zip
 
 function Step($m) { Write-Host "==> $m" -ForegroundColor Cyan }
+
+if ($Version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+$') { throw "Versiya X.Y.Z ko'rinishida bo'lishi kerak: $Version" }
+$zipTarget = Join-Path $Root "dist\DronStream-$Version-win64.zip"
+if ((Test-Path $zipTarget) -and -not $Force) { throw "$zipTarget allaqachon mavjud. Chiqarilgan paket ustidan yozilmaydi: yangi versiya raqami bering yoki -Force." }
 
 # --- toolchain ---
 $go = Join-Path $Tools "go\bin\go.exe"
@@ -48,6 +57,16 @@ if (-not (Test-Path $mtxExe)) {
 }
 $ver = & $mtxExe --version 2>&1 | Select-Object -First 1
 if ("$ver".Trim() -ne $MediaMTXVersion) { throw "MediaMTX versiyasi $ver, kutilgan $MediaMTXVersion" }
+
+# --- guide: info.html + admin help are generated from the single source guide\src ---
+$node = Join-Path $Tools "node\node.exe"
+if (-not (Test-Path $node)) { $nodeCmd = Get-Command node -ErrorAction SilentlyContinue; if ($nodeCmd) { $node = $nodeCmd.Source } else { throw "Node topilmadi (.tools\node yoki PATH)" } }
+if (Test-Path (Join-Path $Tools "node")) { $env:PATH = (Join-Path $Tools "node") + ";" + $env:PATH }
+Step "Qo'llanma hosil qilinmoqda (guide\src -> info.html, admin yordam)"
+& $node (Join-Path $Root "guide\build.mjs")
+if ($LASTEXITCODE -ne 0) { throw "guide build xato" }
+$guideMeta = Get-Content (Join-Path $Root "guide\src\meta.json") -Raw | ConvertFrom-Json
+if ($guideMeta.version -ne $Version) { throw "guide\src\meta.json dagi versiya ($($guideMeta.version)) paket versiyasiga ($Version) mos emas" }
 
 # --- frontend ---
 $webui = Join-Path $Root "backend\internal\webui\dist"
@@ -91,9 +110,9 @@ Copy-Item $mtxExe (Join-Path $appDir "mediamtx")
 Copy-Item (Join-Path $mtxDir "LICENSE") (Join-Path $appDir "mediamtx\LICENSE-mediamtx.txt")
 Copy-Item (Join-Path $Root "packaging\scripts\*") (Join-Path $pkg "scripts")
 foreach ($s in "ds-common.ps1", "ds-start.ps1", "ds-prepare.ps1") { Copy-Item (Join-Path $Root "scripts\$s") (Join-Path $pkg "scripts") }
-foreach ($s in "DronStreamStart.bat", "DronStreamTayyorla.bat") { Copy-Item (Join-Path $Root $s) $pkg }
+foreach ($s in "DronStreamStart.bat", "DronStreamTayyorla.bat", "info.html") { Copy-Item (Join-Path $Root $s) $pkg }
 Copy-Item (Join-Path $Root "config\dronstream.example.yaml") (Join-Path $pkg "config")
-foreach ($d in "README_UZ.md","REQUIREMENTS.md","PROGRESS.md","ADMIN_GUIDE_UZ.md","DJI_SETUP_UZ.md","SECURITY.md","BACKUP_RESTORE_UZ.md","INSTALL_UZ.md","TEST_REPORT.md","ARCHITECTURE.md") {
+foreach ($d in "README_UZ.md","SERVER_INSTALL_UZ.md","REQUIREMENTS.md","PROGRESS.md","ADMIN_GUIDE_UZ.md","DJI_SETUP_UZ.md","SECURITY.md","BACKUP_RESTORE_UZ.md","INSTALL_UZ.md","TEST_REPORT.md","ARCHITECTURE.md") {
   $p = Join-Path $Root $d
   if (Test-Path $p) { Copy-Item $p (Join-Path $pkg "docs") }
 }
@@ -111,3 +130,16 @@ $zh = (Get-FileHash $zipOut -Algorithm SHA256).Hash.ToLower()
 Set-Content -Path "$zipOut.sha256" -Value "$zh  $name.zip" -Encoding ascii
 Step "Tayyor: $zipOut"
 Write-Host "SHA256: $zh"
+
+# --- Linux package (cross-compiled; the same script runs natively in CI) ---
+if ($Linux) {
+  $gitCmd = Get-Command git -ErrorAction SilentlyContinue
+  if (-not $gitCmd) { throw "Linux paketi uchun Git Bash kerak (git topilmadi)" }
+  $bash = Join-Path (Split-Path (Split-Path $gitCmd.Source -Parent) -Parent) "bin\bash.exe"
+  if (-not (Test-Path $bash)) { throw "Git Bash topilmadi: $bash" }
+  Step "Linux paketi (linux/amd64)"
+  $bashArgs = @((Join-Path $Root "packaging\linux\build-package.sh"), $Version)
+  if ($Force) { $bashArgs += "--force" }
+  & $bash @bashArgs
+  if ($LASTEXITCODE -ne 0) { throw "Linux paketi yig'ilmadi" }
+}

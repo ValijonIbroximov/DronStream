@@ -103,6 +103,19 @@ if ($status) {
       Write-DsLog "Tezkor tekshiruv: TypeScript" "STEP"
       if ((Invoke-DsNative $tsc @("-b") -WorkDir (Join-Path $ctx.Base "web")).Code -ne 0) { Stop-DsWith $EX_FAIL "TypeScript xato topdi - commit qilinmadi." }
     }
+    # The guide has one source (guide\src); info.html and the admin help are generated from it.
+    $guideFiles = @($changedFiles | Where-Object { $_ -like "guide/*" -or $_ -eq "info.html" -or $_ -like "backend/internal/webui/help/*" }).Count
+    $nodeExe = Join-Path $td "node\node.exe"
+    $guideBuild = Join-Path $ctx.Base "guide\build.mjs"
+    if ($guideFiles -gt 0 -and (Test-Path $nodeExe) -and (Test-Path $guideBuild)) {
+      Write-DsLog "Tezkor tekshiruv: qo'llanma manbasi va hosil qilingan fayllar" "STEP"
+      if ((Invoke-DsNative $nodeExe @($guideBuild, "--check")).Code -ne 0) { Stop-DsWith $EX_FAIL "info.html yoki admin yordam manbadan eskirgan. Qayta hosil qiling: node guide\build.mjs - commit qilinmadi." }
+    }
+    $lint = Join-Path $ctx.Base "tests\ps-lint.ps1"
+    if (@($changedFiles | Where-Object { $_ -like "*.ps1" }).Count -gt 0 -and (Test-Path $lint)) {
+      Write-DsLog "Tezkor tekshiruv: PowerShell skriptlari (StrictMode, sintaksis)" "STEP"
+      if ((Invoke-DsNative "powershell.exe" @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $lint)).Code -ne 0) { Stop-DsWith $EX_FAIL "PowerShell skript tekshiruvi xato topdi - commit qilinmadi." }
+    }
   }
   G @("add", "-A") -Quiet | Out-Null
   $staged = (G @("diff", "--cached", "--name-only", "--diff-filter=ACMR") -Quiet).Out -split "`n"

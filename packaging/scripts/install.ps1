@@ -26,6 +26,7 @@ Copy-Item (Join-Path $pkg "app\$version") (Join-Path $Root "app") -Recurse -Forc
 Copy-Item (Join-Path $pkg "scripts\*") (Join-Path $Root "scripts") -Force
 foreach ($b in "DronStreamStart.bat", "DronStreamTayyorla.bat") { if (Test-Path (Join-Path $pkg $b)) { Copy-Item (Join-Path $pkg $b) $Root -Force } }
 Copy-Item (Join-Path $pkg "docs\*") (Join-Path $Root "docs") -Force -ErrorAction SilentlyContinue
+if (Test-Path (Join-Path $pkg "info.html")) { Copy-Item (Join-Path $pkg "info.html") $Root -Force }   # offline qo'llanma
 Copy-Item (Join-Path $pkg "config\dronstream.example.yaml") (Join-Path $Root "config") -Force
 $cfg = Join-Path $Root "config\dronstream.yaml"
 if (-not (Test-Path $cfg)) {
