@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
@@ -51,7 +52,8 @@ func TestEveryFrameDecryptsToExactPlaintext(t *testing.T) {
 		c.expect(a, viewer.Decrypted, au)
 		c.expect(b, viewer.Decrypted, au)
 	}
-	want := viewer.Stats{Received: 60, Decrypted: 60, Epoch: 1}
+	// epoch 1 had no member; approving a started epoch 2, approving b started epoch 3
+	want := viewer.Stats{Received: 60, Decrypted: 60, Epoch: 3}
 	if a.Receiver.Stats != want || b.Receiver.Stats != want {
 		t.Fatalf("stats a=%+v b=%+v, want %+v", a.Receiver.Stats, b.Receiver.Stats, want)
 	}
@@ -79,8 +81,9 @@ func TestRelaySeesNeitherPlaintextNorKeys(t *testing.T) {
 		c.expect(b, viewer.NoKey, nil)
 	}
 	keys, _, err := a.Envelopes(c.ctx)
-	if err != nil || len(keys) != 2 {
-		t.Fatalf("viewer a should hold the keys of 2 epochs: %d %v", len(keys), err)
+	// a was sealed the keys of epoch 2 (its own approval), 3 (b approved) and 4 (b revoked)
+	if err != nil || len(keys) != 3 {
+		t.Fatalf("viewer a should hold the keys of 3 epochs: %d %v", len(keys), err)
 	}
 	traffic := c.log.Snapshot()
 
@@ -123,7 +126,7 @@ func TestRelaySeesNeitherPlaintextNorKeys(t *testing.T) {
 			t.Errorf("the relay saw %s", name)
 		}
 	}
-	t.Logf("relay traffic: %d bytes over %d frames and 2 epochs; %d forbidden byte strings searched, none found",
+	t.Logf("relay traffic: %d bytes over %d frames sent in 2 epochs (3 and 4); %d forbidden byte strings searched, none found",
 		len(traffic), c.sent, len(forbidden))
 }
 
@@ -173,29 +176,30 @@ func TestWrongKeyFailsAuthentication(t *testing.T) {
 		t.Fatal("an unapproved viewer must not have any envelope")
 	}
 	frame := a.LastFrame
+	const ep = 2 // approving a started epoch 2
 
 	wrongKey := make([]byte, 32)
 	rand.Read(wrongKey)
 	wrong := viewer.NewReceiver(testStream)
-	wrong.AddKey(1, testSuite, wrongKey)
+	wrong.AddKey(ep, testSuite, wrongKey)
 	if pt, res := wrong.Process(frame); res != viewer.AuthFailure || pt != nil {
 		t.Fatalf("wrong key: %v", res)
 	}
 
 	keys, _, _ := a.Envelopes(c.ctx)
 	otherStream := viewer.NewReceiver("another-stream")
-	otherStream.AddKey(1, testSuite, keys[0].BaseKey)
+	otherStream.AddKey(ep, testSuite, keys[0].BaseKey)
 	if _, res := otherStream.Process(frame); res != viewer.AuthFailure {
 		t.Fatalf("right key but another stream: %v", res)
 	}
 	otherSuite := viewer.NewReceiver(testStream)
-	otherSuite.AddKey(1, sframe.AES128GCMSHA256128, keys[0].BaseKey)
+	otherSuite.AddKey(ep, sframe.AES128GCMSHA256128, keys[0].BaseKey)
 	if _, res := otherSuite.Process(frame); res != viewer.AuthFailure {
 		t.Fatalf("right key but another cipher suite: %v", res)
 	}
 
 	control := viewer.NewReceiver(testStream)
-	control.AddKey(1, testSuite, keys[0].BaseKey)
+	control.AddKey(ep, testSuite, keys[0].BaseKey)
 	if pt, res := control.Process(frame); res != viewer.Decrypted || !bytes.Equal(pt, au) {
 		t.Fatalf("control with the right key: %v", res)
 	}
@@ -213,7 +217,7 @@ func TestTamperedFrameIsRejected(t *testing.T) {
 	c.send()
 	c.expect(a, viewer.AuthFailure, nil)
 	c.expect(a, viewer.Decrypted, c.send())
-	want := viewer.Stats{Received: 7, Decrypted: 6, AuthFailures: 1, Epoch: 1}
+	want := viewer.Stats{Received: 7, Decrypted: 6, AuthFailures: 1, Epoch: 2}
 	if a.Receiver.Stats != want {
 		t.Fatalf("stats %+v, want %+v", a.Receiver.Stats, want)
 	}
@@ -237,7 +241,7 @@ func TestReplayedFrameIsRejected(t *testing.T) {
 	if !bytes.Equal(a.LastFrame, firstFrame) {
 		t.Fatal("the replayed frame should be the unmodified first frame")
 	}
-	want := viewer.Stats{Received: 7, Decrypted: 6, ReplaysRejected: 1, Epoch: 1}
+	want := viewer.Stats{Received: 7, Decrypted: 6, ReplaysRejected: 1, Epoch: 2}
 	if a.Receiver.Stats != want {
 		t.Fatalf("stats %+v, want %+v", a.Receiver.Stats, want)
 	}
@@ -246,7 +250,7 @@ func TestReplayedFrameIsRejected(t *testing.T) {
 	// for the first time accepts them, and refuses them the second time.
 	keys, _, _ := a.Envelopes(c.ctx)
 	fresh := viewer.NewReceiver(testStream)
-	fresh.AddKey(1, testSuite, keys[0].BaseKey)
+	fresh.AddKey(keys[0].Epoch, testSuite, keys[0].BaseKey)
 	if pt, res := fresh.Process(firstFrame); res != viewer.Decrypted || !bytes.Equal(pt, firstPlain) {
 		t.Fatalf("first delivery: %v", res)
 	}
@@ -338,11 +342,91 @@ func TestSkippingFingerprintComparisonGivesRelayTheKey(t *testing.T) {
 	au := c.send()
 	c.expect(v, viewer.NoKey, nil) // the genuine viewer got nothing
 	attacker := viewer.NewReceiver(testStream)
-	attacker.AddKey(1, testSuite, stolen)
+	attacker.AddKey(envs[0].Epoch, testSuite, stolen)
 	if pt, res := attacker.Process(v.LastFrame); res != viewer.Decrypted || !bytes.Equal(pt, au) {
 		t.Fatalf("expected the attack to succeed in this scenario, got %v", res)
 	}
 	t.Log("as expected: without the out-of-band fingerprint comparison the relay obtains the key")
+}
+
+// Claim: a newly approved viewer cannot open anything that was sent before
+// its approval. Approval starts a new epoch; the newcomer is sealed only the
+// key of that new epoch, never an earlier one. The test lets the newcomer
+// record the earlier ciphertext (as a waiting viewer or the relay can) and
+// then tries every key it was given on those recorded frames.
+func TestNewViewerNeverGetsEarlierEpochKeys(t *testing.T) {
+	c := newChain(t)
+	a, late := c.join("early viewer"), c.join("late viewer")
+	c.approve(a)
+	early, _ := c.src.Epoch()
+	var recorded [][]byte
+	for i := 0; i < 15; i++ {
+		au := c.send()
+		c.expect(a, viewer.Decrypted, au)
+		c.expect(late, viewer.NoKey, nil) // the late viewer is subscribed and sees only ciphertext
+		recorded = append(recorded, bytes.Clone(late.LastFrame))
+	}
+	if keys, rejected, _ := late.Envelopes(c.ctx); len(keys) != 0 || rejected != 0 {
+		t.Fatal("a viewer that is not approved yet must not have any envelope")
+	}
+
+	c.approve(late)
+	now, _ := c.src.Epoch()
+	if now != early+1 {
+		t.Fatalf("approving a new viewer must start a new epoch: %d -> %d", early, now)
+	}
+	keys, rejected, err := late.Envelopes(c.ctx)
+	if err != nil || rejected != 0 || len(keys) != 1 || keys[0].Epoch != now {
+		t.Fatalf("the new viewer must hold exactly the key of the new epoch %d: %+v %v", now, len(keys), err)
+	}
+	// the earlier viewer keeps working across the change and has both keys
+	if aKeys, _, _ := a.Envelopes(c.ctx); len(aKeys) != 2 {
+		t.Fatalf("the earlier viewer should hold the keys of epochs %d and %d, has %d", early, now, len(aKeys))
+	}
+	if bytes.Equal(keys[0].BaseKey, mustKey(t, a, early)) {
+		t.Fatal("the new epoch reuses the base key of the earlier epoch")
+	}
+
+	// The recorded frames of the earlier epoch stay closed: the receiver has no
+	// key for that epoch, and forcing the new key onto the old KID fails.
+	meta := envelope.FrameMetadata(testStream)
+	for i, frame := range recorded {
+		kid, _, _, _ := sframe.DecodeHeader(frame)
+		if kid != early {
+			t.Fatalf("recorded frame %d carries KID %d, want %d", i, kid, early)
+		}
+		probe := viewer.NewReceiver(testStream)
+		probe.AddKey(keys[0].Epoch, keys[0].Suite, keys[0].BaseKey)
+		if pt, res := probe.Process(frame); res == viewer.Decrypted || pt != nil {
+			t.Fatalf("recorded frame %d of the earlier epoch was opened by the new viewer", i)
+		}
+		dec, _ := sframe.NewDecryptor(testSuite, early, keys[0].BaseKey)
+		if _, _, err := dec.Decrypt(meta, frame); !errors.Is(err, sframe.ErrAuth) {
+			t.Fatalf("new key forced onto the earlier epoch: %v", err)
+		}
+	}
+	// From the new epoch on both viewers decrypt.
+	for i := 0; i < 10; i++ {
+		au := c.send()
+		c.expect(a, viewer.Decrypted, au)
+		c.expect(late, viewer.Decrypted, au)
+	}
+}
+
+// mustKey returns the base key viewer v was sealed for the given epoch.
+func mustKey(t *testing.T, v *viewer.Client, epoch uint64) []byte {
+	t.Helper()
+	keys, _, err := v.Envelopes(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, k := range keys {
+		if k.Epoch == epoch {
+			return k.BaseKey
+		}
+	}
+	t.Fatalf("viewer has no key for epoch %d", epoch)
+	return nil
 }
 
 // Claim: revoke starts a new epoch with a fresh key that the revoked viewer
@@ -359,15 +443,16 @@ func TestRevokeStartsNewEpochWithoutRevokedViewer(t *testing.T) {
 		c.expect(b, viewer.Decrypted, au)
 	}
 	oldKeys, _, _ := b.Envelopes(c.ctx)
-	if len(oldKeys) != 1 || oldKeys[0].Epoch != 1 {
-		t.Fatalf("viewer b should hold exactly the epoch 1 key: %+v", len(oldKeys))
+	// approving a started epoch 2, approving b started epoch 3: b holds only the key of epoch 3
+	if len(oldKeys) != 1 || oldKeys[0].Epoch != 3 {
+		t.Fatalf("viewer b should hold exactly the epoch 3 key: %+v", len(oldKeys))
 	}
 
 	if err := c.src.Revoke(c.ctx, b.Fingerprint); err != nil {
 		t.Fatal(err)
 	}
-	if epoch, _ := c.src.Epoch(); epoch != 2 {
-		t.Fatalf("epoch after revoke: %d, want 2", epoch)
+	if epoch, _ := c.src.Epoch(); epoch != 4 {
+		t.Fatalf("epoch after revoke: %d, want 4", epoch)
 	}
 	meta := envelope.FrameMetadata(testStream)
 	for i := 0; i < 20; i++ {
@@ -375,26 +460,26 @@ func TestRevokeStartsNewEpochWithoutRevokedViewer(t *testing.T) {
 		c.expect(a, viewer.Decrypted, au)
 		c.expect(b, viewer.NoKey, nil)
 		// The revoked viewer tries its old key on the new frame anyway.
-		if kid, _, _, _ := sframe.DecodeHeader(b.LastFrame); kid != 2 {
-			t.Fatalf("frame after revoke carries KID %d, want 2", kid)
+		if kid, _, _, _ := sframe.DecodeHeader(b.LastFrame); kid != 4 {
+			t.Fatalf("frame after revoke carries KID %d, want 4", kid)
 		}
-		dec, _ := sframe.NewDecryptor(testSuite, 2, oldKeys[0].BaseKey)
+		dec, _ := sframe.NewDecryptor(testSuite, 4, oldKeys[0].BaseKey)
 		if _, _, err := dec.Decrypt(meta, b.LastFrame); !errors.Is(err, sframe.ErrAuth) {
 			t.Fatalf("old key on a new-epoch frame: %v", err)
 		}
 	}
-	if want := (viewer.Stats{Received: 40, Decrypted: 40, Epoch: 2}); a.Receiver.Stats != want {
+	if want := (viewer.Stats{Received: 40, Decrypted: 40, Epoch: 4}); a.Receiver.Stats != want {
 		t.Fatalf("remaining viewer stats %+v, want %+v", a.Receiver.Stats, want)
 	}
-	if want := (viewer.Stats{Received: 40, Decrypted: 20, NoKey: 20, Epoch: 1}); b.Receiver.Stats != want {
+	if want := (viewer.Stats{Received: 40, Decrypted: 20, NoKey: 20, Epoch: 3}); b.Receiver.Stats != want {
 		t.Fatalf("revoked viewer stats %+v, want %+v", b.Receiver.Stats, want)
 	}
 
-	// The relay holds two envelopes for a (epochs 1, 2) and still only one for b.
-	if keys, _, _ := a.Envelopes(c.ctx); len(keys) != 2 {
-		t.Fatalf("remaining viewer has %d keys, want 2", len(keys))
+	// The relay holds three envelopes for a (epochs 2, 3, 4) and still only one for b.
+	if keys, _, _ := a.Envelopes(c.ctx); len(keys) != 3 {
+		t.Fatalf("remaining viewer has %d keys, want 3", len(keys))
 	}
-	if keys, _, _ := b.Envelopes(c.ctx); len(keys) != 1 || keys[0].Epoch != 1 {
+	if keys, _, _ := b.Envelopes(c.ctx); len(keys) != 1 || keys[0].Epoch != 3 {
 		t.Fatal("revoked viewer received a key after revocation")
 	}
 	if err := c.src.Revoke(c.ctx, b.Fingerprint); !errors.Is(err, source.ErrNotMember) {
@@ -405,8 +490,8 @@ func TestRevokeStartsNewEpochWithoutRevokedViewer(t *testing.T) {
 	c.relay.AttackReplay(1)
 	c.expect(a, viewer.Decrypted, c.send())
 	c.expect(a, viewer.Replay, nil)
-	if kid, _, _, _ := sframe.DecodeHeader(a.LastFrame); kid != 1 {
-		t.Fatalf("expected an epoch 1 frame to be replayed, got KID %d", kid)
+	if kid, _, _, _ := sframe.DecodeHeader(a.LastFrame); kid != 3 {
+		t.Fatalf("expected an epoch 3 frame to be replayed, got KID %d", kid)
 	}
 }
 

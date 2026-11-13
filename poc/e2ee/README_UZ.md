@@ -38,7 +38,7 @@ Go tomonida tashqi bog'liqlik yo'q (`go.mod`da `require` yo'q). JS tomonida ishl
 1. **Epoch va kalit.** Manba har bir epoch uchun 32 baytli tasodifiy `base_key` yaratadi. SFrame `KID` = epoch raqami. Har bir kadr uchun `CTR` 0 dan boshlab bittadan oshadi, ya'ni (KID, CTR) juftligi takrorlanmaydi.
 2. **Kadr.** Har bir H.264 access unit (Annex-B) butunligicha SFrame bilan shifrlanadi. SFrame «metadata» (AAD ga kiradi, uzatilmaydi) — stream identifikatori, shuning uchun bir stream kadri boshqasida tasdiqdan o'tmaydi.
 3. **Qo'shilish.** Tomoshabin P-256 kalit juftligini yaratadi (brauzerda yopiq kalit `extractable: false`), ochiq kalitini relay orqali yuboradi va **barmoq izini** ko'rsatadi: ochiq kalitning (65 bayt, siqilmagan) SHA-256 qiymati, to'liq 64 ta hex belgi, 4 tadan 16 guruh. Manba aynan shu satrni chop etadi.
-4. **Tasdiqlash.** Operator barmoq izini tomoshabin bilan **alohida kanal** orqali (ovoz, yuzma-yuz) solishtiradi va `approve <barmoq izi>` buyrug'ini beradi. Manba joriy epoch `base_key`ini shu ochiq kalitga HPKE bilan muhrlaydi. HPKE `info` parametri stream id + epoch + SFrame to'plami + qabul qiluvchi barmoq izini bog'laydi: konvertdagi ochiq maydonlardan birortasi o'zgartirilsa, u ochilmaydi.
+4. **Tasdiqlash.** Operator barmoq izini tomoshabin bilan **alohida kanal** orqali (ovoz, yuzma-yuz) solishtiradi va `approve <barmoq izi>` buyrug'ini beradi. Manba **yangi epoch** boshlaydi va uning `base_key`ini barcha a'zolarga, jumladan yangisiga, HPKE bilan muhrlaydi. Yangi a'zo o'zi tasdiqlanishidan oldin boshlangan epoch kalitini **hech qachon olmaydi**: avval yuborilgan (u yoki relay yozib olgan bo'lishi mumkin bo'lgan) kadrlar unga yopiq qoladi. HPKE `info` parametri stream id + epoch + SFrame to'plami + qabul qiluvchi barmoq izini bog'laydi: konvertdagi ochiq maydonlardan birortasi o'zgartirilsa, u ochilmaydi.
 5. **Bekor qilish = yangi epoch.** `revoke <barmoq izi>`: yangi tasodifiy `base_key`, faqat qolgan a'zolarga muhrlanadi; shundan keyingi kadrlar yangi KID bilan ketadi. Bekor qilingan tomoshabin yangi kalitni olmaydi.
 6. **Qabul qilish qoidalari** (SFrame ularni ilovaga qoldiradi, RFC 9605 §9.1, §9.3): bitta KID ichida CTR qat'iy o'sishi shart (aks holda — replay, rad etiladi); epoch faqat oldinga yuradi; hisoblagich va epoch faqat autentifikatsiyadan o'tgan kadr bilan siljiydi.
 
@@ -77,12 +77,62 @@ Bularni yashirmaslik PoC'ning asosiy maqsadi.
 8. **Metama'lumot relay'ga ko'rinadi:** kim, qachon, qaysi IP'dan ulangani; stream nomi; kadr o'lchamlari va vaqti (bundan kadr tezligi, GOP tuzilishi, sahnadagi harakat miqdori taxmin qilinadi); tomoshabinlarning ochiq kalitlari va yorliqlari; kim konvert olgani (a'zolik); epoch raqami va hisoblagich (SFrame sarlavhasi ochiq); revoke qachon bo'lgani.
 9. **Kaliti bor tomoshabin ekranni yozib olishi** yoki ochilgan kadrlarni saqlashi mumkin. Shifrlash ruxsat berilgan tomoshabinning o'zidan himoya qilmaydi.
 10. **Revoke allaqachon qabul qilingan kadrlarni qaytarib ololmaydi.** Bekor qilingan tomoshabinda o'zi a'zo bo'lgan epoch'larning kalitlari qoladi; o'sha epoch'larning yozib olingan shifrlangan kadrlarini keyin ham ocha oladi.
-11. **Epoch ichida forward secrecy yo'q.** Epoch `base_key`i oshkor bo'lsa, o'sha epochning barcha kadrlari ochiladi. Tomoshabinning yopiq kaliti oshkor bo'lsa va konvertlar yozib olingan bo'lsa, unga muhrlangan barcha epoch kalitlari ochiladi. Yangi tasdiqlangan tomoshabin **joriy** epoch kalitini oladi — agar u shu epochning oldingi shifrlangan kadrlarini yozib olgan bo'lsa, ularni ham ochadi (kerak bo'lsa `approve`dan oldin `rotate` qiling; MLS buni tuzilishiga ko'ra hal qiladi).
+11. **Epoch ichida forward secrecy yo'q.** Epoch `base_key`i oshkor bo'lsa, o'sha epochning barcha kadrlari ochiladi. Tomoshabinning yopiq kaliti oshkor bo'lsa va konvertlar yozib olingan bo'lsa, unga muhrlangan barcha epoch kalitlari ochiladi. Yangi tasdiqlangan tomoshabin faqat o'zi qo'shilgan paytda boshlangan epoch va undan keyingilarining kalitini oladi (`TestNewViewerNeverGetsEarlierEpochKeys`); lekin u a'zo bo'lgan epoch'lar uchun yuqoridagi cheklov to'liq amal qiladi. MLS buni tuzilishiga ko'ra kuchliroq hal qiladi.
 12. **Relay xizmatni buzishi mumkin:** kadr va konvertlarni tashlab yuborish, kechiktirish, tartibini o'zgartirish (bu holda ular replay sifatida rad etiladi). Shifrlash mavjudlikni kafolatlamaydi.
 13. **PoC relay'ida autentifikatsiya yo'q** va u faqat `127.0.0.1` da oddiy HTTP bilan ishlaydi: shu kompyuterdagi har qanday jarayon kadr yuborishi yoki join so'rovi qo'yishi mumkin. Manbaning operator endpoint'i veb-sahifalardan himoyalangan (Host tekshiruvi, `Origin` rad etiladi, maxsus sarlavha talab qilinadi), lekin mahalliy jarayonlardan emas.
 14. **Holat xotirada.** Sahifa qayta yuklansa — yangi kalit, yangi tasdiq kerak. Relay yoki manba qayta ishga tushsa, a'zolik yo'qoladi.
 15. **Faqat Windows 11 da sinalgan** (Go 1.27.4, Node 22). Skriptlarning `.sh` variantlari Git Bash'da sinalgan; Linux/macOS'da ishga tushirib ko'rilmagan.
 16. **Production uchun to'g'ri tanlov — MLS (RFC 9420)** (RFC 9605 §5.2 SFrame kalitlarini MLS'dan olishni tasvirlaydi) va WebRTC (Encoded Transform / SFrame) kabi real vaqt transporti. Bu PoC ularning o'rnini bosmaydi.
+
+## 4a. Arxitektura va ishonch chegaralari — kim nimani ko'radi
+
+| Tomon | Ochiq videoni ko'radimi | Kalitga egami | Izoh |
+|---|---|---|---|
+| Manba (bu yerda simulyator; real tizimda pultdagi ilova yoki pult yonidagi gateway) | **Ha** | Ha (kalitlarni u yaratadi) | E2EE aynan shu yerdan boshlanadi. Undan oldingi hamma narsa ochiq |
+| Relay / backend | Yo'q | Yo'q | Faqat shifrlangan kadr va muhrlangan konvertlarni uzatadi; metama'lumotni ko'radi; xizmatni buzishi mumkin |
+| Tasdiqlangan tomoshabin brauzeri | Ha | Ha (o'z epoch'lari uchun) | Yopiq kalit eksport qilinmaydi; sahifa JS kodi ishonchli manbadan kelishi shart |
+| Sahifani tarqatuvchi (viewerhost) | Bilvosita **ha** | Bilvosita ha | Kim JS bersa, u kalitni olib qo'yishi mumkin. Shuning uchun u relay'dan alohida va ishonchli bo'lishi kerak |
+| Tasdiqlanmagan yoki bekor qilingan tomoshabin | Yo'q (yangi kadrlarni) | Faqat o'zi a'zo bo'lgan epoch'lar | |
+
+**Mos bo'lmagan brauzer.** Shifrlanmagan zaxira rejim **yo'q**: relay'da ochiq oqim umuman mavjud emas, sahifa esa WebCrypto bo'lmasa ishga tushmaydi (`viewer/src/capabilities.js`). WebCodecs bo'lmasa — faqat hisoblagichlar, tasvirsiz.
+
+**Server (relay) qila oladigan hujumlar va ularning holati:**
+
+| Hujum | Natija | Dalil |
+|---|---|---|
+| Join so'rovidagi ochiq kalitni o'ziniki bilan almashtirish (soxta qabul qiluvchi) | Operator ko'radigan barmoq izi tomoshabinnikidan farq qiladi; tomoshabin aytgan barmoq izi rad etiladi | `TestRelaySubstitutingJoinKeyIsCaughtByFingerprint`; brauzerda qo'lda |
+| Xuddi shu, lekin operator barmoq izini **solishtirmasa** | **Relay kalitni oladi va videoni ochadi** | `TestSkippingFingerprintComparisonGivesRelayTheKey` (ogohlantirish testi) |
+| Tomoshabinga o'z kalitini muhrlab, o'z kadrlarini yuborish | Haqiqiy videoni o'qiy olmaydi, lekin tomoshabinga **soxta video ko'rsata oladi** — bu PoC'da yopilmagan | `TestKnownLimitationEnvelopeSenderIsNotAuthenticated`; 4-bo'lim, 6-band |
+| Kadrni o'zgartirish / eski kadrni qayta yuborish | Rad etiladi | `TestTamperedFrameIsRejected`, `TestReplayedFrameIsRejected`; brauzerda qo'lda |
+| Kadr yoki konvertni tashlab yuborish, kechiktirish | Mumkin (xizmat buziladi) | 4-bo'lim, 12-band |
+
+## 4b. Haqiqiy qurilma bilan bog'liq blokerlar
+
+Bu PoC'ni haqiqiy pultga ulash uchun quyidagilar kerak va ularning hech biri qurilmasiz hal bo'lmaydi:
+
+1. **Manba qayerda ishlaydi.** DJI Pilot 2 SFrame'ni bilmaydi. Ikki yo'l bor: (A) pultda ishlaydigan o'z ilovamiz (DJI Mobile SDK kodlangan oqimni beradi — hujjatda bor, qurilmada sinalmagan; bunday ilova Pilot 2 **o'rnida** ishlaydi) yoki (B) pult yonidagi gateway. Gateway — **qo'shimcha qurilma**: u pultdan videoni ochiq oladi (lokal RTMP/RTSP yoki HDMI orqali), ya'ni pult ↔ gateway bo'lagi va gateway'ning o'zi videoni ochiq ko'radi; E2EE **gateway'dan** boshlanadi, pultdan emas.
+2. **Aniq qurilma ma'lumotlari** (pult modeli va firmware, Pilot 2 versiyasi, dron firmware, ilova o'rnatish mumkinligi) noma'lum — asosiy repozitoriydagi `SECURITY_MODEL.md` 6.5.
+3. **Transport.** Dala sharoitidagi aloqa (LTE va h.k.) uchun HTTP oqimi yetarli emas; WebRTC + SFrame (Encoded Transform) brauzerlar bo'yicha sinalishi kerak.
+4. **Kalit boshqaruvi.** Operator barmoq izini kim va qanday solishtiradi; jo'natuvchini autentifikatsiya qilish (4-bo'lim, 6-band); production uchun MLS.
+5. **Frontend tarqatish.** Sahifa relay'dan mustaqil, o'zgarmas va tekshiriladigan manbadan kelishi kerak (imzolangan ilova yoki alohida statik paket).
+
+Dastlabki qurilma sinovlari yerda, uchmasdan, xavfsiz holatda o'tkazilishi kerak. Bu PoC hech kimga sinov ilovasi bilan uchishni yoki Pilot 2'ni almashtirishni tavsiya qilmaydi.
+
+## 4c. Amalda bajarilgan sinovlar (2026-11-14)
+
+Muhit: Windows 11 Pro, Go 1.27.4, Node 22, bitta kompyuter, hammasi `127.0.0.1` da (relay 59320, viewerhost 59321, manba boshqaruvi 59322). DJI qurilmasi qatnashmagan.
+
+| Sinov | Natija |
+|---|---|
+| `run-tests.sh`: `go vet`, `go test ./...` (31 test, 6 paket), viewer bundle, `node --test` (19 test) | hammasi o'tdi, `== ALL TESTS PASSED ==` |
+| Demo (`run-demo.ps1 -AttackHooks -Background`): manba ffmpeg'dan haqiqiy H.264 test tasviri (300 access unit, 20 kalit kadr) | ishga tushdi; `-Stop` faqat o'z uchta jarayonini to'xtatdi |
+| Brauzerda qo'lda (Chromium 156 asosidagi ichki brauzer): join → «waiting for approval», kadrlar kelyapti, ochilgani 0 | o'tdi |
+| Operator `list`dagi barmoq izi sahifadagi bilan aynan bir xil; `approve` → «decrypting (epoch 2)», WebCodecs `avc1.42c016`, «Pictures drawn» o'sdi; canvas piksellari bo'sh emas (namunada 110 xil rang) | o'tdi |
+| `attack tamper 5` → «Authentication failures» 5; `attack replay 5` → «Replays rejected» 5; oqim davom etdi | o'tdi |
+| Ikkinchi tomoshabin tasdiqlandi (3-epoch), birinchisi `revoke` qilindi (4-epoch): birinchi tabda «revoked: no key for epoch 4», ochilgan kadrlar soni to'xtadi; ikkinchisida «decrypting (epoch 4)» va faqat 2 ta konvert (3- va 4-epoch) | o'tdi |
+| `attack substitute-on`: `list`da relay'ning barmoq izi, sahifada boshqasi; sahifadagi barmoq izi bilan `approve` → `REFUSED` | o'tdi |
+
+Tekshirilmagan: tasvirni ko'z bilan ko'rish (brauzer paneli yashirin bo'lgani uchun tasvir piksel statistikasi orqali tasdiqlandi); boshqa brauzerlar (Firefox, Safari), telefon; haqiqiy tarmoq; Linux/macOS; DJI qurilmasi.
 
 ## 5. Ishga tushirish
 
@@ -135,7 +185,7 @@ Operator buyruqlari — manba oynasiga yoki boshqa terminaldan `operator` dastur
 
 ```
 list                      kutayotgan so'rovlar, a'zolar, bekor qilinganlar (to'liq barmoq izlari bilan)
-approve <barmoq izi>      joriy epoch kalitini shu kalitga muhrlash (16 guruhning hammasi kerak)
+approve <barmoq izi>      a'zo qilish: yangi epoch boshlanadi, kaliti barcha a'zolarga muhrlanadi (16 guruhning hammasi kerak)
 revoke <barmoq izi>       a'zoni chiqarish va yangi epoch boshlash
 rotate                    a'zolikni o'zgartirmasdan yangi epoch
 status                    epoch va yuborilgan kadrlar soni
@@ -162,15 +212,15 @@ Brauzersiz tekshirish: `poc\e2ee\.run\bin\receiver.exe -relay http://127.0.0.1:5
 
 1. Demoni `-AttackHooks` bilan ishga tushiring, `http://127.0.0.1:59321/viewer.html` ni oching, tugmani bosing. Sahifada barmoq izi chiqadi, holat: `waiting for approval`; «Frames received» va «Frames without a key» o'sadi, «Frames decrypted» 0.
 2. Manba oynasida `list` — barmoq izi sahifadagi bilan **aynan bir xil** bo'lishi kerak. `approve <barmoq izi>`.
-3. Kutiladigan natija: holat `decrypting (epoch 1)`, «Frames decrypted» o'sadi, tasvir (rangli test jadvali) ko'rinadi, «Pictures drawn» o'sadi. Tasvir chiqmasa, «Video» ostidagi izoh sababini aytadi; hisoblagichlar baribir ishlashi kerak.
+3. Kutiladigan natija: holat `decrypting (epoch 2)` (1-epochda a'zo bo'lmagan; tasdiqlash 2-epochni boshlaydi), «Frames decrypted» o'sadi, tasvir (rangli test jadvali) ko'rinadi, «Pictures drawn» o'sadi. Tasvir chiqmasa, «Video» ostidagi izoh sababini aytadi; hisoblagichlar baribir ishlashi kerak.
 4. `attack tamper 5` → «Authentication failures» +5; `attack replay 5` → «Replays rejected» +5; tasvir keyingi kalit kadrdan davom etadi.
-5. Ikkinchi tabda yana bir tomoshabin oching va tasdiqlang; so'ng birinchisini `revoke` qiling: birinchi tabda ~2 soniyada `revoked: no key for epoch 2`, ikkinchisida `decrypting (epoch 2)`.
+5. Ikkinchi tabda yana bir tomoshabin oching va tasdiqlang; so'ng birinchisini `revoke` qiling: birinchi tabda ~2 soniyada `revoked: no key for epoch 4`, ikkinchisida `decrypting (epoch 4)` (ikkinchi tomoshabin tasdiqlanganda 3-epoch, revoke'da 4-epoch boshlanadi). Ikkinchi tabda «Key envelopes opened» = 2 (faqat 3- va 4-epoch): u 2-epoch kalitini olmagan.
 6. `attack substitute-on`, yangi tab oching: `list`dagi barmoq izi sahifadagidan farq qiladi; sahifadagi barmoq izi bilan `approve` — `REFUSED`.
 7. Brauzer dasturchi panelining Network bo'limida sahifa faqat `127.0.0.1:59321` (sahifa fayllari) va `127.0.0.1:59320` (relay) ga murojaat qilishini tekshiring.
 
 ## 6. Testlar ro'yxati
 
-### Go (`go test ./...`) — 30 ta
+### Go (`go test ./...`) — 31 ta
 
 | Paket | Test | Nimani ko'rsatadi |
 |---|---|---|
@@ -198,9 +248,10 @@ Brauzersiz tekshirish: `poc\e2ee\.run\bin\receiver.exe -relay http://127.0.0.1:5
 | `e2e` | `TestRevokeStartsNewEpochWithoutRevokedViewer` | Revoke: yangi epoch; bekor qilingan ocha olmaydi, qolgan davom etadi; eski epoch kadri rad etiladi |
 | `e2e` | `TestKnownLimitationEnvelopeSenderIsNotAuthenticated` | **Cheklov testi:** soxta konvert va kadr qabul qilinadi (4-bo'lim, 6-band) |
 | `e2e` | `TestGoldenGoToJS`, `TestGoldenJSToGo` | Go ikkala golden faylni o'qiydi (jumladan JS yaratganini) |
-| `e2e` | `TestRealProcessesChain` | Alohida jarayonlar (relay, manba + ffmpeg H.264, operator, 2 ta qabul qiluvchi): approve, 150 kadr, revoke, epoch 2, yo'qotishsiz |
+| `e2e` | `TestRealProcessesChain` | Alohida jarayonlar (relay, manba + ffmpeg H.264, operator, 2 ta qabul qiluvchi): approve, 150 kadr, revoke, epoch 4, yo'qotishsiz |
+| `e2e` | `TestNewViewerNeverGetsEarlierEpochKeys` | Tasdiqlash yangi epoch boshlaydi; yangi a'zoda faqat yangi epoch kaliti bor; u tasdiqlanishidan oldin yozib olgan shifrlangan kadrlarni ocha olmaydi (yangi kalitni eski KID'ga majburlab ham); eski a'zo uzilishsiz davom etadi |
 
-### Node (`node --test`) — 15 ta
+### Node (`node --test`) — 19 ta
 
 | Fayl | Nimani ko'rsatadi |
 |---|---|
@@ -208,7 +259,8 @@ Brauzersiz tekshirish: `poc\e2ee\.run\bin\receiver.exe -relay http://127.0.0.1:5
 | `viewer/test/hpke.test.mjs` (4) | `@hpke/core` RFC 9180 A.3.1 javoblarini beradi; yopiq kalit eksport qilinmaydi; barmoq izi matni Go'niki bilan bir xil; konvert maydonlari bog'langan |
 | `viewer/test/golden.test.mjs` (2) | JS ikkala golden faylni ochadi: Go muhrlagan konvertlar va Go shifrlagan kadrlar (va aksincha fayl) |
 | `viewer/test/receiver.test.mjs` (4) | Replay rad etiladi; soxta katta CTR oqimni to'xtata olmaydi; epoch almashishi; oqimni kadrlarga bo'lish; H.264 yordamchilari |
-| `viewer/test/chain.test.mjs` (1) | Sahifaning o'z modullari (`session.js` va boshqalar) Node ostida real Go relay va manba bilan: tasdiqdan oldin 0 ta ochilgan kadr; approve; 5 marta kalit almashishi — bitta kadr ham yo'qolmaydi, tartib buzilmaydi; revoke → `revoked: no key for epoch 7` |
+| `viewer/test/chain.test.mjs` (1) | Sahifaning o'z modullari (`session.js` va boshqalar) Node ostida real Go relay va manba bilan: tasdiqdan oldin 0 ta ochilgan kadr; approve; 5 marta kalit almashishi — bitta kadr ham yo'qolmaydi, tartib buzilmaydi; revoke → `revoked: no key for epoch 8` |
+| `viewer/test/capabilities.test.mjs` (4) | Mos bo'lmagan brauzer **rad etiladi**: xavfsiz kontekst, WebCrypto yoki oqimli o'qish bo'lmasa sahifa ishga tushmaydi (kalit ham, join so'rovi ham, kadr ham yo'q); WebCodecs bo'lmasa shifr ochiladi, faqat tasvir yo'q; tekshiruv sahifa skriptida hamma narsadan oldin keladi; sahifada shifrlanmagan rejimga o'tadigan yo'l yo'q |
 
 ## 7. Fayllar
 
@@ -224,7 +276,7 @@ poc/e2ee/
   cmd/relay, cmd/source, cmd/viewerhost, cmd/receiver, cmd/operator
   e2e/                           zanjir testlari, golden testlar, alohida jarayonlar testi
   viewer/viewer.html, viewer.css tomoshabin sahifasi (CDN yo'q, tashqi so'rov yo'q)
-  viewer/src/                    sframe.js, envelope.js, receiver.js, session.js, h264.js, main.js
+  viewer/src/                    sframe.js, envelope.js, receiver.js, session.js, h264.js, capabilities.js, main.js
   viewer/viewer.bundle.js        esbuild natijasi (kichraytirilmagan; `npm run build` qayta yaratadi)
   viewer/THIRD-PARTY-NOTICES.txt bundle ichidagi @hpke/core va @hpke/common litsenziyalari (MIT)
   viewer/build.mjs               yig'ish skripti (bundle'ga kutilmagan modul kirsa, xato beradi)

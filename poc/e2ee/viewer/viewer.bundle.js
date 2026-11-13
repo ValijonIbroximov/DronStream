@@ -33,6 +33,28 @@
     }
   });
 
+  // viewer/src/capabilities.js
+  function checkCapabilities(g) {
+    const refuse = (reason) => ({ ok: false, reason, video: false, videoReason: reason });
+    if (!g || g.isSecureContext !== true) {
+      return refuse("this page is not a secure context (https or localhost): WebCrypto is unavailable, the viewer does not start");
+    }
+    const subtle = g.crypto && g.crypto.subtle;
+    if (!subtle || typeof subtle.generateKey !== "function" || typeof subtle.deriveBits !== "function" || typeof subtle.decrypt !== "function") {
+      return refuse("this browser has no WebCrypto (crypto.subtle): frames cannot be decrypted, and there is no unencrypted mode");
+    }
+    if (typeof g.fetch !== "function" || typeof g.ReadableStream !== "function") {
+      return refuse("this browser cannot read a streamed response (fetch / ReadableStream)");
+    }
+    const video = typeof g.VideoDecoder === "function" && typeof g.EncodedVideoChunk === "function";
+    return {
+      ok: true,
+      reason: "",
+      video,
+      videoReason: video ? "" : "WebCodecs (VideoDecoder) is not available in this browser: frames are still decrypted and counted, but no picture is shown"
+    };
+  }
+
   // node_modules/@hpke/common/esm/src/errors.js
   var HpkeError = class extends Error {
     constructor(e) {
@@ -1571,7 +1593,7 @@
     const { key, salt } = await deriveKeySalt(suiteId, kid, baseKey);
     const aesKey = await crypto.subtle.importKey("raw", key, "AES-GCM", false, [usage]);
     key.fill(0);
-    return { suite: suiteId, kid: u64(kid, "KID"), aesKey, salt };
+    return { suite: suiteId, kid: u64(kid, "KID"), aesKey, salt, tagLength: suiteParams(suiteId).nt * 8 };
   }
   function nonce(salt, ctr) {
     const n = new Uint8Array(salt.length);
@@ -1586,7 +1608,7 @@
     let plaintext;
     try {
       plaintext = await crypto.subtle.decrypt(
-        { name: "AES-GCM", iv: nonce(k.salt, ctr), additionalData: aad, tagLength: 128 },
+        { name: "AES-GCM", iv: nonce(k.salt, ctr), additionalData: aad, tagLength: k.tagLength },
         k.aesKey,
         ciphertext.subarray(length)
       );
@@ -1659,7 +1681,7 @@
     if (env.stream !== stream) throw new Error("envelope is for another stream");
     if (env.to !== toHex(ownFingerprint)) throw new Error("envelope is for another recipient");
     if (!Number.isSafeInteger(env.epoch) || env.epoch < 1) throw new Error("bad epoch");
-    if (!Object.hasOwn(SUITES, env.suite)) throw new Error("unsupported SFrame cipher suite");
+    if (!Number.isInteger(env.suite) || !Object.hasOwn(SUITES, env.suite)) throw new Error("unsupported SFrame cipher suite");
     if (typeof env.sealed !== "string" || env.sealed.length > 1024) throw new Error("bad sealed field");
     const sealed = fromBase64(env.sealed);
     if (sealed.length <= PUBLIC_KEY_LENGTH + GCM_TAG_LENGTH) throw new Error("sealed field too short");
@@ -1874,6 +1896,7 @@
       if (!response.ok) throw new Error("HTTP " + response.status);
       const list = await response.json();
       if (!Array.isArray(list)) throw new Error("unexpected answer");
+      if (this.seenEnvelopes.size > 2e3) this.seenEnvelopes.clear();
       for (const env of list.slice(0, 64)) {
         const id = JSON.stringify(env);
         if (this.seenEnvelopes.has(id)) continue;
@@ -2077,9 +2100,8 @@
     const url = new URL(relay);
     if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("the relay URL must be http or https");
     if (!/^[A-Za-z0-9_-]{1,64}$/.test(stream)) throw new Error("bad stream id");
-    if (!globalThis.isSecureContext || !globalThis.crypto || !crypto.subtle) {
-      throw new Error("WebCrypto needs a secure context (https or localhost)");
-    }
+    const capabilities = checkCapabilities(globalThis);
+    if (!capabilities.ok) throw new Error(capabilities.reason);
     const key = await generateViewerKey();
     $("fingerprint").textContent = formatFingerprint(key.fingerprint);
     const video = new VideoSink($("canvas"), (text) => $("video-note").textContent = text);

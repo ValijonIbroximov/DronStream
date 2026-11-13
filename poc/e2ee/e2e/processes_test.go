@@ -152,7 +152,7 @@ func TestRealProcessesChain(t *testing.T) {
 	stays.waitLine(t, `^STATE (decrypting)$`)
 	leaves.waitLine(t, `^STATE (decrypting)$`)
 
-	if out := operator("revoke", leavesFP); !strings.HasPrefix(out, "revoked") || !strings.Contains(out, "epoch 2") {
+	if out := operator("revoke", leavesFP); !strings.HasPrefix(out, "revoked") || !strings.Contains(out, "epoch 4") { // approvals started epochs 2 and 3
 		t.Fatalf("revoke: %s", out)
 	}
 	leaves.waitLine(t, `^STATE (revoked: no key for the current epoch)$`)
@@ -163,7 +163,7 @@ func TestRealProcessesChain(t *testing.T) {
 	if err := stays.cmd.Wait(); err != nil {
 		t.Fatalf("receiver exit: %v\n%s", err, stays.output())
 	}
-	for _, want := range []string{"decrypted=150", "auth_failures=0", "replays_rejected=0", "lost_after_start=0", "epoch=2"} {
+	for _, want := range []string{"decrypted=150", "auth_failures=0", "replays_rejected=0", "lost_after_start=0", "epoch=4"} {
 		if !strings.Contains(result, want) {
 			t.Fatalf("receiver result %q lacks %q", result, want)
 		}

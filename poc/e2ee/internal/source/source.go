@@ -4,7 +4,8 @@
 // gets the key:
 //
 //   - epoch N has one random SFrame base key; the SFrame KID is the epoch number
-//   - approve = seal the current epoch key to the viewer's public key (HPKE)
+//   - approve = start epoch N+1 with a fresh random key, sealed (HPKE) to every
+//     member including the new one: a newcomer never gets an earlier key
 //   - revoke  = start epoch N+1 with a fresh random key, sealed only to the
 //     remaining members
 //
@@ -217,9 +218,14 @@ func (s *Source) sendKey(ctx context.Context, m Member, epoch uint64, baseKey []
 	return nil
 }
 
-// Approve admits the viewer whose public key has exactly this fingerprint:
-// the current epoch key is sealed to that key. The fingerprint must be the
-// one the viewer reported over a separate channel.
+// Approve admits the viewer whose public key has exactly this fingerprint and
+// starts a NEW epoch whose key is sealed to every member, the new one
+// included. The fingerprint must be the one the viewer reported over a
+// separate channel.
+//
+// A new member never receives the key of an epoch that began before it was
+// approved: frames sent earlier (which it, or the relay, may have recorded as
+// ciphertext) stay closed to it.
 func (s *Source) Approve(ctx context.Context, fp envelope.Fingerprint) error {
 	s.opMu.Lock()
 	defer s.opMu.Unlock()
@@ -233,15 +239,9 @@ func (s *Source) Approve(ctx context.Context, fp envelope.Fingerprint) error {
 	if _, dup := s.members[fp]; dup {
 		return ErrAlreadyMember
 	}
-	s.encMu.Lock()
-	epoch, key := s.epoch, s.baseKey
-	s.encMu.Unlock()
-	if err := s.sendKey(ctx, m, epoch, key); err != nil {
-		return err
-	}
 	s.members[fp] = m
 	delete(s.revoked, fp)
-	return nil
+	return s.rotate(ctx)
 }
 
 // Revoke removes a member and starts a new epoch. The revoked key never
@@ -387,7 +387,8 @@ func (s *Source) Run(ctx context.Context, units [][]byte, fps int) error {
 // Help is the operator command summary.
 const Help = `commands:
   list                    show pending join requests, members and revoked keys
-  approve <fingerprint>   give the current key to the viewer with this full fingerprint
+  approve <fingerprint>   admit the viewer with this full fingerprint; starts a new epoch
+                          (the newcomer gets only the new key, never an earlier one)
   revoke <fingerprint>    remove a member and start a new key epoch
   rotate                  start a new key epoch for the current members
   status                  show epoch and frame counters
@@ -427,7 +428,7 @@ func (s *Source) Command(ctx context.Context, line string) string {
 		case err != nil:
 			return "REFUSED: " + err.Error()
 		case command == "approve":
-			return fmt.Sprintf("approved %s: key of epoch %d sealed to this key", fp, epoch)
+			return fmt.Sprintf("approved %s: now epoch %d, its key sealed to every member including this one", fp, epoch)
 		default:
 			return fmt.Sprintf("revoked %s; now epoch %d, key sealed only to the remaining members", fp, epoch)
 		}

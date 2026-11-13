@@ -136,32 +136,33 @@ test('chain: Go source -> Go relay -> page JavaScript (approve, key changes, rev
   assert.match(operator('approve', '0'.repeat(64)), /^REFUSED/);
   assert.match(operator('approve', fingerprint), /^approved /);
   await until('first decrypted frames', () => stats.decrypted >= 60);
-  assert.equal(states.at(-1), 'decrypting (epoch 1)');
+  // epoch 1 had no member: approving this viewer started epoch 2 (a new member never gets an earlier key)
+  assert.equal(states.at(-1), 'decrypting (epoch 2)');
 
   // Five key changes while watching: no frame may be lost at any of them.
   const lostBefore = lost;
-  for (let epoch = 2; epoch <= 6; epoch++) {
+  for (let epoch = 3; epoch <= 7; epoch++) {
     await sleep(150 + epoch * 90); // different offsets relative to the viewer's own key polling
     assert.match(operator('rotate'), new RegExp(`now epoch ${epoch}`));
     await until(`epoch ${epoch}`, () => stats.epoch === epoch);
   }
-  await until('frames in epoch 6', () => stats.decrypted >= frameNumbers.length && frameNumbers.length >= 200);
+  await until('frames in epoch 7', () => stats.decrypted >= frameNumbers.length && frameNumbers.length >= 200);
   assert.equal(lost, lostBefore, 'no frame lost across key changes');
   for (let i = 1; i < frameNumbers.length; i++) {
     assert.equal(frameNumbers[i], (frameNumbers[i - 1] + 1) % UNITS, `frame ${i}: every frame, in order, no gap`);
   }
-  assert.equal(states.at(-1), 'decrypting (epoch 6)');
+  assert.equal(states.at(-1), 'decrypting (epoch 7)');
   assert.equal(session.envelopesOpened, 6);
   assert.equal(session.envelopesRejected, 0);
 
-  // Revoke: the source moves to epoch 7 and this viewer gets no key for it.
-  assert.match(operator('revoke', fingerprint), /^revoked .*now epoch 7/);
-  await until('the revoked state', () => states.at(-1) === 'revoked: no key for epoch 7');
+  // Revoke: the source moves to epoch 8 and this viewer gets no key for it.
+  assert.match(operator('revoke', fingerprint), /^revoked .*now epoch 8/);
+  await until('the revoked state', () => states.at(-1) === 'revoked: no key for epoch 8');
   const decryptedAtRevoke = stats.decrypted;
   const noKeyAtRevoke = stats.noKey;
   await until('more frames of the new epoch', () => stats.noKey >= noKeyAtRevoke + 30);
   assert.equal(stats.decrypted, decryptedAtRevoke, 'nothing decrypts after the revoke');
-  assert.equal(stats.epoch, 6);
+  assert.equal(stats.epoch, 7);
   assert.equal(stats.authFailures, 0);
   assert.equal(stats.replaysRejected, 0);
   assert.equal(stats.received, stats.decrypted + stats.noKey);

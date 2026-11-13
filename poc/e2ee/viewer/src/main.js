@@ -4,6 +4,7 @@
 //
 // Text received from the network is only ever written with textContent.
 
+import { checkCapabilities } from './capabilities.js';
 import { formatFingerprint, generateViewerKey } from './envelope.js';
 import { codecFromKeyframe, isKeyframe } from './h264.js';
 import { Session } from './session.js';
@@ -129,9 +130,9 @@ async function start() {
   const url = new URL(relay); // throws on garbage
   if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('the relay URL must be http or https');
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(stream)) throw new Error('bad stream id');
-  if (!globalThis.isSecureContext || !globalThis.crypto || !crypto.subtle) {
-    throw new Error('WebCrypto needs a secure context (https or localhost)');
-  }
+  // Refuse before anything is generated or sent: see capabilities.js (no other mode exists).
+  const capabilities = checkCapabilities(globalThis);
+  if (!capabilities.ok) throw new Error(capabilities.reason);
 
   const key = await generateViewerKey();
   $('fingerprint').textContent = formatFingerprint(key.fingerprint);
