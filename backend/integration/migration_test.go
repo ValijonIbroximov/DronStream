@@ -88,7 +88,7 @@ func TestMigrationFromV1(t *testing.T) {
 	a2 := newClient(t, "admin2")
 	a2.login("boss", "Correct-Horse-1")
 	_, audit := a2.do("GET", "/api/admin/audit?action=schema_migrate", nil, nil)
-	if !strings.Contains(string(audit), "v1-\\u003ev2") && !strings.Contains(string(audit), "v1->v3") {
+	if !strings.Contains(string(audit), "v1-\\u003ev3") && !strings.Contains(string(audit), "v1->v3") {
 		t.Fatalf("migration not audited: %s", audit)
 	}
 	s2.stop()
