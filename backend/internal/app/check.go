@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"dronstream/internal/config"
+	"dronstream/internal/mtx"
 	"dronstream/internal/store"
 )
 
@@ -93,7 +94,7 @@ func Check(root, exeDir string) CheckResult {
 	r.URL += "/"
 	bin := cfg.Media.Binary
 	if bin == "" {
-		bin = filepath.Join(exeDir, "mediamtx", "mediamtx.exe")
+		bin = mtx.DefaultBinary(exeDir)
 	}
 	if !cfg.Media.DisableManagedMTX {
 		if _, err := os.Stat(bin); err != nil {

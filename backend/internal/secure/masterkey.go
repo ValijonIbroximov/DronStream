@@ -10,7 +10,8 @@ import (
 
 // Master key file format: 4-byte magic + payload.
 //   "DSK1" + DPAPI(LocalMachine)-protected 32 bytes   (Windows, bound to this machine)
-//   "DSK0" + raw 32 bytes                             (non-Windows / tests; protected by file ACL only)
+//   "DSK0" + raw 32 bytes                             (Linux and other systems: no DPAPI; protected by file
+//                                                      mode 0600 in a 0700 directory owned by the service user)
 // The key encrypts stream publish keys at rest (so the admin can view them
 // again). A machine-bound key must be re-bound after migration: backups carry
 // the raw key inside the passphrase-encrypted archive and restore re-protects
@@ -34,6 +35,11 @@ func LoadOrCreateMasterKey(secretsDir string) ([]byte, error) {
 		return key, nil
 	}
 	if err != nil {
+		return nil, err
+	}
+	// Where no machine-bound protection exists (Linux), the key is only as
+	// private as the file: refuse to run with a key that others can read.
+	if err := checkSecretFile(p); err != nil {
 		return nil, err
 	}
 	return decodeMasterKey(b)

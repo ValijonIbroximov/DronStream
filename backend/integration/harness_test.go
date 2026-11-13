@@ -6,7 +6,8 @@
 //
 //	go test -tags integration -v -count=1 ./integration/
 //
-// Requirements: MediaMTX at DS_MEDIAMTX (default ../.tools/mediamtx/mediamtx.exe)
+// Requirements: MediaMTX at DS_MEDIAMTX (default ../.tools/mediamtx/mediamtx.exe,
+// on Linux ../.tools/mediamtx-linux/mediamtx)
 // and ffmpeg on PATH.
 package integration
 
@@ -48,9 +49,24 @@ func repoRoot() string {
 	return filepath.Dir(filepath.Dir(filepath.Dir(f)))
 }
 
+// The suite runs on Windows and on Linux; only file names differ.
+func exeSuffix() string {
+	if runtime.GOOS == "windows" {
+		return ".exe"
+	}
+	return ""
+}
+
+func defaultMediaMTX() string {
+	if runtime.GOOS == "windows" {
+		return filepath.Join(repoRoot(), ".tools", "mediamtx", "mediamtx.exe")
+	}
+	return filepath.Join(repoRoot(), ".tools", "mediamtx-linux", "mediamtx")
+}
+
 func buildServer(t testing.TB) (bin string) {
 	dir := t.TempDir()
-	bin = filepath.Join(dir, "dronstream.exe")
+	bin = filepath.Join(dir, "dronstream"+exeSuffix())
 	embedFrontend(t)
 	cmd := exec.Command("go", "build", "-o", bin, "./cmd/dronstream")
 	cmd.Dir = filepath.Join(repoRoot(), "backend")
@@ -60,14 +76,14 @@ func buildServer(t testing.TB) (bin string) {
 	}
 	mtxSrc := os.Getenv("DS_MEDIAMTX")
 	if mtxSrc == "" {
-		mtxSrc = filepath.Join(repoRoot(), ".tools", "mediamtx", "mediamtx.exe")
+		mtxSrc = defaultMediaMTX()
 	}
 	os.MkdirAll(filepath.Join(dir, "mediamtx"), 0o755)
 	b, err := os.ReadFile(mtxSrc)
 	if err != nil {
 		t.Fatalf("mediamtx binary: %v", err)
 	}
-	os.WriteFile(filepath.Join(dir, "mediamtx", "mediamtx.exe"), b, 0o755)
+	os.WriteFile(filepath.Join(dir, "mediamtx", "mediamtx"+exeSuffix()), b, 0o755)
 	return bin
 }
 

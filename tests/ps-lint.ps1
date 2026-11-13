@@ -14,7 +14,7 @@ param([string]$Repo = (Split-Path $PSScriptRoot -Parent))
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 3.0
 $files = @()
-foreach ($d in "scripts", "packaging\scripts", "tests") { $files += @(Get-ChildItem (Join-Path $Repo $d) -Filter *.ps1 -File) }
+foreach ($d in "scripts", "packaging\scripts", "tests") { $files += @(Get-ChildItem (Join-Path $Repo $d) -Filter *.ps1 -File -Recurse) }
 $files += Get-Item (Join-Path $Repo "build.ps1")
 $auto = @('true', 'false', 'null', '_', 'psitem', 'args', 'input', 'this', 'psscriptroot', 'pscommandpath', 'lastexitcode', 'erroractionpreference',
   'progresspreference', 'warningpreference', 'verbosepreference', 'confirmpreference', 'myinvocation', 'psboundparameters', 'error', 'host', 'pid',

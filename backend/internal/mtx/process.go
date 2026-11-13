@@ -49,7 +49,7 @@ func (p *Process) spawn() error {
 	cmd := exec.Command(p.Binary, p.ConfPath)
 	cmd.Stdout = p.Output
 	cmd.Stderr = p.Output
-	hideWindow(cmd)
+	configureChild(cmd)
 	if err := cmd.Start(); err != nil {
 		return err
 	}

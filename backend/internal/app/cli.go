@@ -207,11 +207,17 @@ func RestoreCLI(root, in, pass string, force bool) error {
 			return
 		}
 		if _, err := os.Stat(dst); err == nil {
-			os.WriteFile(dst+".from-backup", data, 0o600)
+			// Never claim a copy that was not written (e.g. a read-only config directory on Linux).
+			if err := os.WriteFile(dst+".from-backup", data, 0o600); err != nil {
+				notes = append(notes, fmt.Sprintf("%s mavjud edi va o'zgartirilmadi; backupdagi nusxani yonida saqlab bo'lmadi (%v)", dst, err))
+				return
+			}
 			notes = append(notes, fmt.Sprintf("%s mavjud edi — backupdagi nusxa %s.from-backup ga yozildi (qo'lda solishtiring)", dst, dst))
 			return
 		}
-		os.WriteFile(dst, data, 0o600)
+		if err := os.WriteFile(dst, data, 0o600); err != nil {
+			notes = append(notes, fmt.Sprintf("%s ni backupdan yozib bo'lmadi (%v)", dst, err))
+		}
 	}
 	writeIfAbsent("dronstream.yaml", L.ConfigFile)
 	writeIfAbsent("tls.crt", filepath.Join(L.SecretsDir, "tls.crt"))

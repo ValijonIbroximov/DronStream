@@ -5,3 +5,6 @@
 *.h264 binary
 *.png binary
 *.bat text eol=crlf
+*.service text eol=lf
+*.yml text eol=lf
+*.mjs text eol=lf

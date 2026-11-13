@@ -1,0 +1,40 @@
+# DronStream systemd unit (namuna). install.sh @ROOT@ va @USER@ ni almashtirib
+# /etc/systemd/system/dronstream.service ga yozadi. Qo'lda tahrirlasangiz: sudo systemctl daemon-reload
+[Unit]
+Description=DronStream video server (HTTPS + WebRTC, MediaMTX)
+Documentation=file://@ROOT@/docs/SERVER_INSTALL_UZ.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@USER@
+Group=@USER@
+ExecStart=@ROOT@/app/current/dronstream run --root @ROOT@
+# To'xtatish: SIGTERM (dastur tartibli yopiladi); MediaMTX ham shu unit guruhida to'xtaydi.
+KillMode=control-group
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65536
+UMask=0077
+
+# Cheklovlar: xizmat faqat o'z papkalariga yoza oladi.
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=@ROOT@/config/secrets @ROOT@/data @ROOT@/logs
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+LockPersonality=true
+
+# Faqat 443/80 kabi 1024 dan kichik portlarni ishlatsangiz izohdan chiqaring (standart 8443 uchun kerak emas):
+#AmbientCapabilities=CAP_NET_BIND_SERVICE
+#CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target

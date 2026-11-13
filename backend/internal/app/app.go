@@ -65,6 +65,9 @@ func Run(ctx context.Context, opt Options) error {
 	}
 	log := slog.New(logx.NewHandler(lw, logx.ParseLevel(cfg.Logging.Level), masker))
 	log.Info("DronStream starting", "version", Version, "root", L.Root, "mediamtx", mtx.PinnedVersion)
+	if os.Geteuid() == 0 { // always -1 on Windows
+		log.Warn("running as root: use a dedicated unprivileged service account (see SERVER_INSTALL_UZ.md)")
+	}
 
 	// The loopback control/hook listener doubles as a single-instance lock.
 	internalLn, err := net.Listen("tcp", cfg.Web.InternalAddr)
@@ -144,7 +147,7 @@ func Run(ctx context.Context, opt Options) error {
 		bin := cfg.Media.Binary
 		if bin == "" {
 			exe, _ := os.Executable()
-			bin = filepath.Join(filepath.Dir(exe), "mediamtx", "mediamtx.exe")
+			bin = mtx.DefaultBinary(filepath.Dir(exe))
 		}
 		proc = &mtx.Process{Binary: bin, ConfPath: confPath, Output: &logx.MaskWriter{W: mlog, M: masker}, Log: log, API: api}
 	}

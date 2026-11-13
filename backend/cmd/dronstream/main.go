@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"syscall"
 
 	"dronstream/internal/app"
 	"dronstream/internal/config"
@@ -58,7 +59,8 @@ func main() {
 			}
 			return
 		}
-		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+		// SIGTERM is what systemd (and "kill") send; Ctrl+C is os.Interrupt.
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 		if err := app.Run(ctx, app.Options{Root: r, Console: true}); err != nil {
 			fail(err)

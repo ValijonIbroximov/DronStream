@@ -43,6 +43,6 @@ func (j *winJob) assign(pid int) error {
 
 func (j *winJob) close() { windows.CloseHandle(j.h) }
 
-func hideWindow(cmd *exec.Cmd) {
+func configureChild(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: windows.CREATE_NO_WINDOW}
 }

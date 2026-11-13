@@ -1,0 +1,106 @@
+# DronStream CI: Linux build + haqiqiy Ubuntu'da runtime sinovlari (systemd, backup/restore, update/rollback)
+# va Windows -> Linux shifrlangan backup ko'chirish sinovi.
+# Sirlar ishlatilmaydi; faqat bir martalik sinov ma'lumotlari. Tashqi yuklamalar: MediaMTX (mahkamlangan
+# versiya, SHA256 tekshiriladi), npm (package-lock), Go modullari (go.sum).
+name: ci
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  GOTOOLCHAIN: go1.27.4      # go.mod bilan bir xil; Go o'zi yuklab, checksum bazasi orqali tekshiradi
+  GOTELEMETRY: "off"
+  CGO_ENABLED: "0"
+
+jobs:
+  windows-backup:
+    name: Windows - shifrlangan backup yaratish
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: MediaMTX (Windows, mahkamlangan versiya + SHA256)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force ci\mediamtx | Out-Null
+          Invoke-WebRequest "https://github.com/bluenviron/mediamtx/releases/download/v1.21.3/mediamtx_v1.21.3_windows_amd64.zip" -OutFile ci\mtx.zip
+          $h = (Get-FileHash ci\mtx.zip -Algorithm SHA256).Hash.ToLower()
+          if ($h -ne "b2f5246b07cb72961df03b8d5e8cad43dc657bcf3f49a87bb031bdf22721af74") { throw "MediaMTX SHA256 mos emas: $h" }
+          Expand-Archive ci\mtx.zip -DestinationPath ci\mediamtx -Force
+      - name: Build (Windows)
+        shell: pwsh
+        working-directory: backend
+        run: go build -o ..\ci\dronstream.exe ./cmd/dronstream
+      - name: Server, sinov ma'lumotlari, backup
+        shell: pwsh
+        run: ./tests/ci/make-windows-backup.ps1 -Exe ci\dronstream.exe -Out ci\out
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-backup
+          path: ci/out
+          retention-days: 1
+          if-no-files-found: error
+
+  linux:
+    name: Linux (${{ matrix.os }}) - build, testlar, paket, systemd
+    needs: windows-backup
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.5"
+      - name: Muhit
+        run: |
+          . /etc/os-release; echo "$PRETTY_NAME $(uname -m)"; go version; node --version; systemctl --version | head -n1
+      - name: Skript sintaksisi
+        run: |
+          for f in packaging/linux/build-package.sh packaging/linux/scripts/*.sh tests/ci/*.sh; do bash -n "$f"; done
+          if grep -rlI $'\r' packaging/linux tests/ci/*.sh; then echo "CRLF topildi"; exit 1; fi
+      - name: Frontend
+        working-directory: web
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          rm -rf ../backend/internal/webui/dist/assets
+          cp -R dist/. ../backend/internal/webui/dist/
+      - name: Qo'llanma manbasi va hosil qilingan fayllar sinxron
+        run: if [ -f guide/build.mjs ]; then node guide/build.mjs --check; fi
+      - name: go vet va unit testlar (linux)
+        working-directory: backend
+        run: |
+          go vet ./...
+          go test ./internal/... -count=1
+      - name: ffmpeg (integratsiya testlaridagi RTMP manba uchun)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: Linux paketlari (ikki versiya - update/rollback sinovi uchun)
+        run: |
+          bash packaging/linux/build-package.sh 9.9.1
+          bash packaging/linux/build-package.sh 9.9.2
+      - name: Integratsiya testlari (haqiqiy MediaMTX, WebRTC, RTMP)
+        working-directory: backend
+        env:
+          DS_MEDIAMTX: ${{ github.workspace }}/.tools/mediamtx-linux/mediamtx
+        run: go test -tags integration ./integration -run 'TestAcceptance|TestLinksAndMedia|TestPlayerSlots|TestTURNRelay' -count=1 -timeout 25m
+      - name: Paket sinovi - o'rnatish, systemd, backup/restore, update/rollback
+        run: bash tests/ci/linux-package-test.sh dist/DronStream-9.9.1-linux-amd64.tar.gz dist/DronStream-9.9.2-linux-amd64.tar.gz
+      - uses: actions/download-artifact@v8
+        with:
+          name: windows-backup
+          path: ci/win
+      - name: Windows backupni Linux'da tiklash
+        run: bash tests/ci/restore-windows-backup.sh dist/DronStream-9.9.1-linux-amd64.tar.gz ci/win/win.dsbak ci/win/expect.json
+      - name: Integratsiya natijalari
+        if: always()
+        run: cat build/test-results/integration.json 2>/dev/null || true
