@@ -76,3 +76,25 @@ Backup: SQLite `VACUUM INTO` (izchil) + config + master kalit + TLS/TURN sirlari
 
 ## 11. Zaiflik haqida xabar berish
 Loyiha egasiga yopiq kanal orqali xabar bering; publish kalitlari va parollarni xabarga qo'shmang.
+
+## 12. v1.1: maxsus havolalar va media
+### Maxsus havolalar
+- Token: 24 bayt (192 bit) `crypto/rand`, bazada SHA-256 (tekshirish) + AES-256-GCM nusxa (adminga qayta ko'rsatish/QR uchun). Shifrlash kaliti — master kalit: bazada emas, `config\secrets\master.key` da DPAPI bilan.
+- URL: `https://<public-base>/link#<token>`. Token URL **fragmentida**: brauzer uni serverga yubormaydi; server loglari, Referer va audit uni ko'rmaydi; Telegram/skaner/prefetch GET qilsa faqat oddiy sahifa oladi — foydalanish sarflanmaydi (integratsiya testi: 0). Sahifa tokenni darhol manzil satridan olib tashlaydi.
+- Faollashtirish faqat POST `/api/link/activate` (maxsus sarlavha + Origin tekshiruvi) bilan, BEGIN IMMEDIATE tranzaksiyada: holat, vaqt oynasi, limit, parallel chegara, bog'langan hisob bloki, favqulodda to'xtatish tekshiriladi; foydalanish sarflanadi va sessiya yaratiladi. 20 parallel urinishdan bitta g'olib (o'lchangan). Bir xil `requestId` bilan qayta yuborish (10 daqiqa ichida) yangi foydalanish sarflamaydi.
+- Keyin oddiy server sessiyasi (`__Host-ds`, HttpOnly, Secure, SameSite=Strict). Refresh, tab, lease, media qayta ulanish — foydalanish emas.
+- Bekor qilish: DB → havola sessiyalari bekor → jonli va fayl yetkazishlar uziladi. "Yangilash" eski tokenni bekor qiladi (ixtiyoriy: mavjud sessiyalarni ham).
+- Oluvchi nomi tasdiqlangan shaxs emas. Cookie o'chirilsa yoki boshqa brauzerga o'tilsa sessiya tiklanmaydi.
+- Rate limit: inspect/activate IP bo'yicha (`security.link_rate_per_minute`, default 60/daq). NAT ortidagi katta guruh uchun oshiring.
+- Restore'dan keyin: barcha sessiyalar bekor, ishlatilgan havolalar ishlatilgan holicha qoladi, faollashtirish qayta-urinish oynasi yopiladi.
+
+### Media (matn, rasm, video)
+- Matn oddiy matn sifatida saqlanadi va escape qilib ko'rsatiladi (HTML/JS bajarilmaydi).
+- Yuklash: tur va hajm cheklovi (`library.max_image_mb`=25, `max_video_mb`=2048), haqiqiy format (magic bytes + dekoder; MP4 `stsd` kodek H.264/AV1/VP9; WebM VP8/VP9/AV1). SVG, HTML/XML/skript, H.265 aniq xabar bilan rad. Transkodlash yo'q — FFmpeg runtime'da ishlatilmaydi.
+- Saqlash: `data\media\<tasodifiy id>` (public papka emas, mijoz yo'l bermaydi). Fayl, thumbnail va har bir Range so'rovida serverda ruxsat. Javob: `Cache-Control: private, no-store`, `nosniff`, `CSP: default-src 'none'; sandbox`.
+- Revoke/muddat/yashirish: davom etayotgan yuklash uziladi (o'lchangan: 20 MB videodan 0.3–0.9 MB o'tgach; tarmoq buferlari bir necha yuz KB gacha yetkazishi mumkin), keyingi Range rad etiladi. UI: matn/rasm yo'qoladi, video to'xtatiladi.
+- **Cheklov:** foydalanuvchi allaqachon olgan matn, rasm yoki video baytlarini qurilmasidan qaytarib bo'lmaydi (kesh, skrinshot, ekran yozuvi). Kontent "nusxalab bo'lmaydigan" emas.
+
+### Backend qotib qolishi (v1.0 cheklovi, yangi media turlari uchun baho)
+- Jonli WebRTC: o'zgarmagan — eng yomon holatda ochiq video ≤ `lease_seconds` (default 120 s) davom etishi mumkin. Bu cheklov **bartaraf etilmagan**; qotishning o'zi sinalmagan (faqat lease mexanizmi).
+- Yuklangan video/rasm/matn: baytlarni backend o'zi yetkazadi, backend qotsa yangi bayt yuborilmaydi. Lekin brauzer buferlagan qism (qisqa videoda butun fayl) o'ynashda davom etadi va ochiq matn/rasm ekranda qoladi. Bu ssenariy alohida sinalmagan.

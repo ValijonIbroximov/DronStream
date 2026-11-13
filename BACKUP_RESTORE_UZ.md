@@ -70,3 +70,11 @@ powershell -File C:\DronStream\scripts\rollback.ps1 -ToVersion 1.0.0 -Backup C:\
 
 ## 7. Sinov holati
 `tests\install-roundtrip.ps1` (bir kompyuterda ikki toza ROOT): backup ishlayotgan serverda, migrate-out, noto'g'ri parol rad, tiklash, standby, faollashtirish, foydalanuvchi/stream/ruxsat/kalit tiklanishi — **o'tdi**. `tests\update-rollback.ps1`: 1.0.0 → 1.0.1 → 1.0.0 — natija TEST_REPORT.md da. **Haqiqiy boshqa kompyuterga ko'chirish (boshqa DPAPI kaliti) sinalmagan.**
+
+## 8. v1.1 o'zgarishlari
+- Backup formati **v2**: baza + sozlama + sirlar + **barcha media fayllar** (`data\media`), oqimli shifrlash (katta videolar xotiraga yuklanmaydi). 1.0.x (v1) backuplari ham o'qiladi.
+- Tiklanadi: kontent metadata, to'plamlar, ruxsatlar, maxsus havolalar, ularning **foydalanish hisoblagichlari** va **bekor qilinganlik** holati.
+- Restore'dan keyin barcha eski sessiyalar bekor; ishlatilgan bir martalik havola ishlatilgan holicha qoladi (sinalgan).
+- Sxema v1 → v2 migratsiyasi birinchi ishga tushishda avtomatik; oldidan `data\backups\pre-migration-schema-v1-*.db` izchil nusxa olinadi.
+- **Rollback 1.1.0 → 1.0.x:** eski dastur v2 bazani ochmaydi. `rollback.ps1 -ToVersion 1.0.1` yangilashdan oldingi backupni (`pre-update-1.0.1-to-1.1.0-*.dsbak`) avtomatik topib tiklaydi; boshqasi uchun `-Backup`. Backupdan keyingi o'zgarishlar yo'qoladi. Real 1.0.0 binary bilan sinalgan.
+- Git bazani, media va sirlarni ko'chirmaydi: kompyuterlar o'rtasida faqat shu backup/restore yo'li.

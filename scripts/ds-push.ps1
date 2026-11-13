@@ -11,6 +11,7 @@
 #>
 param([string]$Message, [switch]$NoChecks)
 . (Join-Path $PSScriptRoot "ds-common.ps1")
+trap { Write-DsUnexpected $_; exit 1 }
 $ctx = Get-DsContext
 Start-DsLog $ctx "push"
 $lock = Enter-DsLock $ctx "git"
@@ -89,15 +90,16 @@ if ($status) {
     $changedFiles = ($status -split "`n" | ForEach-Object { $_.Substring(3) })
     $goFiles = @($changedFiles | Where-Object { $_ -like "backend/*" }).Count
     $webFiles = @($changedFiles | Where-Object { $_ -like "web/*" }).Count
-    $go = Join-Path $ctx.Base ".tools\go\bin\go.exe"
+    $td = Get-DsToolsDir $ctx
+    $go = Join-Path $td "go\bin\go.exe"
     if ($goFiles -gt 0 -and (Test-Path $go)) {
-      $env:GOROOT = Join-Path $ctx.Base ".tools\go"; $env:GOPATH = Join-Path $ctx.Base ".tools\gopath"; $env:GOCACHE = Join-Path $ctx.Base ".tools\gocache"; $env:GOTOOLCHAIN = "local"; $env:CGO_ENABLED = "0"
+      $env:GOROOT = Join-Path $td "go"; $env:GOPATH = Join-Path $td "gopath"; $env:GOCACHE = Join-Path $td "gocache"; $env:GOTOOLCHAIN = "local"; $env:CGO_ENABLED = "0"
       Write-DsLog "Tezkor tekshiruv: go vet" "STEP"
       if ((Invoke-DsNative $go @("vet", "./...") -WorkDir (Join-Path $ctx.Base "backend")).Code -ne 0) { Stop-DsWith $EX_FAIL "go vet xato topdi - commit qilinmadi." }
     }
     $tsc = Join-Path $ctx.Base "web\node_modules\.bin\tsc.cmd"
     if ($webFiles -gt 0 -and (Test-Path $tsc)) {
-      $nd = Join-Path $ctx.Base ".tools\node"; if (Test-Path $nd) { $env:PATH = "$nd;$env:PATH" }
+      $nd = Join-Path $td "node"; if (Test-Path $nd) { $env:PATH = "$nd;$env:PATH" }
       Write-DsLog "Tezkor tekshiruv: TypeScript" "STEP"
       if ((Invoke-DsNative $tsc @("-b") -WorkDir (Join-Path $ctx.Base "web")).Code -ne 0) { Stop-DsWith $EX_FAIL "TypeScript xato topdi - commit qilinmadi." }
     }

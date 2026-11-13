@@ -22,7 +22,9 @@ function TestConfig([string]$root) {
   Set-Content $p $c -Encoding utf8
 }
 
-if (Test-Path $Work) { Remove-Item $Work -Recurse -Force }
+function Stop-TestServers { Get-Process dronstream -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$Work*" } | ForEach-Object { $root = Split-Path (Split-Path (Split-Path $_.Path)); if ($_.Path -like "*\build\dronstream.exe") { $root = Join-Path (Split-Path (Split-Path $_.Path)) "runtime" }; & $_.Path stop --root $root 2>$null | Out-Null } }
+trap { Stop-TestServers; throw }
+if (Test-Path $Work) { Stop-TestServers; Remove-Item $Work -Recurse -Force }
 New-Item -ItemType Directory $Work | Out-Null
 
 # ================= package mode, path with spaces + Unicode =================

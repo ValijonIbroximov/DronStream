@@ -87,3 +87,24 @@ Manba: foydalanuvchining 2026-11-13 dagi topshirig'i. Har bir talab ID bilan; ho
 
 ## R11. Yakuniy topshiriladiganlar
 Manba kod; Windows build/skript; README_UZ.md; ADMIN_GUIDE_UZ.md; DJI_SETUP_UZ.md; SECURITY.md; BACKUP_RESTORE_UZ.md; TEST_REPORT.md; config namunasi (sirlarsiz); toza kompyuterda o'rnatish yo'riqnomasi; tekshirilmaganlar ro'yxati.
+
+## R12. v1.1 — foydalanuvchi turlari, maxsus havolalar, kontent (2026-11-13 topshirig'i)
+- R12.1 Doimiy foydalanuvchi: umumiy kirish havolasi + shaxsiy login-parol; ruxsat hisobga bog'langan; blok/ruxsat o'zgarishi/barcha sessiyalarni yakunlash.
+- R12.2 Maxsus havola turlari (admin uchun tayyor variantlar): bir martalik, N martalik (+ parallel sessiya chegarasi), vaqtinchalik (boshlanish–tugash, parallel chegara). Ichki model: foydalanish soni + vaqt + parallel chegara birlashadi. Sessiya davomiyligi majburiy (muddatsiz default yo'q).
+- R12.3 Refresh, yangi tab, lease yangilanishi, media qayta ulanishi foydalanishni sarflamaydi; boshqa brauzer — yangi foydalanish.
+- R12.4 GET/preview/QR ko'rish sarflamaydi; faqat "Tomosha qilish" (POST) atomar sarflaydi; qayta yuborilgan POST ikki marta sarflamaydi; token URL'dan olib tashlanadi; keyin server sessiyasi ishlaydi.
+- R12.5 Token: kriptografik tasodifiy, xesh + alohida shifrlangan nusxa (kalit bazadan tashqarida); log/Referer/auditga tushmaydi; no-referrer, no-store, tashqi resurs yo'q; bekor qilish → barcha sessiya va media uziladi; "yangilash" eski tokenni bekor qiladi; oluvchi nomi tasdiqlangan shaxs emas; blok va favqulodda to'xtatish aylanib o'tilmaydi.
+- R12.6 Vaqtlar bazada UTC, interfeysda Asia/Tashkent.
+- R12.7 Guest so'rovi saqlanadi va alohida yoqiladi/o'chiriladi.
+- R12.8 Kontent: jonli stream, matn, rasm, video — sarlavha, izoh, faol/yashirin, tartib, ruxsatlar; stream sarlavhasi texnik yo'lni almashtirmaydi. To'plamlar (umumiy va element sarlavhasi), ommaviy sarlavha. To'plam ruxsati: "faqat hozirgi elementlar" yoki "dinamik" — aniq tanlanadi.
+- R12.9 Media: tur/hajm cheklovi, haqiqiy format tekshiruvi, HTML/SVG rad, public papkadan tarqatilmaydi, har so'rovda (thumbnail, Range) server ruxsati, revoke'da davom etayotgan yetkazish uziladi, UI yashiradi; olingan baytlarni qaytarib bo'lmasligi hujjatlashtiriladi. Brauzerga mos formatlar; transkodlash yo'q.
+- R12.10 Backup/restore media va havola holatlarini o'z ichiga oladi.
+- R12.11 Ulashish: nusxa, o'z ilovamizda QR, QR PNG clipboard, PNG yuklab olish, tizim ulashishi, fallback; PNG nomida token yo'q; public base URL (localhost emas).
+- R12.12 Admin menyu: Bosh sahifa, Kontent, To'plamlar, Doimiy foydalanuvchilar, Maxsus havolalar, Kirish so'rovlari, Faol sessiyalar, Audit va sozlamalar; 3 bosqichli "Ruxsat berish / Havola yaratish"; qidiruv/filtr, ko'p tanlash, shablon, "Nimani ko'radi?" (sarflamaydi), holatlar, telefonga mos, xavfli ommaviy amallar himoyalangan, saqlash holati, "Qo'llash".
+
+## R13. Ishga tushirish va Git skriptlari
+- R13.1 `DronStreamStart.bat`, `DronStreamTayyorla.bat`, `push.bat`, `pull.bat` (ildizda), mantiq `scripts\*.ps1` da; yo'llar BAT joylashuvidan; bo'sh joy/Unicode papka; PS 5.1; ASCII matn; xatoda oyna yopilmaydi; sirlar logga yozilmaydi; parallel ishga tushish nazorati; administrator faqat zarur amal uchun.
+- R13.2 Start: tekshiruv → sog'lom bo'lsa ikkinchi nusxa yo'q → bir martalik avtomatik tayyorlash → health → brauzer → birinchi sozlash. Band port, buzilgan baza, TLS — tashxis, "tuzatish" yo'q, begona jarayon to'xtatilmaydi.
+- R13.3 Tayyorla: platforma, mahkamlangan vositalar `.tools` ga checksum bilan, lock fayllar, build, papkalar, sirsiz shablon, migratsiyadan oldin izchil nusxa, idempotent, readiness exit code, offline rejim.
+- R13.4 pull: fast-forward-only, lokal o'zgarish/ajralgan tarixda to'xtash, kerak bo'lsa tayyorlash, server to'xtatilmaydi; yangi kompyuterda mustaqil clone.
+- R13.5 push: identifikatsiya (faqat lokal), GCM, sir/ma'lumot tekshiruvi (tarix bilan), commit xabari (parametr ham), force yo'q, push xatosida commit saqlanadi, SHA mosligi va havola.

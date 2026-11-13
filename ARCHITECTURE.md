@@ -91,3 +91,19 @@ Ko'rish mumkin, agar hammasi to'g'ri bo'lsa: instance `active`; favqulodda to'xt
 | 1936/tcp RTMPS | pultlar | ha (agar RTMPS ishlasa) |
 | 3478/udp+tcp TURN (ixtiyoriy) | brauzerlar | ha |
 | 8889, 9997, 9180 | ichki | **yo'q** (127.0.0.1) |
+
+## 8. v1.1 qo'shimchalari (sxema v2)
+| # | Qaror | Sabab |
+|---|---|---|
+| D23 | `contents` jadvali: stream/matn/rasm/video yagona kutubxona; har stream uchun bitta `stream` kontent (sarlavha alohida, `streams.slug` texnik yo'l o'zgarmaydi) | Bitta ruxsat modeli barcha turlar uchun |
+| D24 | `grants`: (user\|guest\|link) × (content\|collection); collection uchun `include_future` — dinamik yoki grant paytida content grantlarga yoyiladi ("hozirgi elementlar") | Yashirin qo'shimcha huquq yo'q; siyosat aniq |
+| D25 | Yagona `authorizeContent` (+ stream uchun `authorizeView` o'rami): chipta, hook, reconciler, fayl/thumbnail/Range, kutubxona | Bir joyda, serverda |
+| D26 | Maxsus havola: `access_links` (token SHA-256 + AES-GCM nusxa master kalit bilan, master kalit DPAPI — bazadan tashqarida), `link_activations(link_id, request_id)` idempotentlik; faollashtirish BEGIN IMMEDIATE ichida | Atomar sarflash; parallel urinishda bitta g'olib; qayta yuborilgan POST qayta sarflamaydi (10 daqiqa oyna) |
+| D27 | Havola URL'i `https://<public-base>/link#<token>`: token **fragmentda** | Brauzer fragmentni serverga yubormaydi: GET/preview/skaner sarflamaydi, log va Referer'ga tushmaydi; sahifa tokenni `replaceState` bilan olib tashlaydi |
+| D28 | Havola sessiyasi = oddiy server sessiyasi (`web_sessions.kind='link'`), muddati min(sessiya, havola tugashi) | Refresh/tab/qayta ulanish sarflamaydi |
+| D29 | Media fayllar `data\media\<32 hex>` (mijoz yo'l bermaydi), haqiqiy format: magic bytes + `image.DecodeConfig`, MP4 `stsd` kodek, WebM CodecID; SVG/HTML rad; transkodlash yo'q | FFmpeg runtime'da kerak emas |
+| D30 | Fayl yetkazish: har so'rovda ruxsat; `ctxReadSeeker` + `Transfer` reyestri; reconciler/revoke kontekstni bekor qiladi → javob o'rtada uziladi | "Faqat keyingi so'rovni bloklash" bilan cheklanmaslik |
+| D31 | Backup v2: oqimli STREAM-AES-GCM (1 MiB bo'laklar, nonce prefiks‖hisoblagich‖oxirgi bayroq), ZIP ichida media; v1 o'qiladi | Katta media uchun xotira chegaralangan; kesish/almashtirish aniqlanadi |
+| D32 | Sxema migratsiyasi versiyaga qarab; migratsiyadan oldin avtomatik `VACUUM INTO` nusxa; eski binary yangi sxemani rad etadi; rollback mos backup orqali | Eski binary yangi sxemaga ulanmaydi |
+| D33 | QR: serverda go-qrcode matritsasi, brauzer canvas'ida chiziladi (sarlavha + Toshkent vaqti) | Tokenli havola tashqi servisga yuborilmaydi |
+| D34 | `dronstream check` (faqat o'qish): config, papkalar, MediaMTX, portlar, TLS, baza sxemasi, setup holati | Start/Tayyorla skriptlari aniq tashxis beradi |

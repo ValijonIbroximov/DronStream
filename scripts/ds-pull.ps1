@@ -9,6 +9,7 @@
 #>
 param([switch]$NoPrepare)
 . (Join-Path $PSScriptRoot "ds-common.ps1")
+trap { Write-DsUnexpected $_; exit 1 }
 $ctx = Get-DsContext
 Start-DsLog $ctx "pull"
 $lock = Enter-DsLock $ctx "git"

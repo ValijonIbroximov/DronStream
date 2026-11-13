@@ -86,3 +86,29 @@ Brauzerda allaqachon ko'rsatilgan kadrlarni qaytarib olib bo'lmaydi. Watermark (
 - Holat: `scripts\status.ps1`. Loglar: `<ROOT>\logs\dronstream.log`, `mediamtx.log` (sirlar niqoblangan).
 - Backup: Tarmoq va tizim → Backup, yoki `scripts\backup.ps1`. Backup faylini **boshqa joyda** saqlang.
 - Yangilash: BACKUP_RESTORE_UZ.md → "Yangilash va rollback".
+
+## 12. v1.1: yangi menyu
+Bosh sahifa · **Kontent** · **To'plamlar** · **Doimiy foydalanuvchilar** · **Maxsus havolalar** · Kirish so'rovlari · Faol sessiyalar · Audit va sozlamalar. Vaqtlar **Toshkent vaqtida (UTC+5)** ko'rsatiladi va kiritiladi (bazada UTC).
+
+### Kontent
+- Jonli dronlar, matn, rasm, video. Qidiruv, tur filtri, bir nechtasini belgilab **Bir xil sarlavha berish**, **Yashirish/Faol qilish**, ▲▼ tartib. Sarlavha maydonidan chiqqanda saqlanadi: "● saqlanmagan o'zgarish" → "Saqlanmoqda…" → "✓ Saqlandi".
+- Dron streami sarlavhasi tomoshabin uchun; texnik yo'l (`live/<nom>`) va pult kaliti o'zgarmaydi ("Dron pultlari (texnik)" tabida).
+- **+ Matn**, **+ Rasm** (PNG/JPEG/GIF/WebP), **+ Video** (MP4 H.264/AV1/VP9, WebM). H.265, SVG, HTML rad etiladi — sababi yoziladi.
+
+### To'plamlar
+- Umumiy sarlavha + elementlar (har biriga ixtiyoriy alohida sarlavha), tartib, ommaviy element sarlavhasi. Yashirin to'plam orqali dinamik ruxsat ishlamaydi.
+
+### Ruxsat berish / Havola yaratish (3 bosqich)
+1. **Kimga va qanday:** maxsus havola (bir martalik / bir necha martalik / vaqtinchalik) yoki doimiy foydalanuvchi(lar).
+2. **Nimaga:** kontent va to'plamlar (qidiruv, filtr, shablondan nusxa). To'plam uchun aniq tanlov: **faqat hozirgi elementlar** yoki **dinamik**.
+3. **Cheklovlar:** sessiya davomiyligi (majburiy), foydalanish soni, parallel sessiyalar, boshlanish/tugash.
+4. Tasdiq — xulosa → **Yaratish va ulashish** (havola) yoki **Qo'llash** (doimiy foydalanuvchi; so'ng umumiy kirish havolasi/QR).
+
+### Maxsus havolalar
+- Karta: nomi, turi, resurslar, amal qilish vaqti, foydalanish (sarflangan/limit/qolgan), faol sessiyalar, holat (**Faol, Kutilmoqda, Tugagan, Limit tugagan, Bekor qilingan**). Filtr va qidiruv.
+- **Ulashish / QR:** havolani nusxalash, QR (sarlavha va muddat bilan), QR rasmni clipboard'ga, PNG yuklab olish, tizim ulashish oynasi. Brauzer qo'llamasa xabar chiqadi — PNG'ni yuklab oling. QR bizning serverda yaratiladi; PNG nomida token yo'q.
+- **Tashqi manzil** (Audit va sozlamalar → Sozlamalar): masalan `https://stream.example.uz:8443`. Sozlanmagan yoki localhost bo'lsa havola/QR berilmaydi va sabab ko'rsatiladi.
+- **Sessiyalar** (har bir brauzer alohida, alohida "Uzish"), **Nimani ko'radi?** (sarflamaydi), **Cheklovlar**, **Shablon sifatida**, **Havolani yangilash** (eski havola/QR ishlamaydi), **Bekor qilish** (faol sessiya bo'lsa `BEKOR` deb yozib tasdiqlanadi).
+
+### Doimiy foydalanuvchilar
+- "Umumiy kirish havolasi / QR" — hamma uchun bitta manzil (login-parol bilan). Ruxsat chiplari (✕), **Nimani ko'radi?**, bloklash, hamma joydan chiqarish, parolni tiklash.

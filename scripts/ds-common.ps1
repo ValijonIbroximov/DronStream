@@ -118,3 +118,20 @@ function Get-DsFile([string]$url, [string]$out, [string]$sha256) {
   if ($h -ne $sha256) { Remove-Item $out -Force; throw ("Checksum mos emas: " + $url) }
   Write-DsLog "  checksum (SHA256) tekshirildi" "OK"
 }
+
+# Toolchain directory: <project>\.tools when the path is short enough for the
+# deepest archive entries (Windows PowerShell 5.1 cannot extract paths longer
+# than 260 characters); otherwise a short per-project folder under LOCALAPPDATA.
+function Get-DsToolsDir($ctx) {
+  $local = Join-Path $ctx.Base ".tools"
+  if (($local.Length + 140) -le 250 -or (Test-Path (Join-Path $local "go\bin\go.exe"))) { return $local }
+  $sha = New-Object Security.Cryptography.SHA1Managed
+  $id = ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($ctx.Base.ToLowerInvariant())))).Replace("-", "").Substring(0, 8)
+  return (Join-Path $env:LOCALAPPDATA ("DronStream\t-" + $id))
+}
+
+# Report unexpected errors with their reason and the log path (never silent).
+function Write-DsUnexpected($err) {
+  Write-DsLog ("Kutilmagan xato: " + $err.Exception.Message + " (" + $err.InvocationInfo.PositionMessage.Split("`n")[0].Trim() + ")") "ERR"
+  if ($script:DsLogFile) { Write-Host ("Log: " + $script:DsLogFile) -ForegroundColor DarkGray }
+}

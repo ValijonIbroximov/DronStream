@@ -14,6 +14,7 @@
 #>
 param([switch]$Offline)
 . (Join-Path $PSScriptRoot "ds-common.ps1")
+trap { Write-DsUnexpected $_; exit 1 }
 $ctx = Get-DsContext
 Start-DsLog $ctx "tayyorla"
 if ($ctx.Mode -eq "unknown") { Stop-DsWith $EX_MANUAL "Bu papka DronStream manba kodi ham, tarqatish paketi ham emas: $($ctx.Base)" }
@@ -77,7 +78,8 @@ if ($ctx.Mode -eq "package") {
 # ======================= source checkout =======================
 if ($ctx.Mode -eq "source") {
   Write-DsLog "Rejim: Git'dan olingan manba kod" "STEP"
-  $tools = Join-Path $ctx.Base ".tools"
+  $tools = Get-DsToolsDir $ctx
+  if ($tools -ne (Join-Path $ctx.Base ".tools")) { Write-DsLog ("Loyiha yo'li juda uzun (Windows 260 belgi chegarasi): vositalar qisqa papkaga o'rnatiladi: " + $tools) "WARN" }
   New-Item -ItemType Directory -Force (Join-Path $tools "dl") | Out-Null
   $online = $null
   function Online { if ($script:Offline) { return $false }; if ($null -eq $script:online) { $script:online = Test-DsOnline }; return $script:online }

@@ -10,6 +10,7 @@
 #>
 param([switch]$NoBrowser, [switch]$NoPrepare)
 . (Join-Path $PSScriptRoot "ds-common.ps1")
+trap { Write-DsUnexpected $_; exit 1 }
 if ($env:DS_NO_BROWSER -eq "1") { $NoBrowser = $true }
 $ctx = Get-DsContext
 Start-DsLog $ctx "start"
@@ -26,6 +27,7 @@ function Open-DsBrowser([string]$url) {
 function Get-Readiness {
   # returns @{ chk; fixable = @(...); manual = @(...) }
   $fix = @(); $man = @()
+  if ($ctx.Mode -eq "package" -and -not (Test-Path (Join-Path $ctx.Base "app\active.txt"))) { $fix += "Faol versiya belgilanmagan (app\active.txt yo'q)" }
   if (-not (Test-Path $ctx.Exe)) {
     if ($ctx.Mode -eq "source") { $fix += "Dastur hali yig'ilmagan (build\dronstream.exe yo'q)" }
     else { $fix += "Faol versiya yoki dastur fayli topilmadi" }
