@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>DronStream E2EE PoC viewer</title>
+  <link rel="stylesheet" href="viewer.css">
+  <script src="viewer.bundle.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>DronStream E2EE PoC viewer</h1>
+    <p class="warn">Proof of concept, separate from the product. SFrame (RFC 9605) frames, key delivered with HPKE (RFC 9180).
+      This page must come from a party you trust that is <strong>not</strong> the relay: whoever delivers this script can read the keys it handles.</p>
+  </header>
+
+  <section class="panel">
+    <form id="join-form" autocomplete="off">
+      <label>Relay URL <input id="relay" type="url" value="http://127.0.0.1:59320" required></label>
+      <label>Stream id <input id="stream" type="text" value="demo" pattern="[A-Za-z0-9_\-]{1,64}" required></label>
+      <label>Label (shown to the operator, optional) <input id="label" type="text" value="browser" maxlength="32"></label>
+      <button id="join" type="submit">Generate key and send join request</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>Your key fingerprint</h2>
+    <p>Read all 16 groups to the operator over a separate channel (voice, in person). The operator must approve exactly this value.</p>
+    <p id="fingerprint" class="fingerprint">(no key yet)</p>
+    <p class="hint">The private key is generated in this tab as a non-extractable WebCrypto key and is gone when the tab is closed or reloaded.</p>
+  </section>
+
+  <section class="panel">
+    <h2>State</h2>
+    <p id="state" class="state idle">not started</p>
+    <table class="counters">
+      <tbody>
+        <tr><th scope="row">Frames received</th><td id="c-received">0</td></tr>
+        <tr><th scope="row">Frames decrypted</th><td id="c-decrypted">0</td></tr>
+        <tr><th scope="row">Authentication failures</th><td id="c-auth">0</td></tr>
+        <tr><th scope="row">Replays rejected</th><td id="c-replays">0</td></tr>
+        <tr><th scope="row">Frames without a key</th><td id="c-nokey">0</td></tr>
+        <tr><th scope="row">Current epoch (SFrame KID)</th><td id="c-epoch">-</td></tr>
+        <tr><th scope="row">Key envelopes opened / rejected</th><td id="c-envelopes">0 / 0</td></tr>
+        <tr><th scope="row">Pictures drawn</th><td id="c-pictures">0</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel">
+    <h2>Video</h2>
+    <p id="video-note" class="hint">Waiting for the first decrypted key frame.</p>
+    <canvas id="canvas" width="640" height="360"></canvas>
+  </section>
+
+  <section class="panel">
+    <h2>Log</h2>
+    <div id="log" class="log"></div>
+  </section>
+</body>
+</html>

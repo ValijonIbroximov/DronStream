@@ -1,0 +1,119 @@
+{
+  "about": "JS to Go interop fixture: HPKE envelopes sealed by @hpke/core and SFrame frames encrypted by viewer/src/sframe.js. Regenerate with: node viewer/test/gen-golden.mjs",
+  "stream": "golden-js",
+  "recipient": {
+    "source": "RFC 9180 Appendix A.3.1 example key pair (public test vector, not a secret)",
+    "sk": "f3ce7fdae57e1a310d87f1ebbde6f328be0a99cdbcadf4d6589cf29de4b8ffd2",
+    "pk": "04fe8c19ce0905191ebc298a9245792531f26f0cece2460639e8bc39cb7f706a826a779b4cf969b8a0e539c7f62fb3d30ad6aa8f80e30f1d128aafd68a2ce72ea0",
+    "fingerprint": "8710 cee5 9cfe 355a ed7b 658c e51b 8269 ee73 2b1f 70a9 7c25 c7e9 cece 1e6b 14aa"
+  },
+  "envelopes": [
+    {
+      "v": 1,
+      "stream": "golden-js",
+      "epoch": 1,
+      "suite": 4,
+      "to": "8710cee59cfe355aed7b658ce51b8269ee732b1f70a97c25c7e9cece1e6b14aa",
+      "sealed": "BMADZEmwMhrxo/3itAe25cKVkKuBiMS/rMm/Z+M/dpNsngKoIdyM2xHCMV5iXVJdEolNH+yBqMp1XhmxkbhNHIyduGgxVysASUzAsvLR2BmqnLx46Cdp4Xk1P0iEWKdVwgAnrM1vNs/vwlgKU+F3G9M="
+    },
+    {
+      "v": 1,
+      "stream": "golden-js",
+      "epoch": 2,
+      "suite": 4,
+      "to": "8710cee59cfe355aed7b658ce51b8269ee732b1f70a97c25c7e9cece1e6b14aa",
+      "sealed": "BFVyt+KU4nrw4iQLuvWdVk9dB+V4x0prnOwcGU+uBZVsoU4eynwss3ItJ9mJas9xuQzy6k8KXtJbyrWvwzqrkGUFypjwL3wG3u69WtbhAcrJcQe3HtT2lAu0c8d5JDSneltkWE4dHqLl+wKWiMkSj7o="
+    },
+    {
+      "v": 1,
+      "stream": "golden-js",
+      "epoch": 3,
+      "suite": 4,
+      "to": "8710cee59cfe355aed7b658ce51b8269ee732b1f70a97c25c7e9cece1e6b14aa",
+      "sealed": "BFVyt+KU4nrw4iQLuvWdVk9dB+V4x0prnOwcGU+uBZVsoU4eynwss3ItJ9mJas9xuQzy6k8KXtJbyrWvwzqrkGUFypjwL3wG3u69WtbhAcrJcQe3HtT2lAu0c8d5JDSneltkWE4dHqLl+wKWiMkSj7o="
+    }
+  ],
+  "envelopes_rejected": 1,
+  "wire": "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",
+  "frames": [
+    {
+      "expect": "decrypted",
+      "plaintext": "AAAAAWWIanMtcGxhaW50ZXh0LWZyYW1lLTAteHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA==",
+      "note": "epoch 1"
+    },
+    {
+      "expect": "decrypted",
+      "plaintext": "AAAAAUGIanMtcGxhaW50ZXh0LWZyYW1lLTEteHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=",
+      "note": "epoch 1"
+    },
+    {
+      "expect": "decrypted",
+      "plaintext": "AAAAAUGIanMtcGxhaW50ZXh0LWZyYW1lLTIteHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4",
+      "note": "epoch 1"
+    },
+    {
+      "expect": "decrypted",
+      "plaintext": "AAAAAUGIanMtcGxhaW50ZXh0LWZyYW1lLTMteHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA==",
+      "note": "epoch 1"
+    },
+    {
+      "expect": "decrypted",
+      "plaintext": "AAAAAWWIanMtcGxhaW50ZXh0LWZyYW1lLTQteHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=",
+      "note": "epoch 1"
+    },
+    {
+      "expect": "decrypted",
+      "plaintext": "AAAAAUGIanMtcGxhaW50ZXh0LWZyYW1lLTUteHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4",
+      "note": "epoch 1"
+    },
+    {
+      "expect": "auth-failure",
+      "note": "epoch 1, one bit flipped in transit"
+    },
+    {
+      "expect": "decrypted",
+      "plaintext": "AAAAAUGIanMtcGxhaW50ZXh0LWZyYW1lLTcteHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=",
+      "note": "epoch 1, stream continues after the bad frame"
+    },
+    {
+      "expect": "replay-rejected",
+      "note": "third frame sent again"
+    },
+    {
+      "expect": "decrypted",
+      "plaintext": "AAAAAWWIanMtcGxhaW50ZXh0LWZyYW1lLTgteHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4",
+      "note": "epoch 2 (key change)"
+    },
+    {
+      "expect": "decrypted",
+      "plaintext": "AAAAAUGIanMtcGxhaW50ZXh0LWZyYW1lLTkteHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA==",
+      "note": "epoch 2 (key change)"
+    },
+    {
+      "expect": "decrypted",
+      "plaintext": "AAAAAUGIanMtcGxhaW50ZXh0LWZyYW1lLTEwLXh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4",
+      "note": "epoch 2 (key change)"
+    },
+    {
+      "expect": "replay-rejected",
+      "note": "frame of the old epoch 1 sent again"
+    },
+    {
+      "expect": "no-key",
+      "note": "epoch 3: only a re-labelled envelope exists, which must not open"
+    },
+    {
+      "expect": "decrypted",
+      "plaintext": "AAAAAWWIanMtcGxhaW50ZXh0LWZyYW1lLTAteHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA==",
+      "note": "epoch 2 continues"
+    }
+  ],
+  "expected_stats": {
+    "received": 15,
+    "decrypted": 11,
+    "auth_failures": 1,
+    "replays_rejected": 2,
+    "no_key": 1,
+    "epoch": 2
+  }
+}

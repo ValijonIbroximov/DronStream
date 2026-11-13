@@ -1,0 +1,27 @@
+Provenance of the vendored test vectors (public data, no secrets).
+
+rfc9605-test-vectors.json
+  What:    official SFrame (RFC 9605) test vectors published by the IETF SFrame working group.
+  URL:     https://github.com/sframe-wg/sframe/blob/025d568a506937c901af8e7f0a663f39aeaf67ad/test-vectors/test-vectors.json
+  Raw:     https://raw.githubusercontent.com/sframe-wg/sframe/025d568a506937c901af8e7f0a663f39aeaf67ad/test-vectors/test-vectors.json
+  Commit:  025d568a506937c901af8e7f0a663f39aeaf67ad (2023-09-13, "Update test vectors")
+  SHA-256: b8d35efd41749567427cb9ae52d9a7362904154978ff6a5fb20c0258a8ffdec1
+  Fetched: 2026-11-14, stored byte-for-byte.
+  Why this commit: it is the last change of the file before RFC 9605 was published. The newer
+  repository head (c66e9a2e4a6c56191fa0b9da6df495b3cdfd5631, 2025-09-18) adds an
+  "aes_256_ctr_hmac" section for cipher suites that are not part of RFC 9605; its "header",
+  "aes_ctr_hmac" and "sframe" sections are identical to this file (compared on 2026-11-14).
+  Cross-check: all 289 header vectors, the 3 AES-CTR-HMAC vectors and the 5 SFrame vectors in
+  this file were compared field by field with Appendix C of
+  https://www.rfc-editor.org/rfc/rfc9605.txt on 2026-11-14 and are identical.
+
+rfc9180-a3-base.json
+  What:    RFC 9180 (HPKE) Appendix A.3.1 known-answer values, base mode,
+           DHKEM(P-256, HKDF-SHA256), HKDF-SHA256, AES-128-GCM; sequence numbers 0..2.
+  URL:     https://www.rfc-editor.org/rfc/rfc9180.txt
+  How:     extracted mechanically from the RFC text (fields info, pkRm, skRm, enc, pt, aad, ct).
+  Note:    skRm/pkRm are the RFC's public example key pair. The golden files under golden/ reuse
+           this public example key as the recipient key, so no private key of ours is committed.
+
+golden/go-to-js.json   written by: go test ./e2e -run TestGolden -update   (Go seals/encrypts, JS opens)
+golden/js-to-go.json   written by: node viewer/test/gen-golden.mjs          (JS seals/encrypts, Go opens)
