@@ -313,6 +313,7 @@ html:not(.anim) .world, html:not(.anim) .card, html:not(.anim) .slab { transitio
 <li><a href="#foydalanuvchilar">Foydalanuvchi turlari</a></li>
 <li><a href="#kontent">Kontent: jonli stream, matn, rasm, video, to'plam</a></li>
 <li><a href="#ruxsat-shifr">Ruxsat va shifrlash — ikki xil narsa</a></li>
+<li><a href="#kim-koradi">Kim videoni ko'ra oladi: joriy holat va reja</a></li>
 <li><a href="#chegaralar">Nimani kafolatlab bo'lmaydi</a></li>
 </ol>
 <div class="toc-part"><a href="#b">B. Tarmoq asoslari</a></div>
@@ -365,6 +366,8 @@ html:not(.anim) .world, html:not(.anim) .card, html:not(.anim) .slab { transitio
 <li><a href="#f-sessiya">Faol sessiyalar</a></li>
 <li><a href="#f-farq">Revoke, bloklash, publish'ni to'xtatish — farqi</a></li>
 <li><a href="#f-audit">Audit, parol, chiqish, favqulodda to'xtatish</a></li>
+<li><a href="#admin-mfa">Administrator himoyasi: TOTP va qayta tasdiqlash</a></li>
+<li><a href="#secure-rejim">Xavfsizlik holati paneli</a></li>
 <li><a href="#f-yangilash">Kodni yangilash va serverni yangilash — ikki alohida ish</a></li>
 </ol>
 <div class="toc-part"><a href="#g">G. Xatolar</a></div>
@@ -429,7 +432,7 @@ html:not(.anim) .world, html:not(.anim) .card, html:not(.anim) .slab { transitio
             <ol class="caps" id="caps">
 <li class="cap" data-step="1"><span class="cap-n">1</span><div><strong>Pult video yuboradi</strong><p>DJI pulti jonli videoni server manziliga RTMP orqali yuboradi. Har bir pult uchun alohida manzil va maxfiy kalit bor.</p></div></li>
 <li class="cap" data-step="2"><span class="cap-n">2</span><div><strong>Server manbani tekshiradi</strong><p>Server kalit to'g'riligini va shu yo'l band emasligini tekshiradi. Kalit noto'g'ri bo'lsa yoki boshqa manba ulanib turgan bo'lsa — rad etadi.</p></div></li>
-<li class="cap" data-step="3"><span class="cap-n">3</span><div><strong>Foydalanuvchi kiradi yoki havolani faollashtiradi</strong><p>Tomoshabin brauzerda login-parol bilan kiradi, mehmon so'rovi yuboradi yoki maxsus havolani ochib &quot;Kirish&quot;ni bosadi. Alohida dastur o'rnatilmaydi.</p></div></li>
+<li class="cap" data-step="3"><span class="cap-n">3</span><div><strong>Foydalanuvchi kiradi yoki so'rov yuboradi</strong><p>Tomoshabin login-parol bilan kiradi yoki (mehmon, maxsus havola) kirish so'rovini yuboradi. Havolaning o'zi kalit emas: administrator aynan shu brauzer sessiyasini tekshirish kodi bilan tasdiqlaydi.</p></div></li>
 <li class="cap" data-step="4"><span class="cap-n">4</span><div><strong>Administrator ruxsatni boshqaradi</strong><p>Admin kim nimani va qachongacha ko'rishini belgilaydi. Ruxsat berilmagan narsa umuman ko'rinmaydi.</p></div></li>
 <li class="cap" data-step="5"><span class="cap-n">5</span><div><strong>Ruxsatli kontent ko'rsatiladi</strong><p>Server har bir video ulanishini alohida tekshiradi va faqat ruxsat etilgan streamni WebRTC orqali uzatadi.</p></div></li>
 <li class="cap" data-step="6"><span class="cap-n">6</span><div><strong>Revoke'dan keyin ulanish uziladi</strong><p>Admin ruxsatni olib tashlasa, server ochiq video ulanishini o'zi uzadi va qayta ulanishni rad etadi. Bu faqat tugmani yashirish emas.</p></div></li>
@@ -465,18 +468,22 @@ html:not(.anim) .world, html:not(.anim) .card, html:not(.anim) .slab { transitio
 <tr><td>Tomoshabin</td><td>Faqat ruxsat berilgan kontentni ko'radi</td><td>O'ziga berilgan stream, matn, rasm, video</td></tr>
 </tbody></table></div>
 <p>Pult kaliti faqat video <strong>yuborish</strong> uchun. U bilan videoni ko'rib bo'lmaydi va saytga kirib bo'lmaydi.</p>
+<p><strong>Boshqarish huquqi va ko'rish huquqi</strong> — ikki xil narsa. Administrator tizimni boshqaradi va hozirgi versiyada barcha streamlarni ko'ra oladi. Server esa (uning root egasi bilan birga) videoni texnik jihatdan ochiq ko'radi — <a href="#kim-koradi">&quot;Kim videoni ko'ra oladi&quot;</a> bo'limiga qarang.</p>
 </section>
 <section class="sec" id="foydalanuvchilar" data-title="Foydalanuvchi turlari">
 <h2>Foydalanuvchi turlari</h2>
 <div class="tbl"><table><thead><tr><th>Tur</th><th>Qanday kiradi</th><th>Qachon ishlatiladi</th></tr></thead><tbody>
 <tr><td>Doimiy foydalanuvchi</td><td>Login va parol</td><td>Doimiy xodimlar. Admin yaratadi, bloklashi mumkin</td></tr>
 <tr><td>Mehmon (so'rov bilan)</td><td>Ismini yozib so'rov yuboradi, admin tasdiqlaydi</td><td>Oldindan hisob ochilmagan odam. Ism tasdiqlanmagan hisoblanadi</td></tr>
-<tr><td>Maxsus havola</td><td>Havolani ochib &quot;Kirish&quot;ni bosadi, login yo'q</td><td>Bir martalik, N martalik yoki vaqtinchalik kirish; QR orqali ulashish</td></tr>
+<tr><td>Maxsus havola</td><td>Havolani ochib kirish so'rovini yuboradi; admin aynan shu brauzerni tekshirish kodi bilan tasdiqlaydi</td><td>Login-parolsiz taklif; bir martalik, N martalik yoki vaqtinchalik; QR orqali ulashish</td></tr>
 <tr><td>Administrator</td><td>Login va parol</td><td>Tizimni boshqarish</td></tr>
 </tbody></table></div>
-<p>Maxsus havolaning uch turi bor:</p>
-<ul><li><strong>Bir martalik</strong> — bir marta faollashtiriladi. Boshqa brauzerda qayta ochilmaydi.</li><li><strong>N martalik</strong> — belgilangan marta faollashtiriladi; bir vaqtdagi sessiyalar soni ham cheklanadi.</li><li><strong>Vaqtinchalik</strong> — belgilangan vaqt oralig'ida ishlaydi (boshlanishidan oldin ham, tugaganidan keyin ham rad etiladi).</li></ul>
-<p>Havolani shunchaki ochish, oldindan ko'rish yoki QR kodni skanerlash foydalanishni <strong>sarflamaydi</strong>. Faqat &quot;Kirish&quot; tugmasi bosilganda sarflanadi. Sahifani yangilash, boshqa tab ochish yoki video qayta ulanishi yangi kirish hisoblanmaydi.</p>
+<div class="note warn">
+<p><strong>Havola — faqat taklif, kalit emas.</strong> Havolani ochish, QR kodni skanerlash yoki &quot;Kirish so'rovini yuborish&quot; tugmasini bosish hech qanday video yoki material bermaydi. Tugma bosilganda shu brauzerda kutayotgan so'rov yaratiladi va ekranda <strong>tekshirish kodi</strong> (masalan <code>K7Q-4MX</code>) chiqadi. Administrator tomoshabindan shu kodni ishonchli yo'l bilan (masalan telefon orqali) so'raydi va kod mos kelsa aynan shu brauzerni tasdiqlaydi. Havolani boshqa odamga yuborish unga hech narsa bermaydi — uning so'rovi alohida tasdiqlanishi kerak.</p>
+</div>
+<p>Maxsus havolaning uch turi bor (cheklovlar admin tasdig'ining o'rnini bosmaydi, unga qo'shimcha):</p>
+<ul><li><strong>Bir martalik</strong> — faqat bitta brauzer sessiyasi tasdiqlanadi.</li><li><strong>N martalik</strong> — ko'pi bilan N ta sessiya tasdiqlanadi; bir vaqtdagi ochiq sessiyalar soni ham cheklanadi.</li><li><strong>Vaqtinchalik</strong> — belgilangan vaqt oralig'ida ishlaydi (boshlanishidan oldin ham, tugaganidan keyin ham rad etiladi).</li></ul>
+<p>Foydalanish <strong>administrator tasdiqlaganda</strong> sanaladi — havolani olgan begona odam &quot;Kirish&quot; bosib haqiqiy egasining bir martalik imkoniyatini yeb qo'ya olmaydi. Bitta havola bo'yicha bir vaqtda ko'pi bilan 5 ta so'rov kutishi mumkin. Tasdiqlangan sessiyada sahifani yangilash, boshqa tab ochish yoki video qayta ulanishi yangi foydalanish hisoblanmaydi. IP manzil va brauzer nomi faqat ma'lumot uchun ko'rsatiladi — ular shaxsni tasdiqlamaydi.</p>
 </section>
 <section class="sec" id="kontent" data-title="Kontent: jonli stream, matn, rasm, video, to'plam">
 <h2>Kontent: jonli stream, matn, rasm, video, to'plam</h2>
@@ -489,6 +496,25 @@ html:not(.anim) .world, html:not(.anim) .card, html:not(.anim) .slab { transitio
 <ul><li><strong>Shifrlash</strong> yo'ldagi begona odam trafikni o'qiy olmasligini ta'minlaydi. Brauzer bilan server orasida HTTPS va WebRTC (DTLS-SRTP) shifrlangan.</li><li><strong>Ruxsat</strong> kim nimani ko'rishi mumkinligini belgilaydi. Uni server tekshiradi: har bir video ulanishi, har bir fayl va har bir Range so'rovi uchun alohida.</li></ul>
 <p>Shifrlash bor degani ruxsat bor degani emas, va aksincha. Oddiy <strong>RTMP shifrlanmagan</strong>: pultdan serverga boradigan video yo'lda ochiq ketadi. Buning yechimlari <a href="#ingest">&quot;Pult → server yo'li&quot;</a> bo'limida.</p>
 <p>Bu end-to-end shifrlash emas: server videoni ochiq holda ko'radi.</p>
+</section>
+<section class="sec" id="kim-koradi" data-title="Kim videoni ko'ra oladi: joriy holat va reja">
+<h2>Kim videoni ko'ra oladi: joriy holat va reja</h2>
+<div class="note info">
+<p>Bu bo'lim &quot;joriy ishlash&quot; (hozir haqiqatan nima bor) va &quot;rejalashtirilgan arxitektura&quot; (hali yo'q) ni ataylab ajratadi. To'liq tahlil — loyihadagi <code>SECURITY_MODEL.md</code>.</p>
+</div>
+<h3>Joriy ishlash</h3>
+<div class="tbl"><table><thead><tr><th>Kim</th><th>Videoni ko'ra oladimi</th><th>Nima uchun</th></tr></thead><tbody>
+<tr><td>Havolani olgan begona odam</td><td>Yo'q</td><td>Havola faqat so'rov; admin tasdig'isiz hech narsa ochilmaydi</td></tr>
+<tr><td>Ruxsatsiz foydalanuvchi</td><td>Yo'q</td><td>Server har bir ulanish, fayl va Range so'rovini tekshiradi</td></tr>
+<tr><td>Lokal tarmoq kuzatuvchisi, internet provayderi (brauzer ↔ server)</td><td>Mazmunini yo'q</td><td>HTTPS va WebRTC (DTLS-SRTP). Sertifikat ishonchli bo'lishi shart</td></tr>
+<tr><td>Pult ↔ server oralig'idagi kuzatuvchi</td><td><strong>Oddiy RTMP'da ha</strong> (kalit ham)</td><td>RTMP shifrlanmaydi: VPN yoki yopiq tarmoq kerak</td></tr>
+<tr><td>Server egasi / hosting root, media-server</td><td><strong>Ha</strong></td><td>TLS va DTLS serverda tugaydi; MediaMTX videoni ochiq qabul qilib qayta paketlaydi</td></tr>
+<tr><td>Ruxsatli tomoshabin</td><td>Ha, va ekranini yozib olishi mumkin</td><td>Buni texnik jihatdan to'xtatib bo'lmaydi</td></tr>
+</tbody></table></div>
+<p>Shifrlangan video ham <strong>metadata</strong>ni yashirmaydi: qachon efir bo'lgani, trafik hajmi, IP manzillar tarmoqda ko'rinadi.</p>
+<h3>Rejalashtirilgan arxitektura — amalga oshirilmagan</h3>
+<p>Pultdan tomoshabingacha shifrlash (E2EE), ya'ni server ham videoni o'qiy olmasligi, <strong>hozirgi qurilmalar bilan mumkin emas</strong>: DJI Pilot 2 faqat RTMP/RTSP kabi oqimlarni yuboradi va manba tomonida E2EE qilmaydi. Serverda qabul qilib keyin shifrlash E2EE emas.</p>
+<p>Mumkin bo'lgan yo'l uchun qo'shimcha narsalar kerak: pult yonida ishonchli <strong>gateway</strong> (u videoni ochiq ko'radi) yoki DJI SDK asosidagi o'z publisher ilovasi, shifrlangan yukni ochmasdan uzatadigan media-server (SFU), tomoshabin qurilmalariga kalit tarqatish va frontend'ni serverdan alohida ishonchli manbadan yetkazish. Bular hali bajarilmagan.</p>
 </section>
 <section class="sec" id="chegaralar" data-title="Nimani kafolatlab bo'lmaydi">
 <h2>Nimani kafolatlab bo'lmaydi</h2>
@@ -537,7 +563,7 @@ html:not(.anim) .world, html:not(.anim) .card, html:not(.anim) .slab { transitio
 <tr><td>8443</td><td>TCP</td><td>brauzer → server</td><td>HTTPS: sahifa, login, boshqaruv</td><td>Tomoshabinlar</td><td>Majburiy</td></tr>
 <tr><td>8189</td><td>UDP</td><td>brauzer ↔ server</td><td>WebRTC video</td><td>Tomoshabinlar</td><td>Majburiy</td></tr>
 <tr><td>8189</td><td>TCP</td><td>brauzer ↔ server</td><td>UDP yopiq tarmoqlar uchun WebRTC</td><td>Tomoshabinlar</td><td>Ixtiyoriy (<code>webrtc_tcp_listen</code>)</td></tr>
-<tr><td>1935</td><td>TCP</td><td>pult → server</td><td>RTMP ingest (shifrlanmagan)</td><td>Faqat pult tarmog'i yoki VPN</td><td>Pult ishlatilsa</td></tr>
+<tr><td>1935</td><td>TCP</td><td>pult → server</td><td>RTMP ingest (shifrlanmagan)</td><td>Faqat pult tarmog'i yoki VPN</td><td>Sukut bo'yicha o'chiq (<code>rtmp_listen</code>)</td></tr>
 <tr><td>1936</td><td>TCP</td><td>pult → server</td><td>RTMPS ingest (<code>rtmps_listen</code> yoqilsa)</td><td>Pultlar</td><td>Ixtiyoriy</td></tr>
 <tr><td>3478</td><td>UDP va TCP</td><td>brauzer ↔ server</td><td>TURN (<code>turn.mode: builtin</code>)</td><td>Tomoshabinlar</td><td>Ixtiyoriy</td></tr>
 <tr><td>50000–50100</td><td>UDP</td><td>brauzer ↔ server</td><td>TURN relay portlari</td><td>Tomoshabinlar</td><td>TURN bilan birga</td></tr>
@@ -585,7 +611,8 @@ html:not(.anim) .world, html:not(.anim) .card, html:not(.anim) .slab { transitio
 <section class="sec" id="win-admin" data-title="3-qadam: birinchi administrator">
 <h2>3-qadam: birinchi administrator</h2>
 <p>Sukut bo'yicha tayyor administrator yo'q — bu ataylab qilingan. Birinchi ishga tushirishda Start oynasida <strong>bir martalik kod</strong> chiqadi (u log'ga yozilmaydi). Brauzerda shu kodni, o'zingiz tanlagan login va parolni kiriting. Kod bir marta ishlatiladi.</p>
-<p>Parol unutilsa, server kompyuterida <code>dronstream reset-admin --username &lt;LOGIN&gt;</code> buyrug'i yangi vaqtinchalik parol beradi.</p>
+<p>Paket <strong>secure</strong> rejimda keladi: administrator yaratilgach panel avval <strong>ikkinchi bosqichni (TOTP)</strong> yoqishni so'raydi — telefondagi autentifikator ilovasi bilan QR kodni skanerlaysiz va 10 ta bir martalik <strong>tiklash kodi</strong>ni xavfsiz joyga yozib qo'yasiz. TOTP yoqilmaguncha boshqa admin amallari bloklangan. Batafsil: <a href="#admin-mfa">&quot;Administrator himoyasi&quot;</a>.</p>
+<p>Parol unutilsa yoki telefon yo'qolsa: avval tiklash kodlaridan biri bilan kiring. U ham bo'lmasa, server kompyuterida <code>dronstream reset-admin --username &lt;LOGIN&gt;</code> buyrug'i vaqtinchalik parol beradi va TOTP'ni o'chiradi (kirgach qayta yoqing). Bu yo'l server ustidan lokal nazorat bor odamga ishonadi.</p>
 </section>
 <section class="sec" id="win-lokal" data-title="4-qadam: lokal tarmoqdan ulanish">
 <h2>4-qadam: lokal tarmoqdan ulanish</h2>
@@ -617,7 +644,7 @@ html:not(.anim) .world, html:not(.anim) .card, html:not(.anim) .slab { transitio
 </section>
 <section class="sec" id="pult" data-title="Haqiqiy pultni ulash — alohida tekshiruv">
 <h2>Haqiqiy pultni ulash — alohida tekshiruv</h2>
-<ol><li>Admin panel: <strong>Kontent → Dron pultlari → yangi stream</strong>. Dastur pult uchun manzil va kalit beradi.</li><li>Manzil ko'rinishi: <code>rtmp://&lt;SERVER_IP&gt;:1935/live/&lt;YOL&gt;?key=&lt;KALIT&gt;</code>. Pult <code>?</code> belgisini qabul qilmasa: <code>rtmp://&lt;SERVER_IP&gt;:1935/live/&lt;YOL&gt;/&lt;KALIT&gt;</code>.</li><li>DJI Pilot 2 da jonli efir turini RTMP qilib, shu manzilni kiriting.</li><li>Admin panelda stream &quot;efirda&quot; bo'lishi va tomosha sahifasida video ko'rinishi kerak.</li></ol>
+<ol><li>Sozlamada pult tarmog'i uchun RTMP'ni yoqing: <code>media.rtmp_listen</code> ga VPN yoki lokal interfeys IP sini yozing (masalan <code>&lt;VPN_IP&gt;:1935</code>). <strong>secure</strong> rejimda <code>&quot;:1935&quot;</code> (barcha interfeyslar) yoki ommaviy IP bilan dastur ishga tushmaydi — shifrlanmagan RTMP internetga ochilmasligi uchun.</li><li>Admin panel: <strong>Kontent → Dron pultlari → yangi stream</strong>. Dastur pult uchun manzil va kalit beradi (kalitni ko'rish uchun parolni qayta tasdiqlaysiz).</li><li>Manzil ko'rinishi: <code>rtmp://&lt;SERVER_IP&gt;:1935/live/&lt;YOL&gt;?key=&lt;KALIT&gt;</code>. Pult <code>?</code> belgisini qabul qilmasa: <code>rtmp://&lt;SERVER_IP&gt;:1935/live/&lt;YOL&gt;/&lt;KALIT&gt;</code>.</li><li>DJI Pilot 2 da jonli efir turini RTMP qilib, shu manzilni kiriting.</li><li>Admin panelda stream &quot;efirda&quot; bo'lishi va tomosha sahifasida video ko'rinishi kerak.</li></ol>
 <div class="note warn">
 <p>Haqiqiy DJI pulti bilan ishlash bu loyihada hali sinalmagan. DJI hujjatlarida DJI Pilot 2 uchun RTMP ko'rsatilgan; RTMPS rasman tasdiqlanmagan. Pult bilan birinchi ulanishni alohida sinov sifatida o'tkazing va natijani yozib qo'ying.</p>
 </div>
@@ -939,7 +966,7 @@ esac</code></pre>
 </section>
 <section class="sec" id="ingest" data-title="Pult → server yo'li va uning himoyasi">
 <h2>Pult → server yo'li va uning himoyasi</h2>
-<p>Oddiy <strong>RTMP shifrlanmagan</strong>. Pult kaliti va video yo'lda ochiq ketadi. Shuning uchun RTMP portini (1935) internetga ochiq qoldirmang.</p>
+<p>Oddiy <strong>RTMP shifrlanmagan</strong>. Pult kaliti va video yo'lda ochiq ketadi. Shuning uchun RTMP portini (1935) internetga ochiq qoldirmang. <strong>secure</strong> rejim buni majburiy qiladi: oddiy RTMP faqat loopback yoki xususiy (VPN/LAN) manzilda tinglashi mumkin, aks holda dastur ishga tushmaydi. RTMPS ishlamasa dastur o'zi oddiy RTMP'ga o'tib ketmaydi.</p>
 <div class="tbl"><table><thead><tr><th>Variant</th><th>Himoya</th><th>Cheklovi</th><th>Holati</th></tr></thead><tbody>
 <tr><td>RTMP + VPN yoki yopiq tarmoq</td><td>VPN shifrlaydi</td><td>Pult tomonda VPN router yoki VPN'li mobil router kerak</td><td>Dasturda tayyor; firewall'da 1935 faqat VPN tarmog'iga ochiladi</td></tr>
 <tr><td>RTMPS (<code>rtmps_listen: &quot;:1936&quot;</code>)</td><td>TLS shifrlaydi, VPN kerak emas</td><td>Pult RTMPS'ni qo'llashi va server sertifikatini qabul qilishi kerak</td><td>Server tomoni tayyor; <strong>DJI pulti bilan tasdiqlanmagan</strong></td></tr>
@@ -947,6 +974,9 @@ esac</code></pre>
 </tbody></table></div>
 <p>RTMPS haqida halol holat: DJI hujjatlarida DJI Pilot 2 uchun RTMP ko'rsatilgan, RTMPS rasman tasdiqlanmagan (DJI forumidagi eski javobda qo'llanmasligi aytilgan). Pultingiz RTMPS'ni qabul qilishi va sertifikatni tekshirishi <strong>real qurilmada sinab ko'rilmaguncha</strong>, uni tayyor himoyalangan yo'l deb hisoblamang.</p>
 <p>Hozircha VPNsiz, amalda ishlaydigan variant: pult yonidagi kichik router yoki noutbuk RTMP'ni qabul qilib, serverga shifrlangan tunnel orqali uzatadi. Tomoshabinlar uchun bu o'zgarishsiz qoladi — ularga VPN kerak emas.</p>
+<p>RTMPS ishlasa ham video <strong>serverdan yashirilmaydi</strong>: TLS serverda tugaydi.</p>
+<h3>RTMPS'ni haqiqiy pultda sinash tartibi</h3>
+<ol><li>Serverda <code>rtmps_listen: &quot;:1936&quot;</code>, domenga mos ishonchli sertifikat, <code>rtmp_listen</code> bo'sh.</li><li>Pultda <code>rtmps://&lt;DOMEN&gt;:1936/live/&lt;YOL&gt;?key=&lt;KALIT&gt;</code> — efirga chiqdimi?</li><li>O'z-o'zidan imzolangan sertifikat bilan — ulanmasligi kerak.</li><li>Boshqa domen sertifikati bilan — ulanmasligi kerak.</li><li>Muddati o'tgan sertifikat bilan — ulanmasligi kerak.</li><li>3–5 dan birida ulansa, pult sertifikatni tekshirmaydi: RTMPS faqat passiv kuzatuvchidan himoya qiladi. Natijani yozib qo'ying.</li></ol>
 </section>
 <div class="part" id="f"><h1>F. Kundalik boshqaruv</h1></div>
 <section class="sec" id="f-pult" data-title="Pultlar va sarlavhalar">
@@ -963,11 +993,14 @@ esac</code></pre>
 <section class="sec" id="f-hisob" data-title="Hisoblar va mehmon so'rovlari">
 <h2>Hisoblar va mehmon so'rovlari</h2>
 <p><strong>Doimiy foydalanuvchilar</strong>: hisob yaratish, parolni tiklash, bloklash, barcha sessiyalaridan chiqarish, ruxsat berish.</p>
-<p><strong>Kirish so'rovlari</strong>: mehmon so'rovini tasdiqlash (qaysi kontent va qancha vaqtga) yoki rad etish. Mehmon kiritgan ism tasdiqlanmagan — ruxsat berishdan oldin u kim ekaniga boshqa yo'l bilan ishonch hosil qiling.</p>
+<p><strong>Kirish so'rovlari</strong>: mehmon so'rovini tasdiqlash (qaysi kontent va qancha vaqtga) yoki rad etish. Mehmon kiritgan ism va xabar tasdiqlanmagan — ruxsat berishdan oldin u kim ekaniga boshqa yo'l bilan ishonch hosil qiling. Mehmon ekranidagi <strong>tekshirish kodi</strong> so'rov kartasida ham ko'rinadi: ularni telefon orqali solishtiring.</p>
 </section>
 <section class="sec" id="f-havola" data-title="Maxsus havolalar va QR">
 <h2>Maxsus havolalar va QR</h2>
 <p><strong>Maxsus havolalar → + Havola yaratish</strong>. Uch bosqich: kimga va qanday tur → qaysi kontent yoki to'plam → cheklovlar (foydalanish soni, vaqt oralig'i, bir vaqtdagi sessiyalar, sessiya davomiyligi).</p>
+<p>Havolani olgan odam uni ochib <strong>kirish so'rovini yuboradi</strong> — ekranida tekshirish kodi chiqadi. So'rov <strong>Kirish so'rovlari → Maxsus havola orqali kirish so'rovlari</strong> ro'yxatida paydo bo'ladi:</p>
+<ol><li>Tomoshabindan ekranidagi kodni ishonchli yo'l bilan so'rang (telefon, shaxsan).</li><li>Kodni so'rov kartasiga yozing va <strong>Tasdiqlash</strong>ni bosing. Kod mos kelmasa tasdiqlanmaydi.</li><li>Tanimagan so'rovni <strong>Rad etish</strong> bilan yoping.</li></ol>
+<p>Tasdiq aynan shu brauzer sessiyasiga bog'lanadi; havolaning nusxasi boshqa brauzerda yangi so'rov bo'ladi xolos.</p>
 <p><strong>Ulashish / QR</strong> oynasida: havolani nusxalash, QR rasmni nusxalash, PNG yuklab olish, tizim ulashish oynasi. Brauzer rasmni nusxalashni qo'llamasa, dastur buni aytadi va PNG yuklab olishni taklif qiladi.</p>
 <ul><li>QR kod serverning o'zida yasaladi — havola tashqi xizmatga yuborilmaydi.</li><li><strong>Bekor qilish</strong> — havola va u orqali ochilgan barcha sessiyalar darhol to'xtaydi.</li><li><strong>Yangilash</strong> — eski havola ishlamay qoladi, yangisi beriladi.</li><li>Vaqtlar Toshkent vaqti bilan ko'rsatiladi.</li></ul>
 </section>
@@ -991,6 +1024,22 @@ esac</code></pre>
 <section class="sec" id="f-audit" data-title="Audit, parol, chiqish, favqulodda to'xtatish">
 <h2>Audit, parol, chiqish, favqulodda to'xtatish</h2>
 <ul><li><strong>Audit va sozlamalar → Audit</strong>: kim qachon kirdi, kimga ruxsat berildi yoki olib tashlandi, qaysi ulanish rad etildi. Yozuvlar belgilangan muddat saqlanadi (sukut bo'yicha 180 kun).</li><li><strong>Parol</strong>: o'z parolingizni shu bo'limda almashtirasiz.</li><li><strong>Chiqish</strong>: sessiyani yakunlaydi. Umumiy kompyuterda albatta chiqing.</li><li><strong>Favqulodda to'xtatish</strong> (Bosh sahifa): barcha tomoshabinlar uchun videoni bir tugma bilan to'xtatadi.</li><li><strong>?</strong> tugmasi: shu qo'llanmani ochadi.</li></ul>
+</section>
+<section class="sec" id="admin-mfa" data-title="Administrator himoyasi: TOTP va qayta tasdiqlash">
+<h2>Administrator himoyasi: TOTP va qayta tasdiqlash</h2>
+<ul><li><strong>Ikkinchi bosqich (TOTP)</strong>: <strong>Audit va sozlamalar → Sozlamalar → Ikkinchi bosqich (TOTP)</strong>. QR kodni autentifikator ilovasi bilan skanerlang, joriy 6 xonali kodni kiriting. Shundan keyin kirishda parol va kod so'raladi. Bir marta ishlatilgan kod qayta qabul qilinmaydi.</li><li><strong>Tiklash kodlari</strong>: TOTP yoqilganda 10 ta kod beriladi, har biri bir marta ishlaydi. Ularni telefondan alohida saqlang.</li><li><strong>Qayta tasdiqlash</strong>: pult kalitini ko'rish yoki almashtirish, stream o'chirish, foydalanuvchi yaratish yoki rolini o'zgartirish, parolni tiklash, server holatini o'zgartirish — oxirgi 10 daqiqada parol (+ kod) so'raydi. Oyna o'zi chiqadi; tasdiqlangach amal davom etadi.</li><li><strong>secure</strong> rejimda TOTP'siz administrator boshqa admin amallarini bajara olmaydi va TOTP'ni o'chira olmaydi (faqat yangisini yaratadi).</li><li>Passkey (WebAuthn) hali qo'llab-quvvatlanmaydi.</li></ul>
+</section>
+<section class="sec" id="secure-rejim" data-title="Xavfsizlik holati paneli">
+<h2>Xavfsizlik holati paneli</h2>
+<p><strong>Audit va sozlamalar → Sozlamalar → Xavfsizlik holati</strong> har bir himoyani ish vaqtida tekshirib ko'rsatadi:</p>
+<div class="tbl"><table><thead><tr><th>Belgi</th><th>Ma'nosi</th></tr></thead><tbody>
+<tr><td>tekshirilgan</td><td>Dastur buni hozir amalda ta'minlayapti</td></tr>
+<tr><td>zaif</td><td>Ishlaydi, lekin production siyosatidan kuchsiz (masalan o'z-o'zidan imzolangan sertifikat)</td></tr>
+<tr><td>buzilgan</td><td>Production siyosatiga zid (masalan ochiq interfeysdagi oddiy RTMP)</td></tr>
+<tr><td>tasdiqlanmagan</td><td>Dastur o'zi tekshira olmaydi (pult, tarmoq, qurilma)</td></tr>
+<tr><td>mavjud emas</td><td>Bu versiyada yo'q himoya (masalan E2EE)</td></tr>
+</tbody></table></div>
+<p>&quot;Secure&quot; degan yozuv sozlamadagi bayroqning o'zi uchun chiqmaydi. Rejim <code>config/dronstream.yaml</code> dagi <code>security.mode</code> bilan tanlanadi: <code>secure</code> (paketdagi sukut) yoki <code>standard</code> (cheklovlarsiz, faqat sinov uchun).</p>
 </section>
 <section class="sec" id="f-yangilash" data-title="Kodni yangilash va serverni yangilash — ikki alohida ish">
 <h2>Kodni yangilash va serverni yangilash — ikki alohida ish</h2>
@@ -1033,9 +1082,12 @@ esac</code></pre>
 <tr><td>Havola muddati tugagan</td><td>Vaqt oralig'i o'tgan</td><td>Admin muddatni uzaytiradi yoki yangisini beradi</td></tr>
 <tr><td>Havola hali boshlanmagan</td><td>Boshlanish vaqti kelmagan</td><td>Kuting; vaqt Toshkent vaqti bilan</td></tr>
 <tr><td>Havola bekor qilingan</td><td>Admin bekor qilgan yoki yangilagan</td><td>Yangi havolani so'rang</td></tr>
+<tr><td>So'rovingiz administrator tasdig'ini kutmoqda</td><td>Havola faqat so'rov yaratdi</td><td>Ekrandagi tekshirish kodini administratorga ayting; sahifani ochiq qoldiring</td></tr>
+<tr><td>Administrator so'rovni rad etdi</td><td>Admin bu brauzerni tasdiqlamadi</td><td>Administrator bilan bog'laning</td></tr>
+<tr><td>Kutayotgan so'rovlar juda ko'p</td><td>Bitta havola bo'yicha 5 ta so'rov tasdiq kutmoqda</td><td>Administrator ularni ko'rib chiqqach qayta urining</td></tr>
 <tr><td>Juda ko'p sessiya</td><td>Bir vaqtdagi sessiyalar chegarasi</td><td>Boshqa qurilmadagi sessiyani yoping</td></tr>
 </tbody></table></div>
-<p>Ochiq sessiya ichida sahifani yangilash havolani qayta sarflamaydi.</p>
+<p>Tasdiqlangan sessiya ichida sahifani yangilash havolani qayta sarflamaydi.</p>
 </section>
 <section class="sec" id="x-port" data-title="Port band">
 <h2>Port band</h2>
