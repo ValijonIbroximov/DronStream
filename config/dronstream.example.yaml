@@ -1,0 +1,83 @@
+# DronStream sozlamalari (namuna). Bu faylda SIR YO'Q.
+# O'rnatishda <ROOT>\config\dronstream.yaml sifatida nusxalanadi.
+# Sirlar (master kalit, TLS kalit, TURN siri) avtomatik yaratiladi va
+# <ROOT>\config\secrets\ ichida saqlanadi — ularni bu faylga yozmang.
+# O'zgartirgandan keyin xizmatni qayta ishga tushiring.
+
+web:
+  # Brauzerlar ulanadigan HTTPS manzil. 443 ishlatsangiz URL da port yozilmaydi.
+  listen: ":8443"
+  # Ixtiyoriy: http -> https yo'naltirish (ACME uchun ":80" bo'lishi kerak). Bo'sh = o'chiq.
+  redirect_http: ""
+  # Foydalanuvchilar brauzerga yozadigan nom/IP lar (o'z-o'zidan imzolangan sertifikatga kiradi).
+  public_hosts: [localhost]
+  # Ixtiyoriy Let's Encrypt: haqiqiy domen va internetdan 443/80 ochiq bo'lishi shart.
+  acme_domain: ""
+  acme_email: ""
+  # Ichki (faqat 127.0.0.1) hook/boshqaruv porti. Tashqariga ochmang.
+  internal_listen: "127.0.0.1:9180"
+
+media:
+  # Bo'sh = dronstream.exe yonidagi mediamtx\mediamtx.exe
+  mediamtx_binary: ""
+  # MediaMTX Control API va WebRTC signalling — FAQAT 127.0.0.1 (tekshiriladi).
+  api_listen: "127.0.0.1:9997"
+  webrtc_http_listen: "127.0.0.1:8889"
+  # Brauzer video oladigan UDP port (firewall/NAT da ochilishi kerak).
+  webrtc_udp_listen: ":8189"
+  # UDP bloklangan tarmoqlar uchun ixtiyoriy TCP (masalan ":8189"). Bo'sh = o'chiq.
+  webrtc_tcp_listen: ""
+  # Brauzerlarga e'lon qilinadigan server IP/domenlari (public IP, LAN IP, domen).
+  webrtc_additional_hosts: []
+  webrtc_ips_from_interfaces: true
+  # Pultdan RTMP. Xavfsizlik uchun VPN interfeysi IP siga bog'lang, masalan "10.8.0.1:1935".
+  # ":1935" barcha interfeyslar demakdir — shunda firewall bilan VPN tarmog'iga cheklang.
+  rtmp_listen: ":1935"
+  # Ixtiyoriy RTMPS (shifrlangan). config\secrets\tls.crt/tls.key kerak. Bo'sh = o'chiq.
+  rtmps_listen: ""
+  # Pult URL ida ko'rsatiladigan host: VPN IP (RTMP uchun) yoki domen (RTMPS uchun).
+  publish_host: "localhost"
+  # Ijara: backend javob bermasa ham video sessiya shu soniyadan keyin yopiladi.
+  lease_seconds: 120
+  # Bir martalik ko'rish chiptasi amal qilish muddati.
+  ticket_ttl_seconds: 30
+  # Bitta foydalanuvchi/mehmonning bir vaqtdagi video ulanishlari chegarasi.
+  max_media_sessions_per_subject: 12
+  reconcile_interval_ms: 1000
+  mediamtx_log_level: info
+
+turn:
+  # off | builtin (ichki pion/turn) | external (o'zingizning coturn, use-auth-secret)
+  mode: "off"
+  # Brauzerga beriladigan TURN URL lar, masalan:
+  #   - "turn:203.0.113.10:3478?transport=udp"
+  #   - "turn:203.0.113.10:3478?transport=tcp"
+  urls: []
+  # builtin uchun:
+  listen: ":3478"
+  public_ip: ""
+  realm: "dronstream"
+  relay_port_min: 50000
+  relay_port_max: 50100
+  # Qisqa muddatli hisob (daqiqa).
+  credential_minutes: 10
+  # Faqat o'zingiz boshqaradigan STUN (default bo'sh — tashqi xizmat ishlatilmaydi).
+  stun_urls: []
+
+security:
+  session_hours: 24
+  idle_minutes: 480
+  guest_max_hours: 24
+  max_pending_guests: 50
+  audit_retention_days: 180
+  cookie_samesite: Strict
+
+logging:
+  level: info
+  max_size_mb: 20
+  keep_files: 5
+
+demo:
+  # Haqiqiy pult ulanmaguncha test tasvirli 2 ta DEMO manba.
+  # O'chirsangiz, admin paneldan demo streamlarni ham o'chiring.
+  enabled: true
