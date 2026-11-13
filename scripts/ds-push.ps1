@@ -131,15 +131,16 @@ if ($f.Code -ne 0) {
 $up = "$remote/$branch"
 $hasUp = (G @("rev-parse", "--verify", "--quiet", $up) -Quiet).Code -eq 0
 if ($hasUp) {
-  $counts = ((G @("rev-list", "--left-right", "--count", "HEAD...$up") -Quiet).Out.Trim() -split "\s+")
-  $ahead = [int]$counts[0]; $behind = [int]$counts[1]
+  $counts = ConvertTo-DsAheadBehind (G @("rev-list", "--left-right", "--count", "HEAD...$up") -Quiet).Out
+  if (-not $counts) { Stop-DsWith $EX_FAIL "git rev-list kutilmagan javob berdi; hech narsa o'zgartirilmadi." }
+  $ahead = $counts[0]; $behind = $counts[1]
   if ($behind -gt 0) { Stop-DsWith $EX_MANUAL "Remote'da sizda yo'q $behind ta yangi commit bor. Force push ishlatilmaydi: avval pull.bat (lokal commitlaringiz saqlanadi)." }
   if ($ahead -eq 0) { Write-DsLog "Yuboriladigan narsa yo'q - lokal va remote bir xil." "OK"; exit $EX_OK }
   $range = "$up..HEAD"
 } else { $range = "HEAD"; Write-DsLog "Remote'da '$branch' hali yo'q - birinchi push." "WARN" }
 
 # scan history of every commit about to be pushed
-$revs = (G @("rev-list", "--reverse", $range) -Quiet).Out -split "`n" | Where-Object { $_ }
+$revs = @((G @("rev-list", "--reverse", $range) -Quiet).Out -split "`n" | Where-Object { $_ })
 Write-DsLog ("Yuboriladigan {0} ta commit sirlar bo'yicha tekshirilmoqda" -f $revs.Count) "STEP"
 foreach ($rv in $revs) {
   $files = (G @("diff-tree", "--no-commit-id", "--name-only", "-r", "--root", "--diff-filter=ACMR", $rv) -Quiet).Out -split "`n"

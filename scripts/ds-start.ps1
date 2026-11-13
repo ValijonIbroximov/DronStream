@@ -34,7 +34,7 @@ function Get-Readiness {
     return @{ chk = $null; fixable = $fix; manual = $man }
   }
   if ($ctx.Mode -eq "source") {
-    $newest = (Get-ChildItem (Join-Path $ctx.Base "backend"), (Join-Path $ctx.Base "web\src") -Recurse -File -Include *.go, go.mod, go.sum, *.ts, *.tsx, *.css | Where-Object { $_.FullName -notlike "*\integration\*" -and $_.Name -notlike "*_test.go" } | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).LastWriteTimeUtc
+    $newest = Get-DsNewestWrite (Get-ChildItem (Join-Path $ctx.Base "backend"), (Join-Path $ctx.Base "web\src") -Recurse -File -Include *.go, go.mod, go.sum, *.ts, *.tsx, *.css | Where-Object { $_.FullName -notlike "*\integration\*" -and $_.Name -notlike "*_test.go" })
     if ($newest -gt (Get-Item $ctx.Exe).LastWriteTimeUtc) { $fix += "Lokal build eskirgan (manba kod yangiroq)" }
   }
   $chk = Invoke-DsCheck $ctx

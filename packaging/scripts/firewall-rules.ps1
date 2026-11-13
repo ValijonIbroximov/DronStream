@@ -33,7 +33,7 @@ $rules = @(
   @{ n = "$prefix WebRTC UDP"; p = "UDP"; port = "$WebRtcUdpPort"; r = "Any" }
 )
 if ($WebRtcTcpPort) { $rules += @{ n = "$prefix WebRTC TCP"; p = "TCP"; port = "$WebRtcTcpPort"; r = "Any" } }
-if ($RtmpRemote.Count -gt 0) { $rules += @{ n = "$prefix RTMP (faqat VPN)"; p = "TCP"; port = "$RtmpPort"; r = $RtmpRemote } }
+if (@($RtmpRemote).Count -gt 0) { $rules += @{ n = "$prefix RTMP (faqat VPN)"; p = "TCP"; port = "$RtmpPort"; r = $RtmpRemote } }
 else { Write-Warning "RTMP uchun qoida qo'shilmaydi: -RtmpRemote (masalan VPN tarmog'i 10.8.0.0/24) ko'rsatilmagan. RTMP ni internetga ochmang." }
 if ($RtmpsPort) { $rules += @{ n = "$prefix RTMPS"; p = "TCP"; port = "$RtmpsPort"; r = "Any" } }
 if ($TurnPort) {

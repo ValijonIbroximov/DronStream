@@ -5,6 +5,7 @@
 #>
 param([Parameter(Mandatory = $true)][string]$OldZip, [Parameter(Mandatory = $true)][string]$NewZip, [string]$Work = (Join-Path $env:TEMP "ds-update-test"))
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version 3.0
 $results = [ordered]@{}
 function Check($name, $cond) { $results[$name] = if ($cond) { "PASS" } else { "FAIL" }; Write-Host ("{0,-50} {1}" -f $name, $results[$name]) }
 function Ver($root) { $e = "$root\app\$((Get-Content "$root\app\active.txt" -Raw).Trim())\dronstream.exe"; $ErrorActionPreference = "Continue"; $v = (& $e version 2>&1 | Select-Object -First 1); $ErrorActionPreference = "Stop"; return "$v" }

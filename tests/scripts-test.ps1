@@ -5,6 +5,7 @@
 #>
 param([Parameter(Mandatory = $true)][string]$PackageZip, [Parameter(Mandatory = $true)][string]$Work, [switch]$SkipFreshClone)
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version 3.0
 $repo = Split-Path $PSScriptRoot -Parent
 $results = [ordered]@{}
 function Check($name, $cond, $detail = "") { $results[$name] = if ($cond) { "PASS" } else { "FAIL $detail" }; Write-Host ("{0,-62} {1}" -f $name, $results[$name]) }

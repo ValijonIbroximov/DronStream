@@ -1,6 +1,8 @@
 # Shared helpers for DronStream scripts. ROOT defaults to the parent of this
 # scripts folder (installed layout: <ROOT>\scripts\*.ps1).
 $ErrorActionPreference = "Stop"
+# Strict mode: an unset variable or a missing property is an error, not a silent empty value.
+Set-StrictMode -Version 3.0
 
 function Resolve-DsRoot([string]$Root) {
   if ($Root) { return (Resolve-Path $Root).Path }

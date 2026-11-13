@@ -40,8 +40,9 @@ $f = G @("fetch", "--prune", $remote)
 if ($f.Code -ne 0) { Stop-DsWith $EX_FAIL "fetch muvaffaqiyatsiz (internet yoki GitHub kirishini tekshiring). Lokal holat o'zgarmadi." }
 $up = "$remote/$branch"
 if ((G @("rev-parse", "--verify", "--quiet", $up) -Quiet).Code -ne 0) { Stop-DsWith $EX_MANUAL "Remote'da '$branch' branchi yo'q. Avval push.bat bilan yuboring." }
-$counts = ((G @("rev-list", "--left-right", "--count", "HEAD...$up") -Quiet).Out.Trim() -split "\s+")
-$ahead = [int]$counts[0]; $behind = [int]$counts[1]
+$counts = ConvertTo-DsAheadBehind (G @("rev-list", "--left-right", "--count", "HEAD...$up") -Quiet).Out
+if (-not $counts) { Stop-DsWith $EX_FAIL "git rev-list kutilmagan javob berdi; hech narsa o'zgartirilmadi." }
+$ahead = $counts[0]; $behind = $counts[1]
 if ($behind -eq 0) {
   if ($ahead -gt 0) { Write-DsLog "Remote'da yangi commit yo'q. Sizda yuborilmagan $ahead ta lokal commit bor - push.bat bilan yuboring." "OK" }
   else { Write-DsLog "Allaqachon eng yangi holatda ($($before.Substring(0,10)))." "OK" }

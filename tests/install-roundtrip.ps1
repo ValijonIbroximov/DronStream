@@ -6,6 +6,7 @@
 #>
 param([Parameter(Mandatory = $true)][string]$Zip, [string]$Work = (Join-Path $env:TEMP "ds-install-test"))
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version 3.0
 $results = [ordered]@{}
 function Check($name, $cond) { $results[$name] = if ($cond) { "PASS" } else { "FAIL" }; Write-Host ("{0,-50} {1}" -f $name, $results[$name]) }
 

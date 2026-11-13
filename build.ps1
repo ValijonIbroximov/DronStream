@@ -17,6 +17,7 @@ param(
   [switch]$SkipFrontend
 )
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version 3.0
 $Root = $PSScriptRoot
 $Tools = Join-Path $Root ".tools"
 $MediaMTXVersion = "v1.21.3"

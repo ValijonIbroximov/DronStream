@@ -2,6 +2,11 @@
 # Windows PowerShell 5.1 compatible. ASCII only (PS 5.1 reads BOM-less files as ANSI).
 # All paths are derived from this file's location; nothing is hard-coded.
 $ErrorActionPreference = "Stop"
+# Strict mode stays ON for every script that dot-sources this file: reading an
+# unset variable or a missing property is a bug to fix, not something to hide.
+# 3.0 = every rule that exists in Windows PowerShell 5.1 (unset variables,
+# missing properties, out-of-range indexes). See testsps-lint.ps1.
+Set-StrictMode -Version 3.0
 
 # ---- pinned toolchain (source checkout only; a release package needs none) ----
 $script:DS_GO_VERSION = "1.27.4"
@@ -100,6 +105,7 @@ function Get-DsPortOwner([string]$proto, [string]$addr) {
   try {
     if ($proto -eq "udp") { $e = Get-NetUDPEndpoint -LocalPort $port -ErrorAction Stop | Select-Object -First 1 }
     else { $e = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction Stop | Select-Object -First 1 }
+    if (-not $e) { return "noma'lum jarayon" }
     $p = Get-Process -Id $e.OwningProcess -ErrorAction Stop
     return ("{0} (PID {1})" -f $p.ProcessName, $p.Id)
   } catch { return "noma'lum jarayon" }
@@ -130,8 +136,25 @@ function Get-DsToolsDir($ctx) {
   return (Join-Path $env:LOCALAPPDATA ("DronStream\t-" + $id))
 }
 
+# Newest modification time among files; DateTime.MinValue when there are none
+# (so a comparison never reads a property of $null under strict mode).
+function Get-DsNewestWrite($items) {
+  $n = $items | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1
+  if ($n) { return $n.LastWriteTimeUtc }
+  return [DateTime]::MinValue
+}
+
+# "git rev-list --left-right --count A...B" -> @(ahead, behind); $null when the answer is not two numbers.
+function ConvertTo-DsAheadBehind([string]$text) {
+  $parts = @($text.Trim() -split "\s+")
+  if ($parts.Count -ne 2 -or $parts[0] -notmatch '^[0-9]+$' -or $parts[1] -notmatch '^[0-9]+$') { return $null }
+  return @([int]$parts[0], [int]$parts[1])
+}
+
 # Report unexpected errors with their reason and the log path (never silent).
 function Write-DsUnexpected($err) {
-  Write-DsLog ("Kutilmagan xato: " + $err.Exception.Message + " (" + $err.InvocationInfo.PositionMessage.Split("`n")[0].Trim() + ")") "ERR"
+  $where = ""
+  if ($err.InvocationInfo -and $err.InvocationInfo.PositionMessage) { $where = " (" + @($err.InvocationInfo.PositionMessage -split "`n")[0].Trim() + ")" }
+  Write-DsLog ("Kutilmagan xato: " + $err.Exception.Message + $where) "ERR"
   if ($script:DsLogFile) { Write-Host ("Log: " + $script:DsLogFile) -ForegroundColor DarkGray }
 }

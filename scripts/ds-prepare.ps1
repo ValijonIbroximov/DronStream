@@ -157,7 +157,7 @@ if ($ctx.Mode -eq "source") {
     if ($r.Code -ne 0) { Stop-DsWith $(if (Online) { $EX_FAIL } else { $EX_OFFLINE }) "npm ci muvaffaqiyatsiz (internet yo'q bo'lsa npm keshida paketlar bo'lmasligi mumkin)." }
   }
   $dist = Join-Path $web "dist\index.html"
-  $srcNewest = (Get-ChildItem (Join-Path $web "src"), (Join-Path $web "index.html"), (Join-Path $web "public"), $lockFile, (Join-Path $web "vite.config.ts") -Recurse -File | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).LastWriteTimeUtc
+  $srcNewest = Get-DsNewestWrite (Get-ChildItem (Join-Path $web "src"), (Join-Path $web "index.html"), (Join-Path $web "public"), $lockFile, (Join-Path $web "vite.config.ts") -Recurse -File)
   if (-not (Test-Path $dist) -or $srcNewest -gt (Get-Item $dist).LastWriteTimeUtc) {
     Write-DsLog "Frontend yig'ilmoqda" "STEP"
     $r = Invoke-DsNative $npm @("run", "build") -WorkDir $web
@@ -173,7 +173,7 @@ if ($ctx.Mode -eq "source") {
 
   # --- backend ---
   $be = Join-Path $ctx.Base "backend"
-  $newest = (Get-ChildItem $be -Recurse -File -Include *.go, go.mod, go.sum, *.h264 | Where-Object { $_.FullName -notlike "*\integration\*" } | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1).LastWriteTimeUtc
+  $newest = Get-DsNewestWrite (Get-ChildItem $be -Recurse -File -Include *.go, go.mod, go.sum, *.h264 | Where-Object { $_.FullName -notlike "*\integration\*" })
   $embNewest = (Get-Item $embIdx).LastWriteTimeUtc
   if ($embNewest -gt $newest) { $newest = $embNewest }
   $stale = -not (Test-Path $ctx.Exe) -or $newest -gt (Get-Item $ctx.Exe).LastWriteTimeUtc
