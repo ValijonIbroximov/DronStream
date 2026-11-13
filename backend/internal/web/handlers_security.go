@@ -232,9 +232,9 @@ func (s *Server) securityItems(r *http.Request) []SecurityItem {
 		add("ingest_rtmps", "Pult → server (RTMPS)", "not_implemented", "RTMPS yoqilmagan (media.rtmps_listen bo'sh)")
 	}
 	add("internal_ports", "Ichki API'lar", "ok", "MediaMTX API, WebRTC signalizatsiya va ichki hook faqat 127.0.0.1 da (ishga tushishda tekshiriladi)")
-	add("server_sees_video", "Server videoni ochiq ko'radi", "unverified", "Joriy arxitektura: TLS/DTLS serverda tugaydi, MediaMTX videoni ochiq qabul qilib qayta paketlaydi. Server root'i va operatori videoni ko'ra oladi")
+	add("server_sees_video", "Videoni serverdan yashirish", "not_implemented", "Joriy arxitektura: TLS/DTLS serverda tugaydi, MediaMTX videoni ochiq qabul qilib qayta paketlaydi. Server root'i va operatori videoni ko'ra oladi")
 	add("e2ee", "Pultdan tomoshabingacha E2EE", "not_implemented", "Amalga oshirilmagan. DJI Pilot 2 manba tomonida E2EE qila olmaydi (SECURITY_MODEL.md)")
-	add("stored_media", "Yuklangan media", "unverified", "Diskda ochiq saqlanadi (fayl huquqlari bilan himoyalangan); har bir so'rovda ruxsat tekshiriladi. Serverdan yashirilmagan")
+	add("stored_media", "Yuklangan media", "warn", "Diskda ochiq saqlanadi (fayl huquqlari bilan himoyalangan); har bir so'rovda ruxsat tekshiriladi. Serverdan yashirilmagan")
 	add("backup", "Backup", "ok", "Parol bilan shifrlanadi (Argon2id + AES-GCM)")
 	add("telemetry", "Tashqi telemetriya", "ok", "Dastur tashqi analytics/telemetriya yubormaydi; STUN sukut bo'yicha bo'sh")
 	return out

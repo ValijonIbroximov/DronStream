@@ -56,7 +56,7 @@ export default function AdminShell({ info, route, onLogout }: { info: SessionInf
       if (sound) beep()
       refreshCounts()
     }
-    if (e.kind === 'guests' || e.kind === 'state') refreshCounts()
+    if (e.kind === 'guests' || e.kind === 'state' || e.kind === 'sessions' || e.kind === 'links') refreshCounts()
     if (e.kind === 'alert' && e.data?.kind === 'publish_busy') toast(`Diqqat: "${e.data.stream}" ga ikkinchi manba ulanmoqchi bo'ldi — rad etildi`, 'error')
   })
 
