@@ -19,6 +19,12 @@ DJI pult --RTMP (VPN orqali) / RTMPS--> [ Windows server: DronStream + MediaMTX 
 - **Admin paneldagi "?" tugmasi** (Parol → Chiqish → ?) — shu qo'llanmani panel ustida ochadi; o'ynayotgan videolar uzilmaydi. Sahifa faqat administratorga beriladi (`/api/admin/help/`).
 - Ikkalasi **bitta manbadan** hosil qilinadi: `guide/src/guide.md` → `node guide/build.mjs`. Matnni ikki joyda qo'lda yuritish kerak emas; `push.bat` va CI ularning mosligini tekshiradi.
 
+## Xavfsizlik siyosati (v1.3)
+- **Havola/QR — faqat taklif.** Havolani ochgan odam kirish so'rovini yuboradi va ekranida tekshirish kodini ko'radi; administrator aynan shu brauzer sessiyasini kod bilan tasdiqlamaguncha hech narsa ochilmaydi. Havolaning nusxasi boshqa brauzerga huquq bermaydi.
+- **Administrator: TOTP** (autentifikator ilovasi) + 10 ta tiklash kodi; muhim amallarda parolni qayta tasdiqlash.
+- **secure rejim** (paketda sukut): shifrlanmagan RTMP faqat VPN/lokal interfeysda; TOTP'siz admin ishlay olmaydi.
+- **Kim hali videoni ko'ra oladi**: server (va uning root egasi) — video serverda ochiq; oddiy RTMP'da pult↔server yo'li. Pultdan tomoshabingacha shifrlash (E2EE) DJI Pilot 2 bilan mumkin emas va amalga oshirilmagan. Batafsil: [SECURITY_MODEL.md](SECURITY_MODEL.md), testlar: [SECURITY_ACCEPTANCE.md](SECURITY_ACCEPTANCE.md).
+
 ## Hujjatlar
 | Fayl | Mazmuni |
 |---|---|
